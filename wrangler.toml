@@ -1,0 +1,8 @@
+# Cloudflare Pages Configuration
+name = "dubbs-bets"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "db"
+database_name = "worldcup_predictions"
+database_id = "local-db"
