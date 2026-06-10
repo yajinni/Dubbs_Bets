@@ -24,6 +24,12 @@ export async function onRequest(context) {
 
     await checkAndInitDb(env.db);
 
+    // Verify secret key if configured in environment
+    const clientSecret = url.searchParams.get('secret');
+    if (env.SYNC_SECRET && env.SYNC_SECRET !== '' && clientSecret !== env.SYNC_SECRET) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid sync secret' }), { status: 401, headers });
+    }
+
     // 1. Check time since last sync
     const lastSyncSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'last_sync'").first();
     const lastSyncTime = lastSyncSetting ? new Date(lastSyncSetting.value).getTime() : 0;

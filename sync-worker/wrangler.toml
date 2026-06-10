@@ -1,0 +1,11 @@
+# Wrangler configuration for Cloudflare Worker cron-sync trigger
+name = "dubbs-bets-sync-cron"
+main = "index.js"
+compatibility_date = "2026-06-10"
+
+[triggers]
+crons = ["0 */6 * * *"] # Executes every 6 hours (at minute 0 of every 6th hour)
+
+[vars]
+PAGES_URL = "https://dubbs-bets.pages.dev"
+# SYNC_SECRET should be set as a secret via wrangler secret put SYNC_SECRET
