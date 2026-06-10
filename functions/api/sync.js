@@ -91,10 +91,15 @@ async function syncFromAPIFootball(db, apiKey) {
     headers: { 'x-apisports-key': apiKey }
   });
   const fixturesData = await fixturesRes.json();
+
+  if (fixturesData.errors && (Array.isArray(fixturesData.errors) ? fixturesData.errors.length > 0 : Object.keys(fixturesData.errors).length > 0)) {
+    throw new Error(`API Error details: ${JSON.stringify(fixturesData.errors)}`);
+  }
+
   const apiFixtures = fixturesData.response || [];
 
   if (apiFixtures.length === 0) {
-    throw new Error('API-Football returned no fixtures.');
+    throw new Error('API-Football returned no fixtures. Ensure the World Cup 2026 (League ID 1, Season 2026) is available on your plan.');
   }
 
   // 2. Fetch World Cup 2026 Odds
@@ -103,6 +108,9 @@ async function syncFromAPIFootball(db, apiKey) {
     headers: { 'x-apisports-key': apiKey }
   });
   const oddsData = await oddsRes.json();
+  if (oddsData.errors && (Array.isArray(oddsData.errors) ? oddsData.errors.length > 0 : Object.keys(oddsData.errors).length > 0)) {
+    console.warn('API-Football Odds Error:', JSON.stringify(oddsData.errors));
+  }
   const apiOddsList = oddsData.response || [];
 
   // Create an odds map by fixture ID
