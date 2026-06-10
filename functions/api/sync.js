@@ -24,9 +24,12 @@ export async function onRequest(context) {
 
     await checkAndInitDb(env.db);
 
-    // Verify secret key if configured in environment
+    // Verify secret key if configured in environment (allow same-origin browser requests to bypass)
     const clientSecret = url.searchParams.get('secret');
-    if (env.SYNC_SECRET && env.SYNC_SECRET !== '' && clientSecret !== env.SYNC_SECRET) {
+    const secFetchSite = request.headers.get('sec-fetch-site');
+    const isSameOrigin = secFetchSite === 'same-origin' || secFetchSite === 'same-site';
+
+    if (env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid sync secret' }), { status: 401, headers });
     }
 
