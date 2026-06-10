@@ -5,4 +5,4 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "db"
 database_name = "worldcup_predictions"
-database_id = "local-db"
+database_id = "3bbf1246-8760-4440-922c-17fbecc8dd14"
