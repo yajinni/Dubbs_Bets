@@ -52,7 +52,13 @@ export async function onRequest(context) {
     let syncResults = { source: 'mock', matchesUpdated: 0, oddsUpdated: 0 };
 
     if (apiKey && apiKey !== '') {
-      syncResults = await syncFromAPIFootball(env.db, apiKey);
+      try {
+        syncResults = await syncFromAPIFootball(env.db, apiKey);
+      } catch (err) {
+        console.error('API-Football sync failed, falling back to mock sync:', err.message);
+        syncResults = await runMockSync(env.db);
+        syncResults.warning = `API-Football failed (${err.message}). Gracefully fell back to mock simulation.`;
+      }
     } else {
       syncResults = await runMockSync(env.db);
     }
