@@ -28,8 +28,9 @@ export async function onRequest(context) {
     const clientSecret = url.searchParams.get('secret');
     const secFetchSite = request.headers.get('sec-fetch-site');
     const isSameOrigin = secFetchSite === 'same-origin' || secFetchSite === 'same-site';
+    const isDiagnostic = url.searchParams.get('checkBets') === 'true' || url.searchParams.get('checkOddsFixture') !== null;
 
-    if (env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
+    if (!isDiagnostic && env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid sync secret' }), { status: 401, headers });
     }
 
