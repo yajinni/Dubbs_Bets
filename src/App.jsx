@@ -3,6 +3,7 @@ import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
 import MatchesList from './components/MatchesList';
 import AdminPanel from './components/AdminPanel';
+import MatchView from './components/MatchView';
 import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 
 export default function App() {
@@ -282,7 +283,7 @@ export default function App() {
             </div>
           )}
 
-          {activeTab === 'matches' && (
+           {activeTab === 'matches' && (
             <MatchesList 
               matches={matches} 
               predictions={predictions}
@@ -292,6 +293,15 @@ export default function App() {
               onSelectMatch={setSelectedMatchId}
               allPredictions={allPredictions}
               leaderboard={leaderboard}
+            />
+          )}
+
+          {activeTab === 'match-view' && (
+            <MatchView 
+              matches={matches}
+              allPredictions={allPredictions}
+              leaderboard={leaderboard}
+              activeParticipantId={activeParticipantId}
             />
           )}
 
