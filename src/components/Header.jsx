@@ -75,23 +75,25 @@ export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigge
           </div>
         )}
 
-        <div className="locked-icon-container" style={{ background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
-          <Clock size={14} className="text-muted" />
-          <span style={{ fontSize: '12px' }}>
-            Sync: <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{formatLastSync(lastSync)}</span>
-          </span>
-        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button 
+            id="header-sync-btn"
+            className="btn-secondary" 
+            style={{ padding: '8px 12px', fontSize: '13px' }} 
+            disabled={syncing}
+            onClick={handleSync}
+          >
+            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Syncing...' : 'Sync Now'}
+          </button>
 
-        <button 
-          id="header-sync-btn"
-          className="btn-secondary" 
-          style={{ padding: '8px 12px', fontSize: '13px' }} 
-          disabled={syncing}
-          onClick={handleSync}
-        >
-          <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-          {syncing ? 'Syncing...' : 'Sync Now'}
-        </button>
+          <div className="locked-icon-container" style={{ background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+            <Clock size={14} className="text-muted" />
+            <span style={{ fontSize: '12px' }}>
+              Sync: <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{formatLastSync(lastSync)}</span>
+            </span>
+          </div>
+        </div>
       </div>
     </header>
   );
