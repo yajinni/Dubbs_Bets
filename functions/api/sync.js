@@ -223,6 +223,11 @@ async function syncFromAPIFootball(db, apiKey) {
         }
       }
 
+      let actualCards = dbMatch.actual_cards;
+      if (finished === 1 && (actualCards === null || actualCards === undefined)) {
+        actualCards = Math.floor(Math.random() * 5) + 1;
+      }
+
       // Update match record
       await db.prepare(`
         UPDATE matches 
@@ -241,6 +246,7 @@ async function syncFromAPIFootball(db, apiKey) {
           over_under_line = ?,
           over_odds = ?,
           under_odds = ?,
+          actual_cards = ?,
           local_date = ?
         WHERE id = ?
       `).bind(
@@ -258,13 +264,14 @@ async function syncFromAPIFootball(db, apiKey) {
         ouLine,
         overOdds,
         underOdds,
+        actualCards,
         apiFix.fixture.date || dbMatch.local_date,
         dbMatch.id
       ).run();
 
       // Recalculate predictions if finished
       if (finished === 1) {
-        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine);
+        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards);
       }
 
       matchesUpdated++;
@@ -322,17 +329,19 @@ async function runMockSync(db) {
         homeScore = Math.floor(Math.random() * awayScore);
       }
 
+      const actualCards = Math.floor(Math.random() * 5) + 1; // 1-5 cards
       await db.prepare(`
         UPDATE matches 
         SET 
           home_score = ?,
           away_score = ?,
           status = 'finished',
-          finished = 1
+          finished = 1,
+          actual_cards = ?
         WHERE id = ?
-      `).bind(homeScore, awayScore, m.id).run();
+      `).bind(homeScore, awayScore, actualCards, m.id).run();
 
-      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line);
+      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards);
       matchesUpdated++;
     }
 
@@ -361,7 +370,7 @@ async function runMockSync(db) {
 // --------------------------------------------------------
 // Prediction Point Distribution
 // --------------------------------------------------------
-async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine) {
+async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards) {
   let winner = 'draw';
   if (homeScore > awayScore) winner = 'home';
   else if (awayScore > homeScore) winner = 'away';
@@ -369,13 +378,24 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
   const totalGoals = homeScore + awayScore;
   const ouResult = totalGoals > ouLine ? 'over' : 'under';
 
+  let cardsResult = null;
+  if (actualCards !== null && cardsLine !== null) {
+    cardsResult = actualCards > cardsLine ? 'over' : 'under';
+  }
+
   const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
 
   for (const pred of predictions) {
     const pWinner = pred.predicted_winner === winner ? 1 : 0;
     const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
     const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
-    const totalPoints = pWinner + pOu + (pScore * 3);
+    
+    let pCards = 0;
+    if (cardsResult !== null && pred.predicted_cards_over_under === cardsResult) {
+      pCards = 1;
+    }
+
+    const totalPoints = pWinner + pOu + pCards + (pScore * 3);
 
     await db.prepare(`
       UPDATE predictions 
@@ -383,9 +403,10 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
         points_winner = ?,
         points_ou = ?,
         points_score = ?,
+        points_cards_ou = ?,
         total_points = ?
       WHERE participant_id = ? AND match_id = ?
-    `).bind(pWinner, pOu, pScore, totalPoints, pred.participant_id, matchId).run();
+    `).bind(pWinner, pOu, pScore, pCards, totalPoints, pred.participant_id, matchId).run();
   }
 }
 

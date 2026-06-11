@@ -3,6 +3,14 @@ import { SCHEMA_SQL, TEAMS_SQL, MATCHES_SQL } from './db_init_data.js';
 
 export async function checkAndInitDb(db) {
   try {
+    // Dynamic Schema Migrations for Cards Prop Bets
+    try { await db.prepare("ALTER TABLE matches ADD COLUMN cards_line REAL DEFAULT 3.5").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE matches ADD COLUMN cards_over_odds REAL DEFAULT 1.9").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE matches ADD COLUMN cards_under_odds REAL DEFAULT 1.9").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE matches ADD COLUMN actual_cards INTEGER DEFAULT NULL").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_cards_over_under TEXT DEFAULT NULL").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_cards_ou INTEGER DEFAULT 0").run(); } catch(e){}
+
     // 1. Check if matches table exists
     const checkTable = await db.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='matches'"

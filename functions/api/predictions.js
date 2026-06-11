@@ -56,7 +56,8 @@ export async function onRequest(context) {
         predictedWinner,       // 'home', 'away', or 'draw'
         predictedOverUnder,    // 'over' or 'under'
         predictedHomeScore, 
-        predictedAwayScore 
+        predictedAwayScore,
+        predictedCardsOverUnder // 'over' or 'under'
       } = body;
 
       if (!participantId || !matchId) {
@@ -64,7 +65,7 @@ export async function onRequest(context) {
       }
 
       // 1. Fetch match to verify it exists and check if it has already started
-      const match = await env.db.prepare('SELECT local_date, status, finished, home_score, away_score, over_under_line FROM matches WHERE id = ?').bind(matchId).first();
+      const match = await env.db.prepare('SELECT local_date, status, finished, home_score, away_score, over_under_line, cards_line, actual_cards FROM matches WHERE id = ?').bind(matchId).first();
 
       if (!match) {
         return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
@@ -93,11 +94,12 @@ export async function onRequest(context) {
             predicted_winner = ?, 
             predicted_over_under = ?, 
             predicted_home_score = ?, 
-            predicted_away_score = ?
+            predicted_away_score = ?,
+            predicted_cards_over_under = ?
           WHERE participant_id = ? AND match_id = ?
         `;
         await env.db.prepare(updateQuery)
-          .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, participantId, matchId)
+          .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, predictedCardsOverUnder, participantId, matchId)
           .run();
       } else {
         const insertQuery = `
@@ -107,11 +109,12 @@ export async function onRequest(context) {
             predicted_winner, 
             predicted_over_under, 
             predicted_home_score, 
-            predicted_away_score
-          ) VALUES (?, ?, ?, ?, ?, ?)
+            predicted_away_score,
+            predicted_cards_over_under
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
         await env.db.prepare(insertQuery)
-          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore)
+          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, predictedCardsOverUnder)
           .run();
       }
 
@@ -131,7 +134,14 @@ export async function onRequest(context) {
         const pWinner = predictedWinner === winnerResult ? 1 : 0;
         const pOu = predictedOverUnder === ouResult ? 1 : 0;
         const pScore = (pHomeScore === homeScore && pAwayScore === awayScore) ? 1 : 0;
-        const totalPoints = pWinner + pOu + (pScore * 3);
+
+        let pCards = 0;
+        if (match.actual_cards !== null && match.cards_line !== null) {
+          const cardsResult = match.actual_cards > match.cards_line ? 'over' : 'under';
+          pCards = predictedCardsOverUnder === cardsResult ? 1 : 0;
+        }
+
+        const totalPoints = pWinner + pOu + pCards + (pScore * 3);
         
         await env.db.prepare(`
           UPDATE predictions 
@@ -139,9 +149,10 @@ export async function onRequest(context) {
             points_winner = ?,
             points_ou = ?,
             points_score = ?,
+            points_cards_ou = ?,
             total_points = ?
           WHERE participant_id = ? AND match_id = ?
-        `).bind(pWinner, pOu, pScore, totalPoints, participantId, matchId).run();
+        `).bind(pWinner, pOu, pScore, pCards, totalPoints, participantId, matchId).run();
       }
 
       const savedPrediction = await env.db.prepare('SELECT * FROM predictions WHERE participant_id = ? AND match_id = ?')

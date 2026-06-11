@@ -34,6 +34,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const [overUnder, setOverUnder] = useState('');
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
+  const [cardsOverUnder, setCardsOverUnder] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -48,11 +49,13 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       setOverUnder(pred.predicted_over_under || '');
       setHomeScore(pred.predicted_home_score !== null ? pred.predicted_home_score.toString() : '');
       setAwayScore(pred.predicted_away_score !== null ? pred.predicted_away_score.toString() : '');
+      setCardsOverUnder(pred.predicted_cards_over_under || '');
     } else {
       setWinner('');
       setOverUnder('');
       setHomeScore('');
       setAwayScore('');
+      setCardsOverUnder('');
     }
     setError('');
     setSuccessMsg('');
@@ -64,17 +67,19 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
     const currentOU = overUnder || '';
     const currentHome = homeScore || '';
     const currentAway = awayScore || '';
+    const currentCardsOU = cardsOverUnder || '';
 
     if (!pred) {
-      return currentWinner !== '' || currentOU !== '' || currentHome !== '' || currentAway !== '';
+      return currentWinner !== '' || currentOU !== '' || currentHome !== '' || currentAway !== '' || currentCardsOU !== '';
     }
 
     const matchWinner = currentWinner === (pred.predicted_winner || '');
     const matchOU = currentOU === (pred.predicted_over_under || '');
     const matchHome = currentHome === (pred.predicted_home_score !== null ? pred.predicted_home_score.toString() : '');
     const matchAway = currentAway === (pred.predicted_away_score !== null ? pred.predicted_away_score.toString() : '');
+    const matchCards = currentCardsOU === (pred.predicted_cards_over_under || '');
 
-    return !(matchWinner && matchOU && matchHome && matchAway);
+    return !(matchWinner && matchOU && matchHome && matchAway && matchCards);
   })();
 
   const handleSave = async (e) => {
@@ -88,6 +93,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
     }
     if (!overUnder) {
       setError('Select O/U Goals.');
+      return;
+    }
+    if (!cardsOverUnder) {
+      setError('Select O/U Cards.');
       return;
     }
     if (homeScore === '' || awayScore === '') {
@@ -129,6 +138,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           predictedOverUnder: overUnder,
           predictedHomeScore: hScore,
           predictedAwayScore: aScore,
+          predictedCardsOverUnder: cardsOverUnder,
         }),
       });
 
@@ -297,7 +307,11 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                     </span>
                     {` | `}
                     <span style={{ color: 'var(--warning)', fontWeight: '700' }}>
-                      {pred.predicted_over_under.toUpperCase()} {m.over_under_line}
+                      {pred.predicted_over_under.toUpperCase()} {m.over_under_line} Goals
+                    </span>
+                    {` | `}
+                    <span style={{ color: 'var(--success)', fontWeight: '700' }}>
+                      {(pred.predicted_cards_over_under || 'under').toUpperCase()} {m.cards_line || 3.5} Cards
                     </span>
                     {` | Score: `}
                     <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
@@ -310,6 +324,8 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       <span style={{ color: pred.points_winner ? 'var(--success)' : 'var(--text-muted)' }}>W</span>
                       <span className={`p-point-dot ${pred.points_ou ? 'earned' : ''}`}></span>
                       <span style={{ color: pred.points_ou ? 'var(--success)' : 'var(--text-muted)' }}>O/U</span>
+                      <span className={`p-point-dot ${pred.points_cards_ou ? 'earned' : ''}`}></span>
+                      <span style={{ color: pred.points_cards_ou ? 'var(--success)' : 'var(--text-muted)' }}>C</span>
                       <span className={`p-point-dot ${pred.points_score ? 'earned' : ''}`}></span>
                       <span style={{ color: pred.points_score ? 'var(--success)' : 'var(--text-muted)' }}>S</span>
                       <span style={{ marginLeft: '6px', color: 'var(--primary-hover)', fontWeight: '700' }}>
@@ -382,6 +398,29 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       disabled={saving}
                     >
                       Under {m.over_under_line}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cards Over/Under Select */}
+                <div className="prediction-col">
+                  <label>Total Cards (1 pt)</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${cardsOverUnder === 'over' ? 'active' : ''}`}
+                      onClick={() => setCardsOverUnder('over')}
+                      disabled={saving}
+                    >
+                      Over {m.cards_line || 3.5}
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${cardsOverUnder === 'under' ? 'active' : ''}`}
+                      onClick={() => setCardsOverUnder('under')}
+                      disabled={saving}
+                    >
+                      Under {m.cards_line || 3.5}
                     </button>
                   </div>
                 </div>

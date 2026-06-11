@@ -24,6 +24,10 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
   const [ouLine, setOuLine] = useState(2.5);
   const [overOdds, setOverOdds] = useState(1.9);
   const [underOdds, setUnderOdds] = useState(1.9);
+  const [cardsLine, setCardsLine] = useState(3.5);
+  const [actualCards, setActualCards] = useState('');
+  const [cardsOverOdds, setCardsOverOdds] = useState(1.9);
+  const [cardsUnderOdds, setCardsUnderOdds] = useState(1.9);
 
   const [matchError, setMatchError] = useState('');
   const [matchSuccess, setMatchSuccess] = useState('');
@@ -72,6 +76,10 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
       setOuLine(m.over_under_line);
       setOverOdds(m.over_odds);
       setUnderOdds(m.under_odds);
+      setCardsLine(m.cards_line || 3.5);
+      setActualCards(m.actual_cards !== null ? m.actual_cards.toString() : '');
+      setCardsOverOdds(m.cards_over_odds || 1.9);
+      setCardsUnderOdds(m.cards_under_odds || 1.9);
       setMatchError('');
       setMatchSuccess('');
     }
@@ -157,7 +165,11 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
           drawWinPct: drawPct,
           overUnderLine: ouLine,
           overOdds,
-          underOdds
+          underOdds,
+          cardsLine,
+          actualCards,
+          cardsOverOdds,
+          cardsUnderOdds
         })
       });
 
@@ -326,8 +338,8 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
             {selectedMatchId && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
                 
-                {/* Score inputs */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* Score & Cards inputs */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
                   <div className="admin-input-group">
                     <label>Home Score</label>
                     <input
@@ -346,6 +358,17 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
                       className="admin-text-input"
                       value={awayScore}
                       onChange={(e) => setAwayScore(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="admin-input-group">
+                    <label>Actual Cards</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="admin-text-input"
+                      placeholder="e.g. 4"
+                      value={actualCards}
+                      onChange={(e) => setActualCards(e.target.value)}
                     />
                   </div>
                 </div>
@@ -420,7 +443,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
                 {/* Over/Under Line */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                   <div className="admin-input-group">
-                    <label>O/U Target</label>
+                    <label>O/U Goals Target</label>
                     <input
                       type="number"
                       step="0.5"
@@ -430,7 +453,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
                     />
                   </div>
                   <div className="admin-input-group">
-                    <label>Over Odds</label>
+                    <label>Goals Over Odds</label>
                     <input
                       type="number"
                       step="0.01"
@@ -440,13 +463,47 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
                     />
                   </div>
                   <div className="admin-input-group">
-                    <label>Under Odds</label>
+                    <label>Goals Under Odds</label>
                     <input
                       type="number"
                       step="0.01"
                       className="admin-text-input"
                       value={underOdds}
                       onChange={(e) => setUnderOdds(parseFloat(e.target.value) || 1.9)}
+                    />
+                  </div>
+                </div>
+
+                {/* Cards Over/Under Line */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                  <div className="admin-input-group">
+                    <label>Cards O/U Target</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      className="admin-text-input"
+                      value={cardsLine}
+                      onChange={(e) => setCardsLine(parseFloat(e.target.value) || 3.5)}
+                    />
+                  </div>
+                  <div className="admin-input-group">
+                    <label>Cards Over Odds</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="admin-text-input"
+                      value={cardsOverOdds}
+                      onChange={(e) => setCardsOverOdds(parseFloat(e.target.value) || 1.9)}
+                    />
+                  </div>
+                  <div className="admin-input-group">
+                    <label>Cards Under Odds</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="admin-text-input"
+                      value={cardsUnderOdds}
+                      onChange={(e) => setCardsUnderOdds(parseFloat(e.target.value) || 1.9)}
                     />
                   </div>
                 </div>

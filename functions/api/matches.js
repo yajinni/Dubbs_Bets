@@ -57,7 +57,11 @@ export async function onRequest(context) {
         drawWinPct,
         overUnderLine,
         overOdds,
-        underOdds
+        underOdds,
+        cardsLine,
+        actualCards,
+        cardsOverOdds,
+        cardsUnderOdds
       } = body;
 
       // Validate Admin Password
@@ -82,6 +86,10 @@ export async function onRequest(context) {
       const ouLine = overUnderLine !== undefined ? parseFloat(overUnderLine) : 2.5;
       const oOdds = overOdds !== undefined ? parseFloat(overOdds) : 1.9;
       const uOdds = underOdds !== undefined ? parseFloat(underOdds) : 1.9;
+      const cLine = cardsLine !== undefined ? parseFloat(cardsLine) : 3.5;
+      const actCards = (actualCards !== undefined && actualCards !== '') ? parseInt(actualCards) : null;
+      const cOverOdds = cardsOverOdds !== undefined ? parseFloat(cardsOverOdds) : 1.9;
+      const cUnderOdds = cardsUnderOdds !== undefined ? parseFloat(cardsUnderOdds) : 1.9;
 
       const updateQuery = `
         UPDATE matches 
@@ -95,17 +103,21 @@ export async function onRequest(context) {
           draw_pct = ?,
           over_under_line = ?,
           over_odds = ?,
-          under_odds = ?
+          under_odds = ?,
+          cards_line = ?,
+          actual_cards = ?,
+          cards_over_odds = ?,
+          cards_under_odds = ?
         WHERE id = ?
       `;
 
       await env.db.prepare(updateQuery)
-        .bind(hScore, aScore, status || 'scheduled', finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, matchId)
+        .bind(hScore, aScore, status || 'scheduled', finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, cOverOdds, cUnderOdds, matchId)
         .run();
 
       // If finished, we want to recalculate predictions/points for this match
       if (finishedVal === 1) {
-        await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine);
+        await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards);
       }
 
       const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
@@ -119,7 +131,7 @@ export async function onRequest(context) {
 }
 
 // Recalculates and stores point awards for a completed match
-async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ouLine) {
+async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards) {
   // Determine winner: 'home', 'away', or 'draw'
   let winner = 'draw';
   if (homeScore > awayScore) winner = 'home';
@@ -129,6 +141,11 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
   const totalGoals = homeScore + awayScore;
   const ouResult = totalGoals > ouLine ? 'over' : 'under';
 
+  let cardsResult = null;
+  if (actualCards !== null && cardsLine !== null) {
+    cardsResult = actualCards > cardsLine ? 'over' : 'under';
+  }
+
   // Get all predictions for this match
   const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
 
@@ -136,7 +153,13 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
     const pWinner = pred.predicted_winner === winner ? 1 : 0;
     const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
     const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
-    const totalPoints = pWinner + pOu + (pScore * 3);
+    
+    let pCards = 0;
+    if (cardsResult !== null && pred.predicted_cards_over_under === cardsResult) {
+      pCards = 1;
+    }
+
+    const totalPoints = pWinner + pOu + pCards + (pScore * 3);
 
     await db.prepare(`
       UPDATE predictions 
@@ -144,8 +167,9 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
         points_winner = ?,
         points_ou = ?,
         points_score = ?,
+        points_cards_ou = ?,
         total_points = ?
       WHERE participant_id = ? AND match_id = ?
-    `).bind(pWinner, pOu, pScore, totalPoints, pred.participant_id, matchId).run();
+    `).bind(pWinner, pOu, pScore, pCards, totalPoints, pred.participant_id, matchId).run();
   }
 }

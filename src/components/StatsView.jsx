@@ -16,11 +16,13 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     // Count correct answers
     const correctWinners = pPreds.filter(pred => pred.points_winner > 0).length;
     const correctOu = pPreds.filter(pred => pred.points_ou > 0).length;
+    const correctCards = pPreds.filter(pred => pred.points_cards_ou > 0).length;
     const correctScores = pPreds.filter(pred => pred.points_score > 0).length;
 
     // Accuracy percentages
     const winnerPct = totalFinishedPreds > 0 ? Math.round((correctWinners / totalFinishedPreds) * 100) : 0;
     const ouPct = totalFinishedPreds > 0 ? Math.round((correctOu / totalFinishedPreds) * 100) : 0;
+    const cardsPct = totalFinishedPreds > 0 ? Math.round((correctCards / totalFinishedPreds) * 100) : 0;
     const scorePct = totalFinishedPreds > 0 ? Math.round((correctScores / totalFinishedPreds) * 100) : 0;
 
     return {
@@ -29,9 +31,11 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       totalFinishedPreds,
       correctWinners,
       correctOu,
+      correctCards,
       correctScores,
       winnerPct,
       ouPct,
+      cardsPct,
       scorePct,
       totalPoints: p.total_points
     };
@@ -42,12 +46,14 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   
   let topWinner = null;
   let topOu = null;
+  let topCards = null;
   let topScore = null;
 
   if (hasFinishedPreds) {
     // Sort and get max
     topWinner = [...stats].sort((a, b) => b.winnerPct - a.winnerPct || b.correctWinners - a.correctWinners)[0];
     topOu = [...stats].sort((a, b) => b.ouPct - a.ouPct || b.correctOu - a.correctOu)[0];
+    topCards = [...stats].sort((a, b) => b.cardsPct - a.cardsPct || b.correctCards - a.correctCards)[0];
     topScore = [...stats].sort((a, b) => b.scorePct - a.scorePct || b.correctScores - a.correctScores)[0];
   }
 
@@ -84,6 +90,19 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             </div>
           </div>
 
+          <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #3b82f6' }}>
+            <div style={{ background: 'rgba(59, 130, 246, 0.15)', padding: '12px', borderRadius: '12px' }}>
+              <TrendingUp size={24} color="#3b82f6" />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Card Prop Wizard 🎴</h4>
+              <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topCards?.name}</span>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                {topCards?.cardsPct}% Accuracy ({topCards?.correctCards}/{topCards?.totalFinishedPreds})
+              </p>
+            </div>
+          </div>
+
           <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #eab308' }}>
             <div style={{ background: 'rgba(234, 179, 8, 0.15)', padding: '12px', borderRadius: '12px' }}>
               <Target size={24} color="#eab308" />
@@ -112,7 +131,8 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center' }}>Completed Bets</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Winner Accuracy</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under Accuracy</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under Goals</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards O/U Accuracy</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Score Accuracy</th>
             </tr>
           </thead>
@@ -148,6 +168,19 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.ouPct}%`, height: '100%', background: 'linear-gradient(90deg, #22c55e, #4ade80)', borderRadius: '3px' }}></div>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Cards Over Under Stat */}
+                <td style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.cardsPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctCards}/{row.totalFinishedPreds}</span>
+                    </div>
+                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${row.cardsPct}%`, height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
