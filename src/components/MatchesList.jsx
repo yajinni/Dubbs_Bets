@@ -420,7 +420,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                     <div key={op.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.01)', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--glass-border)' }}>
                       <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>{op.name}</span>
                       {opPred ? (
-                        isLocked ? (
+                        (isLocked || m.id === 999) ? (
                           <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '600' }}>
                             {opPred.predicted_winner === 'home' ? m.home_code || 'H' : opPred.predicted_winner === 'away' ? m.away_code || 'A' : 'D'}
                             {` | `}
