@@ -1002,6 +1002,10 @@ h1, h2, h3, h4, h5, h6 {
   align-items: flex-end;
 }
 
+.prediction-col.action {
+  grid-column: span 2;
+}
+
 /* Mobile responsive prediction grid */
 @media (max-width: 600px) {
   .inline-prediction-grid {

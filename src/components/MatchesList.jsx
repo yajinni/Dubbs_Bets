@@ -589,7 +589,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                 </div>
 
                 {/* Save button */}
-                <div className="prediction-col action" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', width: '100%', gridColumn: 'span 2' }}>
+                <div className="prediction-col action" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', width: '100%' }}>
                   <button
                     type="button"
                     className="btn-primary"
