@@ -61,7 +61,8 @@ export async function onRequest(context) {
         cardsLine,
         actualCards,
         cardsOverOdds,
-        cardsUnderOdds
+        cardsUnderOdds,
+        actualFirstScorer
       } = body;
 
       // Validate Admin Password
@@ -90,6 +91,7 @@ export async function onRequest(context) {
       const actCards = (actualCards !== undefined && actualCards !== '') ? parseInt(actualCards) : null;
       const cOverOdds = cardsOverOdds !== undefined ? parseFloat(cardsOverOdds) : 1.9;
       const cUnderOdds = cardsUnderOdds !== undefined ? parseFloat(cardsUnderOdds) : 1.9;
+      const actFirstScorer = actualFirstScorer || null;
 
       const updateQuery = `
         UPDATE matches 
@@ -107,17 +109,18 @@ export async function onRequest(context) {
           cards_line = ?,
           actual_cards = ?,
           cards_over_odds = ?,
-          cards_under_odds = ?
+          cards_under_odds = ?,
+          actual_first_scorer = ?
         WHERE id = ?
       `;
 
       await env.db.prepare(updateQuery)
-        .bind(hScore, aScore, status || 'scheduled', finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, cOverOdds, cUnderOdds, matchId)
+        .bind(hScore, aScore, status || 'scheduled', finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, cOverOdds, cUnderOdds, actFirstScorer, matchId)
         .run();
 
       // If finished, we want to recalculate predictions/points for this match
       if (finishedVal === 1) {
-        await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards);
+        await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards, actFirstScorer);
       }
 
       const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
@@ -131,7 +134,7 @@ export async function onRequest(context) {
 }
 
 // Recalculates and stores point awards for a completed match
-async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards) {
+async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer) {
   // Determine winner: 'home', 'away', or 'draw'
   let winner = 'draw';
   if (homeScore > awayScore) winner = 'home';
@@ -159,7 +162,17 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
       pCards = 1;
     }
 
-    const totalPoints = pWinner + pOu + pCards + (pScore * 3);
+    let pTotalCardsEarned = 0;
+    if (actualCards !== null && pred.predicted_total_cards !== null) {
+      pTotalCardsEarned = pred.predicted_total_cards === actualCards ? 2 : 0;
+    }
+
+    let pFirstScorerEarned = 0;
+    if (actualFirstScorer !== null && pred.predicted_first_scorer !== null) {
+      pFirstScorerEarned = pred.predicted_first_scorer === actualFirstScorer ? 1 : 0;
+    }
+
+    const totalPoints = pWinner + pOu + pCards + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3);
 
     await db.prepare(`
       UPDATE predictions 
@@ -168,8 +181,10 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
         points_ou = ?,
         points_score = ?,
         points_cards_ou = ?,
+        points_total_cards = ?,
+        points_first_scorer = ?,
         total_points = ?
       WHERE participant_id = ? AND match_id = ?
-    `).bind(pWinner, pOu, pScore, pCards, totalPoints, pred.participant_id, matchId).run();
+    `).bind(pWinner, pOu, pScore, pCards, pTotalCardsEarned, pFirstScorerEarned, totalPoints, pred.participant_id, matchId).run();
   }
 }

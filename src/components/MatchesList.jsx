@@ -35,6 +35,8 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
   const [cardsOverUnder, setCardsOverUnder] = useState('');
+  const [totalCards, setTotalCards] = useState('');
+  const [firstScorer, setFirstScorer] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -50,12 +52,16 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       setHomeScore(pred.predicted_home_score !== null ? pred.predicted_home_score.toString() : '');
       setAwayScore(pred.predicted_away_score !== null ? pred.predicted_away_score.toString() : '');
       setCardsOverUnder(pred.predicted_cards_over_under || '');
+      setTotalCards(pred.predicted_total_cards !== null ? pred.predicted_total_cards.toString() : '');
+      setFirstScorer(pred.predicted_first_scorer || '');
     } else {
       setWinner('');
       setOverUnder('');
       setHomeScore('');
       setAwayScore('');
       setCardsOverUnder('');
+      setTotalCards('');
+      setFirstScorer('');
     }
     setError('');
     setSuccessMsg('');
@@ -68,9 +74,11 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
     const currentHome = homeScore || '';
     const currentAway = awayScore || '';
     const currentCardsOU = cardsOverUnder || '';
+    const currentTotalCards = totalCards || '';
+    const currentFirstScorer = firstScorer || '';
 
     if (!pred) {
-      return currentWinner !== '' || currentOU !== '' || currentHome !== '' || currentAway !== '' || currentCardsOU !== '';
+      return currentWinner !== '' || currentOU !== '' || currentHome !== '' || currentAway !== '' || currentCardsOU !== '' || currentTotalCards !== '' || currentFirstScorer !== '';
     }
 
     const matchWinner = currentWinner === (pred.predicted_winner || '');
@@ -78,8 +86,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
     const matchHome = currentHome === (pred.predicted_home_score !== null ? pred.predicted_home_score.toString() : '');
     const matchAway = currentAway === (pred.predicted_away_score !== null ? pred.predicted_away_score.toString() : '');
     const matchCards = currentCardsOU === (pred.predicted_cards_over_under || '');
+    const matchTotalCards = currentTotalCards === (pred.predicted_total_cards !== null ? pred.predicted_total_cards.toString() : '');
+    const matchFirstScorer = currentFirstScorer === (pred.predicted_first_scorer || '');
 
-    return !(matchWinner && matchOU && matchHome && matchAway && matchCards);
+    return !(matchWinner && matchOU && matchHome && matchAway && matchCards && matchTotalCards && matchFirstScorer);
   })();
 
   const handleSave = async (e) => {
@@ -99,16 +109,29 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       setError('Select O/U Cards.');
       return;
     }
+    if (!firstScorer) {
+      setError('Select First Scorer.');
+      return;
+    }
     if (homeScore === '' || awayScore === '') {
       setError('Enter both scores.');
+      return;
+    }
+    if (totalCards === '') {
+      setError('Enter exact cards.');
       return;
     }
 
     const hScore = parseInt(homeScore);
     const aScore = parseInt(awayScore);
+    const tCards = parseInt(totalCards);
 
     if (isNaN(hScore) || isNaN(aScore) || hScore < 0 || aScore < 0) {
-      setError('Positive numbers only.');
+      setError('Positive numbers only for scores.');
+      return;
+    }
+    if (isNaN(tCards) || tCards < 0) {
+      setError('Positive numbers only for cards.');
       return;
     }
 
@@ -126,6 +149,20 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       return;
     }
 
+    // First scorer validation
+    if (firstScorer === 'none' && (hScore > 0 || aScore > 0)) {
+      setError('Cannot choose "No Goal" if predicted score is not 0-0.');
+      return;
+    }
+    if (firstScorer === 'home' && hScore === 0) {
+      setError(`${homeName} must score at least 1 goal.`);
+      return;
+    }
+    if (firstScorer === 'away' && aScore === 0) {
+      setError(`${awayName} must score at least 1 goal.`);
+      return;
+    }
+
     setSaving(true);
     try {
       const response = await fetch('/api/predictions', {
@@ -139,6 +176,8 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           predictedHomeScore: hScore,
           predictedAwayScore: aScore,
           predictedCardsOverUnder: cardsOverUnder,
+          predictedTotalCards: tCards,
+          predictedFirstScorer: firstScorer
         }),
       });
 
@@ -317,6 +356,14 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                     <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
                       {pred.predicted_home_score}-{pred.predicted_away_score}
                     </span>
+                    {` | First Scorer: `}
+                    <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>
+                      {pred.predicted_first_scorer === 'home' ? homeName : pred.predicted_first_scorer === 'away' ? awayName : 'No Goal'}
+                    </span>
+                    {` | Total Cards: `}
+                    <span style={{ color: 'var(--secondary-hover)', fontWeight: '700' }}>
+                      {pred.predicted_total_cards}
+                    </span>
                   </span>
                   {m.finished === 1 && (
                     <div className="prediction-badge-display" style={{ justifyContent: 'flex-end', marginTop: '6px' }}>
@@ -326,6 +373,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       <span style={{ color: pred.points_ou ? 'var(--success)' : 'var(--text-muted)' }}>O/U</span>
                       <span className={`p-point-dot ${pred.points_cards_ou ? 'earned' : ''}`}></span>
                       <span style={{ color: pred.points_cards_ou ? 'var(--success)' : 'var(--text-muted)' }}>C</span>
+                      <span className={`p-point-dot ${pred.points_first_scorer ? 'earned' : ''}`}></span>
+                      <span style={{ color: pred.points_first_scorer ? 'var(--success)' : 'var(--text-muted)' }}>FS</span>
+                      <span className={`p-point-dot ${pred.points_total_cards ? 'earned' : ''}`}></span>
+                      <span style={{ color: pred.points_total_cards ? 'var(--success)' : 'var(--text-muted)' }}>TC</span>
                       <span className={`p-point-dot ${pred.points_score ? 'earned' : ''}`}></span>
                       <span style={{ color: pred.points_score ? 'var(--success)' : 'var(--text-muted)' }}>S</span>
                       <span style={{ marginLeft: '6px', color: 'var(--primary-hover)', fontWeight: '700' }}>
@@ -404,7 +455,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
                 {/* Cards Over/Under Select */}
                 <div className="prediction-col">
-                  <label>Total Cards (1 pt)</label>
+                  <label>Cards O/U (1 pt)</label>
                   <div className="inline-choice-group">
                     <button
                       type="button"
@@ -421,6 +472,37 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       disabled={saving}
                     >
                       Under {m.cards_line || 3.5}
+                    </button>
+                  </div>
+                </div>
+
+                {/* First Team to Score Select */}
+                <div className="prediction-col">
+                  <label>First Scorer (1 pt)</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${firstScorer === 'home' ? 'active' : ''}`}
+                      onClick={() => setFirstScorer('home')}
+                      disabled={saving}
+                    >
+                      {homeName}
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${firstScorer === 'none' ? 'active' : ''}`}
+                      onClick={() => setFirstScorer('none')}
+                      disabled={saving}
+                    >
+                      No Goal
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${firstScorer === 'away' ? 'active' : ''}`}
+                      onClick={() => setFirstScorer('away')}
+                      disabled={saving}
+                    >
+                      {awayName}
                     </button>
                   </div>
                 </div>
@@ -453,8 +535,26 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                   </div>
                 </div>
 
+                {/* Total Cards exact input */}
+                <div className="prediction-col">
+                  <label>Total Cards (2 pts)</label>
+                  <div className="inline-score-inputs" style={{ justifyContent: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={totalCards}
+                      onChange={(e) => setTotalCards(e.target.value)}
+                      placeholder="Cards"
+                      aria-label="Exact cards prediction"
+                      disabled={saving}
+                      style={{ width: '70px', textAlign: 'center' }}
+                    />
+                  </div>
+                </div>
+
                 {/* Save button */}
-                <div className="prediction-col action" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', width: '100%' }}>
+                <div className="prediction-col action" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', width: '100%', gridColumn: 'span 2' }}>
                   <button
                     type="button"
                     className="btn-primary"

@@ -18,12 +18,16 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     const correctOu = pPreds.filter(pred => pred.points_ou > 0).length;
     const correctCards = pPreds.filter(pred => pred.points_cards_ou > 0).length;
     const correctScores = pPreds.filter(pred => pred.points_score > 0).length;
+    const correctFirstScorers = pPreds.filter(pred => pred.points_first_scorer > 0).length;
+    const correctExactCards = pPreds.filter(pred => pred.points_total_cards > 0).length;
 
     // Accuracy percentages
     const winnerPct = totalFinishedPreds > 0 ? Math.round((correctWinners / totalFinishedPreds) * 100) : 0;
     const ouPct = totalFinishedPreds > 0 ? Math.round((correctOu / totalFinishedPreds) * 100) : 0;
     const cardsPct = totalFinishedPreds > 0 ? Math.round((correctCards / totalFinishedPreds) * 100) : 0;
     const scorePct = totalFinishedPreds > 0 ? Math.round((correctScores / totalFinishedPreds) * 100) : 0;
+    const firstScorerPct = totalFinishedPreds > 0 ? Math.round((correctFirstScorers / totalFinishedPreds) * 100) : 0;
+    const exactCardsPct = totalFinishedPreds > 0 ? Math.round((correctExactCards / totalFinishedPreds) * 100) : 0;
 
     return {
       id: p.id,
@@ -33,10 +37,14 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       correctOu,
       correctCards,
       correctScores,
+      correctFirstScorers,
+      correctExactCards,
       winnerPct,
       ouPct,
       cardsPct,
       scorePct,
+      firstScorerPct,
+      exactCardsPct,
       totalPoints: p.total_points
     };
   });
@@ -48,6 +56,8 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   let topOu = null;
   let topCards = null;
   let topScore = null;
+  let topFirstScorer = null;
+  let topExactCards = null;
 
   if (hasFinishedPreds) {
     // Sort and get max
@@ -55,6 +65,8 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     topOu = [...stats].sort((a, b) => b.ouPct - a.ouPct || b.correctOu - a.correctOu)[0];
     topCards = [...stats].sort((a, b) => b.cardsPct - a.cardsPct || b.correctCards - a.correctCards)[0];
     topScore = [...stats].sort((a, b) => b.scorePct - a.scorePct || b.correctScores - a.correctScores)[0];
+    topFirstScorer = [...stats].sort((a, b) => b.firstScorerPct - a.firstScorerPct || b.correctFirstScorers - a.correctFirstScorers)[0];
+    topExactCards = [...stats].sort((a, b) => b.exactCardsPct - a.exactCardsPct || b.correctExactCards - a.correctExactCards)[0];
   }
 
   return (
@@ -133,7 +145,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Winner Accuracy</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under Goals</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards O/U Accuracy</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>First Scorer Accuracy</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Score Accuracy</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Cards Accuracy</th>
             </tr>
           </thead>
           <tbody>
@@ -185,6 +199,19 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                   </div>
                 </td>
 
+                {/* First Scorer Stat */}
+                <td style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.firstScorerPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctFirstScorers}/{row.totalFinishedPreds}</span>
+                    </div>
+                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${row.firstScorerPct}%`, height: '100%', background: 'linear-gradient(90deg, #ec4899, #f472b6)', borderRadius: '3px' }}></div>
+                    </div>
+                  </div>
+                </td>
+
                 {/* Exact Score Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -194,6 +221,19 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.scorePct}%`, height: '100%', background: 'linear-gradient(90deg, #eab308, #fde047)', borderRadius: '3px' }}></div>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Exact Cards Stat */}
+                <td style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.exactCardsPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctExactCards}/{row.totalFinishedPreds}</span>
+                    </div>
+                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${row.exactCardsPct}%`, height: '100%', background: 'linear-gradient(90deg, #06b6d4, #67e8f9)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>

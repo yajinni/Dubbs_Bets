@@ -329,6 +329,15 @@ async function runMockSync(db) {
         homeScore = Math.floor(Math.random() * awayScore);
       }
 
+      let actualFirstScorer = 'none';
+      if (homeScore > 0 && awayScore > 0) {
+        actualFirstScorer = Math.random() < 0.5 ? 'home' : 'away';
+      } else if (homeScore > 0) {
+        actualFirstScorer = 'home';
+      } else if (awayScore > 0) {
+        actualFirstScorer = 'away';
+      }
+
       const actualCards = Math.floor(Math.random() * 5) + 1; // 1-5 cards
       await db.prepare(`
         UPDATE matches 
@@ -337,11 +346,12 @@ async function runMockSync(db) {
           away_score = ?,
           status = 'finished',
           finished = 1,
-          actual_cards = ?
+          actual_cards = ?,
+          actual_first_scorer = ?
         WHERE id = ?
-      `).bind(homeScore, awayScore, actualCards, m.id).run();
+      `).bind(homeScore, awayScore, actualCards, actualFirstScorer, m.id).run();
 
-      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards);
+      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards, actualFirstScorer);
       matchesUpdated++;
     }
 
@@ -370,7 +380,7 @@ async function runMockSync(db) {
 // --------------------------------------------------------
 // Prediction Point Distribution
 // --------------------------------------------------------
-async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards) {
+async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer) {
   let winner = 'draw';
   if (homeScore > awayScore) winner = 'home';
   else if (awayScore > homeScore) winner = 'away';
@@ -395,7 +405,17 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
       pCards = 1;
     }
 
-    const totalPoints = pWinner + pOu + pCards + (pScore * 3);
+    let pTotalCardsEarned = 0;
+    if (actualCards !== null && pred.predicted_total_cards !== null) {
+      pTotalCardsEarned = pred.predicted_total_cards === actualCards ? 2 : 0;
+    }
+
+    let pFirstScorerEarned = 0;
+    if (actualFirstScorer !== null && pred.predicted_first_scorer !== null) {
+      pFirstScorerEarned = pred.predicted_first_scorer === actualFirstScorer ? 1 : 0;
+    }
+
+    const totalPoints = pWinner + pOu + pCards + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3);
 
     await db.prepare(`
       UPDATE predictions 
@@ -404,9 +424,11 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
         points_ou = ?,
         points_score = ?,
         points_cards_ou = ?,
+        points_total_cards = ?,
+        points_first_scorer = ?,
         total_points = ?
       WHERE participant_id = ? AND match_id = ?
-    `).bind(pWinner, pOu, pScore, pCards, totalPoints, pred.participant_id, matchId).run();
+    `).bind(pWinner, pOu, pScore, pCards, pTotalCardsEarned, pFirstScorerEarned, totalPoints, pred.participant_id, matchId).run();
   }
 }
 

@@ -28,6 +28,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
   const [actualCards, setActualCards] = useState('');
   const [cardsOverOdds, setCardsOverOdds] = useState(1.9);
   const [cardsUnderOdds, setCardsUnderOdds] = useState(1.9);
+  const [actualFirstScorer, setActualFirstScorer] = useState('none');
 
   const [matchError, setMatchError] = useState('');
   const [matchSuccess, setMatchSuccess] = useState('');
@@ -80,6 +81,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
       setActualCards(m.actual_cards !== null ? m.actual_cards.toString() : '');
       setCardsOverOdds(m.cards_over_odds || 1.9);
       setCardsUnderOdds(m.cards_under_odds || 1.9);
+      setActualFirstScorer(m.actual_first_scorer || 'none');
       setMatchError('');
       setMatchSuccess('');
     }
@@ -169,7 +171,8 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
           cardsLine,
           actualCards,
           cardsOverOdds,
-          cardsUnderOdds
+          cardsUnderOdds,
+          actualFirstScorer
         })
       });
 
@@ -339,7 +342,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
                 
                 {/* Score & Cards inputs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                   <div className="admin-input-group">
                     <label>Home Score</label>
                     <input
@@ -370,6 +373,18 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
                       value={actualCards}
                       onChange={(e) => setActualCards(e.target.value)}
                     />
+                  </div>
+                  <div className="admin-input-group">
+                    <label>First Scorer</label>
+                    <select
+                      className="admin-select"
+                      value={actualFirstScorer}
+                      onChange={(e) => setActualFirstScorer(e.target.value)}
+                    >
+                      <option value="none">No Goal (None)</option>
+                      <option value="home">Home Team</option>
+                      <option value="away">Away Team</option>
+                    </select>
                   </div>
                 </div>
 

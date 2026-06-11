@@ -142,7 +142,9 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Winner Pick</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under ({m.over_under_line})</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards O/U ({m.cards_line || 3.5})</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>First Scorer</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Score</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Total Cards</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'right' }}>Points</th>
                       </tr>
                     </thead>
@@ -165,8 +167,14 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                         const hasCardsPred = pred && pred.predicted_cards_over_under;
                         const isCardsCorrect = m.finished === 1 && hasCardsPred && pred.predicted_cards_over_under === actualCardsOU;
 
+                        const hasFirstScorerPred = pred && pred.predicted_first_scorer;
+                        const isFirstScorerCorrect = m.finished === 1 && hasFirstScorerPred && pred.predicted_first_scorer === m.actual_first_scorer;
+
                         const hasScorePred = pred && pred.predicted_home_score !== null && pred.predicted_away_score !== null;
                         const isScoreCorrect = m.finished === 1 && hasScorePred && pred.predicted_home_score === m.home_score && pred.predicted_away_score === m.away_score;
+
+                        const hasTotalCardsPred = pred && pred.predicted_total_cards !== null;
+                        const isTotalCardsCorrect = m.finished === 1 && hasTotalCardsPred && pred.predicted_total_cards === m.actual_cards;
 
                         return (
                           <tr 
@@ -222,7 +230,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                               )}
                             </td>
 
-                            {/* Cards Prediction */}
+                            {/* Cards O/U Prediction */}
                             <td style={{ padding: '12px', fontSize: '13px' }}>
                               {hasCardsPred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -231,6 +239,26 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   </span>
                                   {m.finished === 1 && (
                                     isCardsCorrect ? (
+                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
+                                    ) : (
+                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
+                              )}
+                            </td>
+
+                            {/* First Scorer Prediction */}
+                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                              {hasFirstScorerPred ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontWeight: '600', color: 'var(--primary-hover)' }}>
+                                    {pred.predicted_first_scorer === 'home' ? homeName : pred.predicted_first_scorer === 'away' ? awayName : 'No Goal'}
+                                  </span>
+                                  {m.finished === 1 && (
+                                    isFirstScorerCorrect ? (
                                       <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
                                     ) : (
                                       <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
@@ -251,6 +279,26 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   </span>
                                   {m.finished === 1 && (
                                     isScoreCorrect ? (
+                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
+                                    ) : (
+                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
+                              )}
+                            </td>
+
+                            {/* Exact Cards Prediction */}
+                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                              {hasTotalCardsPred ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontWeight: '600', color: 'var(--secondary-hover)' }}>
+                                    {pred.predicted_total_cards} cards
+                                  </span>
+                                  {m.finished === 1 && (
+                                    isTotalCardsCorrect ? (
                                       <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
                                     ) : (
                                       <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
