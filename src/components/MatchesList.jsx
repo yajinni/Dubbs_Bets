@@ -16,6 +16,15 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const overPct = sumOU > 0 ? Math.round((pOver / sumOU) * 100) : 50;
   const underPct = 100 - overPct;
 
+  // Calculate implied Cards Over/Under probabilities
+  const cardsOverOdds = m.cards_over_odds || 1.9;
+  const cardsUnderOdds = m.cards_under_odds || 1.9;
+  const pCardsOver = cardsOverOdds > 0 ? 1.0 / cardsOverOdds : 0.5;
+  const pCardsUnder = cardsUnderOdds > 0 ? 1.0 / cardsUnderOdds : 0.5;
+  const sumCardsOU = pCardsOver + pCardsUnder;
+  const cardsOverPct = sumCardsOU > 0 ? Math.round((pCardsOver / sumCardsOU) * 100) : 50;
+  const cardsUnderPct = 100 - cardsOverPct;
+
   // Calculate implied First Team to Score Probability
   const homeWinPct = m.home_win_pct || 33.3;
   const awayWinPct = m.away_win_pct || 33.3;
@@ -284,7 +293,11 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           3rd Party Match Analysis
         </div>
         <div className="analytics-grid">
+          {/* Winner Probability */}
           <div className="analytics-item">
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
+              Match Winner (%)
+            </div>
             <div className="analytics-labels">
               <span>{homeName}: {m.home_win_pct}%</span>
               <span>{awayName}: {m.away_win_pct}%</span>
@@ -298,18 +311,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <span>Draw: {m.draw_pct}%</span>
             </div>
           </div>
+
+          {/* First Team to Score Probability */}
           <div className="analytics-item">
-            <div className="analytics-labels">
-              <span>Under {m.over_under_line}: {underPct}%</span>
-              <span>Over {m.over_under_line}: {overPct}%</span>
-            </div>
-            <div className="ou-pct-bar">
-              <div className="ou-pct-segment under" style={{ width: `${underPct}%` }}></div>
-              <div className="ou-pct-segment over" style={{ width: `${overPct}%` }}></div>
-            </div>
-          </div>
-          <div className="analytics-item" style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
               First Team to Score (%)
             </div>
             <div className="analytics-labels">
@@ -323,6 +328,36 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>
               <span>No Goal: {noGoalPct}%</span>
+            </div>
+          </div>
+
+          {/* Goals Over/Under Probability */}
+          <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
+              Goals Over / Under ({m.over_under_line})
+            </div>
+            <div className="analytics-labels">
+              <span>Under {m.over_under_line}: {underPct}%</span>
+              <span>Over {m.over_under_line}: {overPct}%</span>
+            </div>
+            <div className="ou-pct-bar">
+              <div className="ou-pct-segment under" style={{ width: `${underPct}%` }}></div>
+              <div className="ou-pct-segment over" style={{ width: `${overPct}%` }}></div>
+            </div>
+          </div>
+
+          {/* Cards Over/Under Probability */}
+          <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
+              Cards Over / Under ({m.cards_line || 3.5})
+            </div>
+            <div className="analytics-labels">
+              <span>Under {m.cards_line || 3.5}: {cardsUnderPct}%</span>
+              <span>Over {m.cards_line || 3.5}: {cardsOverPct}%</span>
+            </div>
+            <div className="ou-pct-bar">
+              <div className="ou-pct-segment under" style={{ width: `${cardsUnderPct}%` }}></div>
+              <div className="ou-pct-segment over" style={{ width: `${cardsOverPct}%` }}></div>
             </div>
           </div>
         </div>
