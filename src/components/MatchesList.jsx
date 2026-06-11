@@ -215,7 +215,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       <div className="match-analytics-box">
         <div className="analytics-title">
           <TrendingUp size={14} className="text-secondary" />
-          Implied Match Analytics
+          3rd Party Match Analysis
         </div>
         <div className="analytics-grid">
           <div className="analytics-item">
