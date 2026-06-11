@@ -298,7 +298,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <div className="inline-prediction-grid">
                 {/* Winner Select */}
                 <div className="prediction-col">
-                  <label>Winner</label>
+                  <label>Winner (1 pt)</label>
                   <div className="inline-choice-group">
                     <button
                       type="button"
@@ -329,7 +329,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
                 {/* Over/Under Select */}
                 <div className="prediction-col">
-                  <label>Total Goals</label>
+                  <label>Total Goals (1 pt)</label>
                   <div className="inline-choice-group">
                     <button
                       type="button"
@@ -352,7 +352,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
                 {/* Score inputs */}
                 <div className="prediction-col">
-                  <label>Exact Score</label>
+                  <label>Exact Score (3 pts)</label>
                   <div className="inline-score-inputs">
                     <input
                       type="number"
