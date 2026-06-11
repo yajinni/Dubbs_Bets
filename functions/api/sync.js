@@ -34,25 +34,8 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid sync secret' }), { status: 401, headers });
     }
 
-    // 1. Check time since last sync
-    const lastSyncSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'last_sync'").first();
-    const lastSyncTime = lastSyncSetting ? new Date(lastSyncSetting.value).getTime() : 0;
-    const currentTime = Date.now();
-    const sixHoursInMs = 6 * 60 * 60 * 1000; // 6 hours
-
-    if (!force && (currentTime - lastSyncTime < sixHoursInMs)) {
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Sync skipped. Updated within the last 6 hours.',
-        last_sync: lastSyncSetting ? lastSyncSetting.value : null
-      }), { status: 200, headers });
-    }
-
-    // 2. Perform Sync
-    const apiKeyOdds = env.THE_ODDS_API_KEY;
-    const apiKeyFootball = env.API_FOOTBALL_KEY;
-
     // Diagnostic Helpers
+    const apiKeyFootball = env.API_FOOTBALL_KEY;
     const checkBets = url.searchParams.get('checkBets') === 'true';
     if (checkBets && apiKeyFootball) {
       const betsRes = await fetch(`https://v3.football.api-sports.io/odds/bets`, {
@@ -70,6 +53,23 @@ export async function onRequest(context) {
       const oddsData = await oddsRes.json();
       return new Response(JSON.stringify(oddsData), { status: 200, headers });
     }
+
+    // 1. Check time since last sync
+    const lastSyncSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'last_sync'").first();
+    const lastSyncTime = lastSyncSetting ? new Date(lastSyncSetting.value).getTime() : 0;
+    const currentTime = Date.now();
+    const sixHoursInMs = 6 * 60 * 60 * 1000; // 6 hours
+
+    if (!force && (currentTime - lastSyncTime < sixHoursInMs)) {
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Sync skipped. Updated within the last 6 hours.',
+        last_sync: lastSyncSetting ? lastSyncSetting.value : null
+      }), { status: 200, headers });
+    }
+
+    // 2. Perform Sync
+    const apiKeyOdds = env.THE_ODDS_API_KEY;
 
     let syncResults = { source: 'mock', matchesUpdated: 0, oddsUpdated: 0 };
 
