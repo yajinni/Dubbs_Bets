@@ -223,7 +223,7 @@ export default function App() {
               matches={matches} 
               predictions={predictions}
               activeParticipantId={activeParticipantId}
-              onPredictClick={handlePredictClick}
+              onSave={refreshAllData}
             />
           )}
 
@@ -236,16 +236,6 @@ export default function App() {
           )}
         </main>
       )}
-
-      {/* Prediction modal overlay */}
-      <PredictionModal
-        isOpen={isPredictModalOpen}
-        onClose={() => setIsPredictModalOpen(false)}
-        match={selectedMatch}
-        participant={getActiveParticipantObj()}
-        existingPrediction={getActivePredictionForSelectedMatch()}
-        onSave={refreshAllData}
-      />
     </>
   );
 }

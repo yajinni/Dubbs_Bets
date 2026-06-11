@@ -1,7 +1,396 @@
-import React, { useState } from 'react';
-import { Calendar, Play, CheckCircle2, Lock, Edit2, TrendingUp, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Lock, TrendingUp, HelpCircle, Save } from 'lucide-react';
 
-export default function MatchesList({ matches, predictions, activeParticipantId, onPredictClick }) {
+function MatchCard({ m, pred, activeParticipantId, onSave }) {
+  const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
+  const homeName = m.home_team_name || m.home_team_label || 'TBD';
+  const awayName = m.away_team_name || m.away_team_label || 'TBD';
+
+  // Calculate implied Over/Under probabilities
+  const overOdds = m.over_odds || 1.9;
+  const underOdds = m.under_odds || 1.9;
+  const pOver = overOdds > 0 ? 1.0 / overOdds : 0.5;
+  const pUnder = underOdds > 0 ? 1.0 / underOdds : 0.5;
+  const sumOU = pOver + pUnder;
+  const overPct = sumOU > 0 ? Math.round((pOver / sumOU) * 100) : 50;
+  const underPct = 100 - overPct;
+
+  // Local state for the inline prediction inputs
+  const [winner, setWinner] = useState('');
+  const [overUnder, setOverUnder] = useState('');
+  const [homeScore, setHomeScore] = useState('');
+  const [awayScore, setAwayScore] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // Sync inputs with existing prediction or reset on participant switch
+  useEffect(() => {
+    if (pred) {
+      setWinner(pred.predicted_winner || '');
+      setOverUnder(pred.predicted_over_under || '');
+      setHomeScore(pred.predicted_home_score !== null ? pred.predicted_home_score.toString() : '');
+      setAwayScore(pred.predicted_away_score !== null ? pred.predicted_away_score.toString() : '');
+    } else {
+      setWinner('');
+      setOverUnder('');
+      setHomeScore('');
+      setAwayScore('');
+    }
+    setError('');
+    setSuccessMsg('');
+  }, [pred, activeParticipantId]);
+
+  const hasChanges = (() => {
+    const currentWinner = winner || '';
+    const currentOU = overUnder || '';
+    const currentHome = homeScore || '';
+    const currentAway = awayScore || '';
+
+    if (!pred) {
+      return currentWinner !== '' || currentOU !== '' || currentHome !== '' || currentAway !== '';
+    }
+
+    const matchWinner = currentWinner === (pred.predicted_winner || '');
+    const matchOU = currentOU === (pred.predicted_over_under || '');
+    const matchHome = currentHome === (pred.predicted_home_score !== null ? pred.predicted_home_score.toString() : '');
+    const matchAway = currentAway === (pred.predicted_away_score !== null ? pred.predicted_away_score.toString() : '');
+
+    return !(matchWinner && matchOU && matchHome && matchAway);
+  })();
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    if (!winner) {
+      setError('Select outcome.');
+      return;
+    }
+    if (!overUnder) {
+      setError('Select O/U Goals.');
+      return;
+    }
+    if (homeScore === '' || awayScore === '') {
+      setError('Enter both scores.');
+      return;
+    }
+
+    const hScore = parseInt(homeScore);
+    const aScore = parseInt(awayScore);
+
+    if (isNaN(hScore) || isNaN(aScore) || hScore < 0 || aScore < 0) {
+      setError('Positive numbers only.');
+      return;
+    }
+
+    // Logical validations matching outcomes
+    if (winner === 'home' && hScore <= aScore) {
+      setError(`${homeName} must score more to win.`);
+      return;
+    }
+    if (winner === 'away' && aScore <= hScore) {
+      setError(`${awayName} must score more to win.`);
+      return;
+    }
+    if (winner === 'draw' && hScore !== aScore) {
+      setError('Scores must be equal for Draw.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch('/api/predictions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          participantId: activeParticipantId,
+          matchId: m.id,
+          predictedWinner: winner,
+          predictedOverUnder: overUnder,
+          predictedHomeScore: hScore,
+          predictedAwayScore: aScore,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save prediction.');
+      }
+
+      setSuccessMsg('Saved!');
+      setTimeout(() => setSuccessMsg(''), 2500);
+      onSave(); // Refresh all state
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getRoundLabel = (m) => {
+    const t = m.type || 'group';
+    if (t === 'group') return `Group ${m.group_name || 'A'}`;
+    if (t === 'r32') return 'Round of 32';
+    if (t === 'r16') return 'Round of 16';
+    if (t === 'qf') return 'Quarter-final';
+    if (t === 'sf') return 'Semi-final';
+    if (t === 'third') return '3rd Place Playoff';
+    if (t === 'final') return 'World Cup Final';
+    return t;
+  };
+
+  const formatMatchDate = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  return (
+    <div className="glass-panel match-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      
+      {/* Header: Stage and Date */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+        <span style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--primary-hover)', letterSpacing: '0.05em' }}>
+          {getRoundLabel(m)}
+        </span>
+        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Calendar size={12} />
+          {formatMatchDate(m.local_date)}
+        </span>
+      </div>
+
+      {/* Match Score & Teams */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', width: '100%', gap: '16px' }}>
+        <div className="team-container home">
+          <span className="team-name">{homeName}</span>
+          {m.home_flag && <img src={m.home_flag} alt={`${homeName} flag`} className="flag-icon" />}
+        </div>
+
+        <div className="match-info-center">
+          {m.status === 'scheduled' ? (
+            <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-muted)' }}>VS</span>
+          ) : (
+            <div className="score-display">
+              <span>{m.home_score}</span>
+              <span className="score-divider">-</span>
+              <span>{m.away_score}</span>
+            </div>
+          )}
+          <span className={`match-badge ${m.status}`}>
+            {m.status === 'scheduled' ? 'Scheduled' : m.status === 'live' ? 'Live' : 'FT'}
+          </span>
+        </div>
+
+        <div className="team-container away">
+          {m.away_flag && <img src={m.away_flag} alt={`${awayName} flag`} className="flag-icon" />}
+          <span className="team-name">{awayName}</span>
+        </div>
+      </div>
+
+      {/* Analytics Box */}
+      <div className="match-analytics-box">
+        <div className="analytics-title">
+          <TrendingUp size={14} className="text-secondary" />
+          Implied Match Analytics
+        </div>
+        <div className="analytics-grid">
+          <div className="analytics-item">
+            <div className="analytics-labels">
+              <span>{homeName}: {m.home_win_pct}%</span>
+              <span>Draw: {m.draw_pct}%</span>
+              <span>{awayName}: {m.away_win_pct}%</span>
+            </div>
+            <div className="win-pct-bar">
+              <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
+              <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
+              <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
+            </div>
+          </div>
+          <div className="analytics-item">
+            <div className="analytics-labels">
+              <span>Under {m.over_under_line}: {underPct}%</span>
+              <span>Over {m.over_under_line}: {overPct}%</span>
+            </div>
+            <div className="ou-pct-bar">
+              <div className="ou-pct-segment under" style={{ width: `${underPct}%` }}></div>
+              <div className="ou-pct-segment over" style={{ width: `${overPct}%` }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Predictions Section */}
+      <div className="match-stats-drawer" style={{ gridTemplateColumns: '1fr', borderTop: '1px solid var(--glass-border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+        {activeParticipantId ? (
+          isLocked ? (
+            /* Locked Prediction View */
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '12px', flexWrap: 'wrap' }}>
+              <div className="locked-icon-container">
+                <Lock size={12} />
+                Locked (Started/Finished)
+              </div>
+              {pred ? (
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Pick: <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
+                      {pred.predicted_winner === 'home' ? homeName : pred.predicted_winner === 'away' ? awayName : 'Draw'}
+                    </span>
+                    {` | `}
+                    <span style={{ color: 'var(--warning)', fontWeight: '700' }}>
+                      {pred.predicted_over_under.toUpperCase()} {m.over_under_line}
+                    </span>
+                    {` | Score: `}
+                    <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
+                      {pred.predicted_home_score}-{pred.predicted_away_score}
+                    </span>
+                  </span>
+                  {m.finished === 1 && (
+                    <div className="prediction-badge-display" style={{ justifyContent: 'flex-end', marginTop: '6px' }}>
+                      <span className={`p-point-dot ${pred.points_winner ? 'earned' : ''}`}></span>
+                      <span style={{ color: pred.points_winner ? 'var(--success)' : 'var(--text-muted)' }}>W</span>
+                      <span className={`p-point-dot ${pred.points_ou ? 'earned' : ''}`}></span>
+                      <span style={{ color: pred.points_ou ? 'var(--success)' : 'var(--text-muted)' }}>O/U</span>
+                      <span className={`p-point-dot ${pred.points_score ? 'earned' : ''}`}></span>
+                      <span style={{ color: pred.points_score ? 'var(--success)' : 'var(--text-muted)' }}>S</span>
+                      <span style={{ marginLeft: '6px', color: 'var(--primary-hover)', fontWeight: '700' }}>
+                        (+{pred.total_points} pts)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No prediction placed
+                </span>
+              )}
+            </div>
+          ) : (
+            /* Inline Prediction Form */
+            <div className="inline-prediction-box">
+              <div className="prediction-title">
+                <span>Your Prediction</span>
+                {successMsg && <span style={{ color: 'var(--success)', fontWeight: '700', fontSize: '12px' }}>{successMsg}</span>}
+              </div>
+              <div className="inline-prediction-grid">
+                {/* Winner Select */}
+                <div className="prediction-col">
+                  <label>Winner</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${winner === 'home' ? 'active' : ''}`}
+                      onClick={() => setWinner('home')}
+                      disabled={saving}
+                    >
+                      {homeName}
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${winner === 'draw' ? 'active' : ''}`}
+                      onClick={() => setWinner('draw')}
+                      disabled={saving}
+                    >
+                      Draw
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${winner === 'away' ? 'active' : ''}`}
+                      onClick={() => setWinner('away')}
+                      disabled={saving}
+                    >
+                      {awayName}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Over/Under Select */}
+                <div className="prediction-col">
+                  <label>Total Goals</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${overUnder === 'over' ? 'active' : ''}`}
+                      onClick={() => setOverUnder('over')}
+                      disabled={saving}
+                    >
+                      Over {m.over_under_line}
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${overUnder === 'under' ? 'active' : ''}`}
+                      onClick={() => setOverUnder('under')}
+                      disabled={saving}
+                    >
+                      Under {m.over_under_line}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Score inputs */}
+                <div className="prediction-col">
+                  <label>Exact Score</label>
+                  <div className="inline-score-inputs">
+                    <input
+                      type="number"
+                      min="0"
+                      max="15"
+                      value={homeScore}
+                      onChange={(e) => setHomeScore(e.target.value)}
+                      placeholder="H"
+                      aria-label="Home score prediction"
+                      disabled={saving}
+                    />
+                    <span>-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="15"
+                      value={awayScore}
+                      onChange={(e) => setAwayScore(e.target.value)}
+                      placeholder="A"
+                      aria-label="Away score prediction"
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+
+                {/* Save button */}
+                <div className="prediction-col action">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ padding: '8px 16px', fontSize: '13px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    onClick={handleSave}
+                    disabled={saving || !hasChanges}
+                  >
+                    <Save size={13} />
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+              {error && <div className="inline-error-text">{error}</div>}
+            </div>
+          )
+        ) : (
+          <div className="locked-icon-container" style={{ justifyContent: 'center', width: '100%', padding: '10px 0', border: '1px dashed var(--glass-border)', borderRadius: '8px', background: 'rgba(255,255,255,0.01)', fontSize: '13px' }}>
+            <HelpCircle size={14} />
+            Please select your name from the leaderboard dropdown to place predictions.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function MatchesList({ matches, predictions, activeParticipantId, onSave }) {
   const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
 
   // Filter stage tabs definitions
@@ -35,30 +424,6 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
     return predictions.find(p => p.match_id === matchId);
   };
 
-  const formatMatchDate = (isoString) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const getRoundLabel = (m) => {
-    const t = m.type || 'group';
-    if (t === 'group') return `Group ${m.group_name || 'A'}`;
-    if (t === 'r32') return 'Round of 32';
-    if (t === 'r16') return 'Round of 16';
-    if (t === 'qf') return 'Quarter-final';
-    if (t === 'sf') return 'Semi-final';
-    if (t === 'third') return '3rd Place Playoff';
-    if (t === 'final') return 'World Cup Final';
-    return t;
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Tabs */}
@@ -81,181 +446,15 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             No matches found for this stage.
           </div>
         ) : (
-          filteredMatches.map(m => {
-            const pred = getPredictionForMatch(m.id);
-            const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
-            
-            // Format labels for knockout matches where teams are not yet determined
-            const homeName = m.home_team_name || m.home_team_label || 'TBD';
-            const awayName = m.away_team_name || m.away_team_label || 'TBD';
-
-            // Calculate implied Over/Under probabilities
-            const overOdds = m.over_odds || 1.9;
-            const underOdds = m.under_odds || 1.9;
-            const pOver = overOdds > 0 ? 1.0 / overOdds : 0.5;
-            const pUnder = underOdds > 0 ? 1.0 / underOdds : 0.5;
-            const sumOU = pOver + pUnder;
-            const overPct = sumOU > 0 ? Math.round((pOver / sumOU) * 100) : 50;
-            const underPct = 100 - overPct;
-
-            return (
-              <div key={m.id} className="glass-panel match-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                
-                {/* Header: Stage, Round, and Date */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--primary-hover)', trackingLetter: '0.05em' }}>
-                    {getRoundLabel(m)}
-                  </span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Calendar size={12} />
-                    {formatMatchDate(m.local_date)}
-                  </span>
-                </div>
-
-                {/* Match Score & Teams */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', width: '100%', gap: '16px' }}>
-                  
-                  {/* Home Team */}
-                  <div className="team-container home">
-                    <span className="team-name">{homeName}</span>
-                    {m.home_flag && <img src={m.home_flag} alt={`${homeName} flag`} className="flag-icon" />}
-                  </div>
-
-                  {/* Score / Time Area */}
-                  <div className="match-info-center">
-                    {m.status === 'scheduled' ? (
-                      <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-muted)' }}>VS</span>
-                    ) : (
-                      <div className="score-display">
-                        <span>{m.home_score}</span>
-                        <span className="score-divider">-</span>
-                        <span>{m.away_score}</span>
-                      </div>
-                    )}
-                    <span className={`match-badge ${m.status}`}>
-                      {m.status === 'scheduled' ? 'Scheduled' : m.status === 'live' ? 'Live' : 'FT'}
-                    </span>
-                  </div>
-
-                  {/* Away Team */}
-                  <div className="team-container away">
-                    {m.away_flag && <img src={m.away_flag} alt={`${awayName} flag`} className="flag-icon" />}
-                    <span className="team-name">{awayName}</span>
-                  </div>
-
-                </div>
-
-                {/* Odds & Predictions Section */}
-                <div className="match-stats-drawer">
-                  
-                  {/* Unified Match Analytics Box */}
-                  <div className="match-analytics-box">
-                    <div className="analytics-title">
-                      <TrendingUp size={14} className="text-secondary" />
-                      Implied Match Analytics
-                    </div>
-                    
-                    <div className="analytics-grid">
-                      {/* Win Probability Bar */}
-                      <div className="analytics-item">
-                        <div className="analytics-labels">
-                          <span>{homeName}: {m.home_win_pct}%</span>
-                          <span>Draw: {m.draw_pct}%</span>
-                          <span>{awayName}: {m.away_win_pct}%</span>
-                        </div>
-                        <div className="win-pct-bar">
-                          <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
-                          <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
-                          <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
-                        </div>
-                      </div>
-
-                      {/* Goals Expectation Over/Under Bar */}
-                      <div className="analytics-item">
-                        <div className="analytics-labels">
-                          <span>Under {m.over_under_line}: {underPct}%</span>
-                          <span>Over {m.over_under_line}: {overPct}%</span>
-                        </div>
-                        <div className="ou-pct-bar">
-                          <div className="ou-pct-segment under" style={{ width: `${underPct}%` }}></div>
-                          <div className="ou-pct-segment over" style={{ width: `${overPct}%` }}></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* User Prediction */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                    {activeParticipantId ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                        {pred ? (
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                              Pick: <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
-                                {pred.predicted_winner === 'home' ? homeName : pred.predicted_winner === 'away' ? awayName : 'Draw'}
-                              </span>
-                              {` | `}
-                              <span style={{ color: 'var(--warning)', fontWeight: '700' }}>
-                                {pred.predicted_over_under.toUpperCase()} {m.over_under_line}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                              Score: <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{pred.predicted_home_score}-{pred.predicted_away_score}</span>
-                            </div>
-
-                            {/* Show points earned if match is finished */}
-                            {m.finished === 1 && (
-                              <div className="prediction-badge-display">
-                                <span className={`p-point-dot ${pred.points_winner ? 'earned' : ''}`} title="Winner (1pt)"></span>
-                                <span style={{ color: pred.points_winner ? 'var(--success)' : 'var(--text-muted)' }}>W</span>
-                                <span className={`p-point-dot ${pred.points_ou ? 'earned' : ''}`} title="O/U (1pt)"></span>
-                                <span style={{ color: pred.points_ou ? 'var(--success)' : 'var(--text-muted)' }}>O/U</span>
-                                <span className={`p-point-dot ${pred.points_score ? 'earned' : ''}`} title="Exact Score (1pt)"></span>
-                                <span style={{ color: pred.points_score ? 'var(--success)' : 'var(--text-muted)' }}>S</span>
-                                <span style={{ marginLeft: '6px', color: 'var(--primary-hover)', fontWeight: '700' }}>
-                                  (+{pred.total_points} pts)
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            No prediction placed
-                          </span>
-                        )}
-                        
-                        {/* Prediction buttons */}
-                        <div style={{ marginTop: '4px' }}>
-                          {isLocked ? (
-                            <div className="locked-icon-container">
-                              <Lock size={12} />
-                              Locked
-                            </div>
-                          ) : (
-                            <button
-                              id={`predict-btn-${m.id}`}
-                              className="prediction-summary-btn"
-                              onClick={() => onPredictClick(m)}
-                            >
-                              <Edit2 size={12} style={{ marginRight: '4px' }} />
-                              {pred ? 'Change Pick' : 'Predict'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="locked-icon-container">
-                        <HelpCircle size={12} />
-                        Select player to predict
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-
-              </div>
-            );
-          })
+          filteredMatches.map(m => (
+            <MatchCard
+              key={m.id}
+              m={m}
+              pred={getPredictionForMatch(m.id)}
+              activeParticipantId={activeParticipantId}
+              onSave={onSave}
+            />
+          ))
         )}
       </div>
     </div>
