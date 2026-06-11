@@ -24,7 +24,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
         {/* Rows */}
         {leaderboard.length === 0 ? (
           <div style={{ textAlignment: 'center', padding: '24px 0', color: 'var(--text-muted)' }}>
-            No participants added yet. Go to the Admin Portal to add players!
+            No participants added yet. Go to Admin to add players!
           </div>
         ) : (
           leaderboard.map((p, index) => {

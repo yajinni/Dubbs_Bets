@@ -52,7 +52,7 @@ export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigge
           className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`}
           onClick={() => setActiveTab('admin')}
         >
-          Admin Portal
+          Admin
         </button>
       </nav>
 
