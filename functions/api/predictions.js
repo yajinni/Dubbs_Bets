@@ -57,7 +57,6 @@ export async function onRequest(context) {
         predictedOverUnder,    // 'over' or 'under'
         predictedHomeScore, 
         predictedAwayScore,
-        predictedCardsOverUnder, // 'over' or 'under'
         predictedTotalCards,     // integer or null
         predictedFirstScorer     // 'home', 'away', or 'none'
       } = body;
@@ -67,7 +66,7 @@ export async function onRequest(context) {
       }
 
       // 1. Fetch match to verify it exists and check if it has already started
-      const match = await env.db.prepare('SELECT local_date, status, finished, home_score, away_score, over_under_line, cards_line, actual_cards, actual_first_scorer FROM matches WHERE id = ?').bind(matchId).first();
+      const match = await env.db.prepare('SELECT local_date, status, finished, home_score, away_score, over_under_line, actual_cards, actual_first_scorer, home_win_pct, away_win_pct FROM matches WHERE id = ?').bind(matchId).first();
 
       if (!match) {
         return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
@@ -99,13 +98,12 @@ export async function onRequest(context) {
             predicted_over_under = ?, 
             predicted_home_score = ?, 
             predicted_away_score = ?,
-            predicted_cards_over_under = ?,
             predicted_total_cards = ?,
             predicted_first_scorer = ?
           WHERE participant_id = ? AND match_id = ?
         `;
         await env.db.prepare(updateQuery)
-          .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, predictedCardsOverUnder, pTotalCards, pFirstScorer, participantId, matchId)
+          .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, participantId, matchId)
           .run();
       } else {
         const insertQuery = `
@@ -116,13 +114,12 @@ export async function onRequest(context) {
             predicted_over_under, 
             predicted_home_score, 
             predicted_away_score,
-            predicted_cards_over_under,
             predicted_total_cards,
             predicted_first_scorer
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
         await env.db.prepare(insertQuery)
-          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, predictedCardsOverUnder, pTotalCards, pFirstScorer)
+          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer)
           .run();
       }
 
@@ -143,10 +140,11 @@ export async function onRequest(context) {
         const pOu = predictedOverUnder === ouResult ? 1 : 0;
         const pScore = (pHomeScore === homeScore && pAwayScore === awayScore) ? 1 : 0;
 
-        let pCards = 0;
-        if (match.actual_cards !== null && match.cards_line !== null) {
-          const cardsResult = match.actual_cards > match.cards_line ? 'over' : 'under';
-          pCards = predictedCardsOverUnder === cardsResult ? 1 : 0;
+        // Underdog Bonus: +1 if player picked the team with lower win% AND they actually won
+        let pUnderdog = 0;
+        if (pWinner === 1 && winnerResult !== 'draw' && match.home_win_pct != null && match.away_win_pct != null) {
+          if (winnerResult === 'home' && match.home_win_pct < match.away_win_pct) pUnderdog = 1;
+          if (winnerResult === 'away' && match.away_win_pct < match.home_win_pct) pUnderdog = 1;
         }
 
         let pTotalCardsEarned = 0;
@@ -159,7 +157,7 @@ export async function onRequest(context) {
           pFirstScorerEarned = pFirstScorer === match.actual_first_scorer ? 1 : 0;
         }
 
-        const totalPoints = pWinner + pOu + pCards + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3);
+        const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3);
         
         await env.db.prepare(`
           UPDATE predictions 
@@ -172,7 +170,7 @@ export async function onRequest(context) {
             points_first_scorer = ?,
             total_points = ?
           WHERE participant_id = ? AND match_id = ?
-        `).bind(pWinner, pOu, pScore, pCards, pTotalCardsEarned, pFirstScorerEarned, totalPoints, participantId, matchId).run();
+        `).bind(pWinner, pOu, pScore, pUnderdog, pTotalCardsEarned, pFirstScorerEarned, totalPoints, participantId, matchId).run();
       }
 
       const savedPrediction = await env.db.prepare('SELECT * FROM predictions WHERE participant_id = ? AND match_id = ?')

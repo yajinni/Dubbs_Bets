@@ -27,8 +27,6 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
   const [underOdds, setUnderOdds] = useState(1.9);
   const [cardsLine, setCardsLine] = useState(3.5);
   const [actualCards, setActualCards] = useState('');
-  const [cardsOverOdds, setCardsOverOdds] = useState(1.9);
-  const [cardsUnderOdds, setCardsUnderOdds] = useState(1.9);
   const [actualFirstScorer, setActualFirstScorer] = useState('none');
 
   const [matchError, setMatchError] = useState('');
@@ -80,8 +78,6 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
       setUnderOdds(m.under_odds);
       setCardsLine(m.cards_line || 3.5);
       setActualCards(m.actual_cards !== null ? m.actual_cards.toString() : '');
-      setCardsOverOdds(m.cards_over_odds || 1.9);
-      setCardsUnderOdds(m.cards_under_odds || 1.9);
       setActualFirstScorer(m.actual_first_scorer || 'none');
       setMatchError('');
       setMatchSuccess('');
@@ -171,8 +167,6 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
           underOdds,
           cardsLine,
           actualCards,
-          cardsOverOdds,
-          cardsUnderOdds,
           actualFirstScorer
         })
       });
@@ -500,26 +494,6 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
                       className="admin-text-input"
                       value={cardsLine}
                       onChange={(e) => setCardsLine(parseFloat(e.target.value) || 3.5)}
-                    />
-                  </div>
-                  <div className="admin-input-group">
-                    <label>Cards Over Odds</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="admin-text-input"
-                      value={cardsOverOdds}
-                      onChange={(e) => setCardsOverOdds(parseFloat(e.target.value) || 1.9)}
-                    />
-                  </div>
-                  <div className="admin-input-group">
-                    <label>Cards Under Odds</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="admin-text-input"
-                      value={cardsUnderOdds}
-                      onChange={(e) => setCardsUnderOdds(parseFloat(e.target.value) || 1.9)}
                     />
                   </div>
                 </div>

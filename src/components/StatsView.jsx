@@ -16,7 +16,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     // Count correct answers
     const correctWinners = pPreds.filter(pred => pred.points_winner > 0).length;
     const correctOu = pPreds.filter(pred => pred.points_ou > 0).length;
-    const correctCards = pPreds.filter(pred => pred.points_cards_ou > 0).length;
+    const underdogBonus = pPreds.filter(pred => pred.points_cards_ou > 0).length;
     const correctScores = pPreds.filter(pred => pred.points_score > 0).length;
     const correctFirstScorers = pPreds.filter(pred => pred.points_first_scorer > 0).length;
     const correctExactCards = pPreds.filter(pred => pred.points_total_cards > 0).length;
@@ -24,7 +24,6 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     // Accuracy percentages
     const winnerPct = totalFinishedPreds > 0 ? Math.round((correctWinners / totalFinishedPreds) * 100) : 0;
     const ouPct = totalFinishedPreds > 0 ? Math.round((correctOu / totalFinishedPreds) * 100) : 0;
-    const cardsPct = totalFinishedPreds > 0 ? Math.round((correctCards / totalFinishedPreds) * 100) : 0;
     const scorePct = totalFinishedPreds > 0 ? Math.round((correctScores / totalFinishedPreds) * 100) : 0;
     const firstScorerPct = totalFinishedPreds > 0 ? Math.round((correctFirstScorers / totalFinishedPreds) * 100) : 0;
     const exactCardsPct = totalFinishedPreds > 0 ? Math.round((correctExactCards / totalFinishedPreds) * 100) : 0;
@@ -35,13 +34,12 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       totalFinishedPreds,
       correctWinners,
       correctOu,
-      correctCards,
+      underdogBonus,
       correctScores,
       correctFirstScorers,
       correctExactCards,
       winnerPct,
       ouPct,
-      cardsPct,
       scorePct,
       firstScorerPct,
       exactCardsPct,
@@ -63,7 +61,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     // Sort and get max
     topWinner = [...stats].sort((a, b) => b.winnerPct - a.winnerPct || b.correctWinners - a.correctWinners)[0];
     topOu = [...stats].sort((a, b) => b.ouPct - a.ouPct || b.correctOu - a.correctOu)[0];
-    topCards = [...stats].sort((a, b) => b.cardsPct - a.cardsPct || b.correctCards - a.correctCards)[0];
+    topCards = [...stats].sort((a, b) => b.underdogBonus - a.underdogBonus)[0];
     topScore = [...stats].sort((a, b) => b.scorePct - a.scorePct || b.correctScores - a.correctScores)[0];
     topFirstScorer = [...stats].sort((a, b) => b.firstScorerPct - a.firstScorerPct || b.correctFirstScorers - a.correctFirstScorers)[0];
     topExactCards = [...stats].sort((a, b) => b.exactCardsPct - a.exactCardsPct || b.correctExactCards - a.correctExactCards)[0];
@@ -107,10 +105,10 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               <TrendingUp size={24} color="#3b82f6" />
             </div>
             <div>
-              <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Card Prop Wizard 🎴</h4>
+              <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Underdog Whisperer 🐉</h4>
               <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topCards?.name}</span>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                {topCards?.cardsPct}% Accuracy ({topCards?.correctCards}/{topCards?.totalFinishedPreds})
+                {topCards?.underdogBonus} underdog bonus point{topCards?.underdogBonus !== 1 ? 's' : ''} earned
               </p>
             </div>
           </div>
@@ -144,7 +142,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center' }}>Completed Bets</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Winner Accuracy</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under Goals</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards O/U Accuracy</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>🐉 Underdog Bonus</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>First Scorer Accuracy</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Score Accuracy</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Cards Accuracy</th>
@@ -186,16 +184,13 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                   </div>
                 </td>
 
-                {/* Cards Over Under Stat */}
+                {/* Underdog Bonus Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.cardsPct}%</span>
-                      <span style={{ color: 'var(--text-muted)' }}>{row.correctCards}/{row.totalFinishedPreds}</span>
+                      <span style={{ color: '#fbbf24', fontWeight: '700' }}>🐉 {row.underdogBonus} bonus pt{row.underdogBonus !== 1 ? 's' : ''}</span>
                     </div>
-                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${row.cardsPct}%`, height: '100%', background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: '3px' }}></div>
-                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Picked underdog &amp; won</div>
                   </div>
                 </td>
 

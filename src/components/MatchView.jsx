@@ -142,7 +142,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Winner Pick</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under ({m.over_under_line})</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards O/U ({m.cards_line || 3.5})</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>🐉 Underdog Bonus</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>First Scorer</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Score</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Total Cards</th>
@@ -161,12 +161,14 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                         const hasOUPred = pred && pred.predicted_over_under;
                         const isOUCorrect = m.finished === 1 && hasOUPred && pred.predicted_over_under === actualOU;
 
-                        let actualCardsOU = null;
-                        if (m.finished === 1 && m.actual_cards !== null) {
-                          actualCardsOU = m.actual_cards > (m.cards_line || 3.5) ? 'over' : 'under';
-                        }
-                        const hasCardsPred = pred && pred.predicted_cards_over_under;
-                        const isCardsCorrect = m.finished === 1 && hasCardsPred && pred.predicted_cards_over_under === actualCardsOU;
+                        // Underdog bonus evaluation
+                        const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.home_win_pct < m.away_win_pct;
+                        const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.away_win_pct < m.home_win_pct;
+                        const pickedUnderdog = pred && (
+                          (pred.predicted_winner === 'home' && homeIsUnderdog) ||
+                          (pred.predicted_winner === 'away' && awayIsUnderdog)
+                        );
+                        const underdogBonusEarned = pred && pred.points_cards_ou > 0;
 
                         const hasFirstScorerPred = pred && pred.predicted_first_scorer;
                         const isFirstScorerCorrect = m.finished === 1 && hasFirstScorerPred && pred.predicted_first_scorer === m.actual_first_scorer;
@@ -231,23 +233,23 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                               )}
                             </td>
 
-                            {/* Cards O/U Prediction */}
+                            {/* Underdog Bonus Column */}
                             <td style={{ padding: '12px', fontSize: '13px' }}>
-                              {hasCardsPred ? (
+                              {pred && pred.predicted_winner && pred.predicted_winner !== 'draw' ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '600', textTransform: 'uppercase', color: 'var(--success)' }}>
-                                    {pred.predicted_cards_over_under}
-                                  </span>
-                                  {m.finished === 1 && (
-                                    isCardsCorrect ? (
-                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
-                                    ) : (
-                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
-                                    )
+                                  {pickedUnderdog ? (
+                                    <span style={{ color: '#fbbf24', fontWeight: '700' }}>⭐ Underdog Pick</span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)' }}>Favourite</span>
+                                  )}
+                                  {m.finished === 1 && pickedUnderdog && (
+                                    underdogBonusEarned
+                                      ? <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
+                                      : <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
                                   )}
                                 </div>
                               ) : (
-                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
+                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{pred?.predicted_winner === 'draw' ? 'Draw' : 'None ⏳'}</span>
                               )}
                             </td>
 

@@ -298,7 +298,7 @@ async function syncFromAPIFootball(db, apiKey) {
 
       // Recalculate predictions if finished
       if (finished === 1) {
-        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards);
+        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards, null, homePct, awayPct);
       }
 
       matchesUpdated++;
@@ -378,7 +378,7 @@ async function runMockSync(db) {
         WHERE id = ?
       `).bind(homeScore, awayScore, actualCards, actualFirstScorer, m.id).run();
 
-      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards, actualFirstScorer);
+      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards, actualFirstScorer, m.home_win_pct, m.away_win_pct);
       matchesUpdated++;
     }
 
@@ -407,7 +407,7 @@ async function runMockSync(db) {
 // --------------------------------------------------------
 // Prediction Point Distribution
 // --------------------------------------------------------
-async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer) {
+async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct) {
   let winner = 'draw';
   if (homeScore > awayScore) winner = 'home';
   else if (awayScore > homeScore) winner = 'away';
@@ -415,21 +415,18 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
   const totalGoals = homeScore + awayScore;
   const ouResult = totalGoals > ouLine ? 'over' : 'under';
 
-  let cardsResult = null;
-  if (actualCards !== null && cardsLine !== null) {
-    cardsResult = actualCards > cardsLine ? 'over' : 'under';
-  }
-
   const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
 
   for (const pred of predictions) {
     const pWinner = pred.predicted_winner === winner ? 1 : 0;
     const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
     const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
-    
-    let pCards = 0;
-    if (cardsResult !== null && pred.predicted_cards_over_under === cardsResult) {
-      pCards = 1;
+
+    // Underdog Bonus: +1 if player picked the team with lower win% AND they actually won
+    let pUnderdog = 0;
+    if (pWinner === 1 && winner !== 'draw' && homeWinPct != null && awayWinPct != null) {
+      if (winner === 'home' && homeWinPct < awayWinPct) pUnderdog = 1;
+      if (winner === 'away' && awayWinPct < homeWinPct) pUnderdog = 1;
     }
 
     let pTotalCardsEarned = 0;
@@ -442,7 +439,7 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
       pFirstScorerEarned = pred.predicted_first_scorer === actualFirstScorer ? 1 : 0;
     }
 
-    const totalPoints = pWinner + pOu + pCards + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3);
+    const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3);
 
     await db.prepare(`
       UPDATE predictions 
@@ -455,7 +452,7 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
         points_first_scorer = ?,
         total_points = ?
       WHERE participant_id = ? AND match_id = ?
-    `).bind(pWinner, pOu, pScore, pCards, pTotalCardsEarned, pFirstScorerEarned, totalPoints, pred.participant_id, matchId).run();
+    `).bind(pWinner, pOu, pScore, pUnderdog, pTotalCardsEarned, pFirstScorerEarned, totalPoints, pred.participant_id, matchId).run();
   }
 }
 
