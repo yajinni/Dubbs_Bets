@@ -414,21 +414,11 @@ async function syncFromTheOddsAPI(db, apiKey) {
   let matchesUpdated = 0;
   let oddsUpdated = 0;
   
-  // Map odds to a lookup object
-  const oddsMap = {};
+  // 1. Process Odds and Schedules (loop over all matches returned in oddsData)
   for (const match of oddsData) {
-    oddsMap[`${match.home_team.toLowerCase()}::${match.away_team.toLowerCase()}`] = match;
-  }
-  
-  // Process Scores & Match status updates
-  for (const event of scoresData) {
-    const key = `${event.home_team.toLowerCase()}::${event.away_team.toLowerCase()}`;
-    const oddsEvent = oddsMap[key];
-    
-    // Find matching match in D1 database
     const dbMatch = dbMatches.find(m => 
-      m.home_team_name.toLowerCase() === event.home_team.toLowerCase() && 
-      m.away_team_name.toLowerCase() === event.away_team.toLowerCase()
+      m.home_team_name.toLowerCase() === match.home_team.toLowerCase() && 
+      m.away_team_name.toLowerCase() === match.away_team.toLowerCase()
     );
     
     if (dbMatch) {
@@ -439,18 +429,17 @@ async function syncFromTheOddsAPI(db, apiKey) {
       let overOdds = dbMatch.over_odds;
       let underOdds = dbMatch.under_odds;
       
-      // Parse odds if available
-      if (oddsEvent && oddsEvent.bookmakers && oddsEvent.bookmakers.length > 0) {
-        const bookmaker = oddsEvent.bookmakers.find(b => {
+      if (match.bookmakers && match.bookmakers.length > 0) {
+        const bookmaker = match.bookmakers.find(b => {
           const markets = b.markets || [];
           return markets.some(mk => mk.key === 'h2h') && markets.some(mk => mk.key === 'totals');
-        }) || oddsEvent.bookmakers[0];
+        }) || match.bookmakers[0];
         
         if (bookmaker) {
           const h2h = bookmaker.markets.find(mk => mk.key === 'h2h');
           if (h2h) {
-            const homeOutcome = h2h.outcomes.find(o => o.name === event.home_team);
-            const awayOutcome = h2h.outcomes.find(o => o.name === event.away_team);
+            const homeOutcome = h2h.outcomes.find(o => o.name === match.home_team);
+            const awayOutcome = h2h.outcomes.find(o => o.name === match.away_team);
             const drawOutcome = h2h.outcomes.find(o => o.name === 'Draw');
             
             if (homeOutcome && awayOutcome && drawOutcome) {
@@ -480,7 +469,41 @@ async function syncFromTheOddsAPI(db, apiKey) {
         }
       }
       
-      // Parse scores if completed or currently live
+      // Update D1 database with the latest odds and schedule
+      await db.prepare(`
+        UPDATE matches
+        SET
+          home_win_pct = ?,
+          away_win_pct = ?,
+          draw_pct = ?,
+          over_under_line = ?,
+          over_odds = ?,
+          under_odds = ?,
+          local_date = ?
+        WHERE id = ?
+      `).bind(
+        homePct,
+        awayPct,
+        drawPct,
+        ouLine,
+        overOdds,
+        underOdds,
+        match.commence_time.replace('Z', ''),
+        dbMatch.id
+      ).run();
+      
+      matchesUpdated++;
+    }
+  }
+  
+  // 2. Process Scores and completed statuses (loop over matches in scoresData)
+  for (const event of scoresData) {
+    const dbMatch = dbMatches.find(m => 
+      m.home_team_name.toLowerCase() === event.home_team.toLowerCase() && 
+      m.away_team_name.toLowerCase() === event.away_team.toLowerCase()
+    );
+    
+    if (dbMatch) {
       let homeScore = dbMatch.home_score;
       let awayScore = dbMatch.away_score;
       let finished = dbMatch.finished;
@@ -509,43 +532,27 @@ async function syncFromTheOddsAPI(db, apiKey) {
         finished = 0;
       }
       
-      // Update D1 database
+      // Update D1 database with the latest scores and match status
       await db.prepare(`
         UPDATE matches
         SET
           home_score = ?,
           away_score = ?,
           status = ?,
-          finished = ?,
-          home_win_pct = ?,
-          away_win_pct = ?,
-          draw_pct = ?,
-          over_under_line = ?,
-          over_odds = ?,
-          under_odds = ?,
-          local_date = ?
+          finished = ?
         WHERE id = ?
       `).bind(
         homeScore,
         awayScore,
         status,
         finished,
-        homePct,
-        awayPct,
-        drawPct,
-        ouLine,
-        overOdds,
-        underOdds,
-        event.commence_time.replace('Z', ''),
         dbMatch.id
       ).run();
       
       // Recalculate predictions if finished
       if (finished === 1) {
-        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine);
+        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, dbMatch.over_under_line);
       }
-      
-      matchesUpdated++;
     }
   }
   

@@ -9,8 +9,11 @@ export async function checkAndInitDb(db) {
     ).first();
 
     if (checkTable) {
-      // Database is already initialized
-      return;
+      // Check if table has data to prevent skipping seeding on empty tables
+      const countMatches = await db.prepare("SELECT COUNT(*) as count FROM matches").first();
+      if (countMatches && countMatches.count > 0) {
+        return;
+      }
     }
 
     console.log('Database empty! Starting self-seeding...');
