@@ -307,7 +307,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
               <span>Draw: {m.draw_pct}%</span>
             </div>
           </div>
@@ -326,7 +326,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <div className="win-pct-segment draw" style={{ width: `${noGoalPct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${awayFirstPct}%` }}></div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
               <span>No Goal: {noGoalPct}%</span>
             </div>
           </div>
