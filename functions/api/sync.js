@@ -240,7 +240,8 @@ async function syncFromAPIFootball(db, apiKey) {
           draw_pct = ?,
           over_under_line = ?,
           over_odds = ?,
-          under_odds = ?
+          under_odds = ?,
+          local_date = ?
         WHERE id = ?
       `).bind(
         apiHome.id, 
@@ -257,6 +258,7 @@ async function syncFromAPIFootball(db, apiKey) {
         ouLine,
         overOdds,
         underOdds,
+        apiFix.fixture.date || dbMatch.local_date,
         dbMatch.id
       ).run();
 
@@ -488,7 +490,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
         ouLine,
         overOdds,
         underOdds,
-        match.commence_time.replace('Z', ''),
+        match.commence_time,
         dbMatch.id
       ).run();
       

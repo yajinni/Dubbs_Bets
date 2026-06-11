@@ -53,14 +53,38 @@ async function generate() {
       const matchday = parseInt(g.matchday) || 1;
       const localDate = g.local_date || ''; // Formatted as MM/DD/YYYY HH:MM
       
-      // Convert localDate to ISO date standard
-      // Input: "06/11/2026 13:00" -> ISO: "2026-06-11T13:00:00"
+      // Convert localDate to ISO standard UTC date using stadium timezone offsets
       let isoDate = localDate;
       if (localDate.includes('/')) {
         const parts = localDate.split(' ');
         const dateParts = parts[0].split('/');
         const timePart = parts[1] || '00:00';
-        isoDate = `${dateParts[2]}-${dateParts[0]}-${dateParts[1]}T${timePart}:00`;
+        
+        const year = parseInt(dateParts[2]);
+        const month = parseInt(dateParts[0]);
+        const day = parseInt(dateParts[1]);
+        const [hourStr, minStr] = timePart.split(':');
+        const hour = parseInt(hourStr);
+        const minute = parseInt(minStr);
+
+        // Map stadium_id to its UTC offset during June/July (DST in effect)
+        let offset = 0;
+        const sId = parseInt(g.stadium_id);
+        if ([1, 2, 3].includes(sId)) {
+          offset = -6; // CST (Mexico: Mexico City, Guadalajara, Monterrey)
+        } else if ([4, 5, 6].includes(sId)) {
+          offset = -5; // CDT (US Central: Dallas, Houston, Kansas City)
+        } else if ([7, 8, 9, 10, 11, 12].includes(sId)) {
+          offset = -4; // EDT (US/Canada Eastern: Atlanta, Miami, Boston, Philadelphia, NY/NJ, Toronto)
+        } else if ([13, 14, 15, 16].includes(sId)) {
+          offset = -7; // PDT (US/Canada Western: Vancouver, Seattle, San Francisco, Los Angeles)
+        } else {
+          offset = -4; // Fallback default to Eastern Time
+        }
+
+        // Subtract the offset to convert venue local time to UTC
+        const utcDate = new Date(Date.UTC(year, month - 1, day, hour - offset, minute));
+        isoDate = utcDate.toISOString();
       }
 
       const status = g.time_elapsed === 'notstarted' ? 'scheduled' : (g.finished === 'TRUE' ? 'finished' : 'live');

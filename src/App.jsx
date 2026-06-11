@@ -3,7 +3,7 @@ import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
 import MatchesList from './components/MatchesList';
 import AdminPanel from './components/AdminPanel';
-import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'matches', 'admin'
@@ -17,7 +17,7 @@ export default function App() {
   const [lastSync, setLastSync] = useState(null);
   const [selectedMatchId, setSelectedMatchId] = useState(null);
   const [selectedWeek, setSelectedWeek] = useState(() => {
-    const startDate = new Date('2026-06-11T00:00:00');
+    const startDate = new Date('2026-06-11T00:00:00Z');
     const today = new Date();
     const diffTime = today - startDate;
     if (diffTime < 0) return 1;
@@ -142,7 +142,7 @@ export default function App() {
 
   const getWeekNumber = (dateString) => {
     if (!dateString) return 1;
-    const startDate = new Date('2026-06-11T00:00:00');
+    const startDate = new Date('2026-06-11T00:00:00Z');
     const d = new Date(dateString);
     const diffTime = d - startDate;
     if (diffTime < 0) return 1;
@@ -248,16 +248,25 @@ export default function App() {
                                 {formatMatchDate(m.local_date)}
                               </span>
                             </div>
-                            <button 
-                              className="btn-primary" 
-                              style={{ padding: '6px 12px', fontSize: '12px' }}
-                              onClick={() => {
-                                setSelectedMatchId(m.id);
-                                setActiveTab('matches');
-                              }}
-                            >
-                              View
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              {activeParticipantId && (
+                                predictions.some(p => p.match_id === m.id) ? (
+                                  <CheckCircle size={16} color="#10b981" style={{ filter: 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.2))' }} title="Prediction saved" />
+                                ) : (
+                                  <XCircle size={16} color="#ef4444" style={{ filter: 'drop-shadow(0 0 4px rgba(239, 68, 68, 0.2))' }} title="No prediction placed" />
+                                )
+                              )}
+                              <button 
+                                className="btn-primary" 
+                                style={{ padding: '6px 12px', fontSize: '12px' }}
+                                onClick={() => {
+                                  setSelectedMatchId(m.id);
+                                  setActiveTab('matches');
+                                }}
+                              >
+                                View
+                              </button>
+                            </div>
                           </div>
                         );
                       })
