@@ -111,6 +111,20 @@ export default function App() {
     return matches.filter(m => m.status === 'live' || m.finished === 1);
   };
 
+  const formatMatchDate = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const dateStr = date.toLocaleString('en-US', {
+      timeZone: 'America/New_York',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    return `${dateStr} ET`;
+  };
+
   const getUpcomingMatches = () => {
     return matches.filter(m => m.status === 'scheduled').slice(0, 4);
   };
@@ -180,10 +194,10 @@ export default function App() {
                         const away = m.away_team_name || m.away_team_label || 'TBD';
                         return (
                           <div key={m.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               <span style={{ fontWeight: '700', fontSize: '14px' }}>{home} vs {away}</span>
-                              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                {new Date(m.local_date).toLocaleDateString()}
+                              <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '600' }}>
+                                {formatMatchDate(m.local_date)}
                               </span>
                             </div>
                             <button 
