@@ -45,14 +45,14 @@ export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigge
           className={`nav-btn ${activeTab === 'matches' ? 'active' : ''}`}
           onClick={() => setActiveTab('matches')}
         >
-          Match Center
+          Bets
         </button>
         <button 
           id="nav-match-view"
           className={`nav-btn ${activeTab === 'match-view' ? 'active' : ''}`}
           onClick={() => setActiveTab('match-view')}
         >
-          Match View
+          Results
         </button>
         <button 
           id="nav-admin"
