@@ -89,6 +89,15 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             const homeName = m.home_team_name || m.home_team_label || 'TBD';
             const awayName = m.away_team_name || m.away_team_label || 'TBD';
 
+            // Calculate implied Over/Under probabilities
+            const overOdds = m.over_odds || 1.9;
+            const underOdds = m.under_odds || 1.9;
+            const pOver = overOdds > 0 ? 1.0 / overOdds : 0.5;
+            const pUnder = underOdds > 0 ? 1.0 / underOdds : 0.5;
+            const sumOU = pOver + pUnder;
+            const overPct = sumOU > 0 ? Math.round((pOver / sumOU) * 100) : 50;
+            const underPct = 100 - overPct;
+
             return (
               <div key={m.id} className="glass-panel match-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 
@@ -139,24 +148,40 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
                 {/* Odds & Predictions Section */}
                 <div className="match-stats-drawer">
                   
-                  {/* Implied Probability split bar */}
-                  <div className="win-pct-container">
-                    <div className="win-pct-label">
-                      <span>{homeName}: {m.home_win_pct}%</span>
-                      <span>Draw: {m.draw_pct}%</span>
-                      <span>{awayName}: {m.away_win_pct}%</span>
+                  {/* Unified Match Analytics Box */}
+                  <div className="match-analytics-box">
+                    <div className="analytics-title">
+                      <TrendingUp size={14} className="text-secondary" />
+                      Implied Match Analytics
                     </div>
-                    <div className="win-pct-bar">
-                      <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
-                      <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
-                      <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
-                    </div>
-                  </div>
+                    
+                    <div className="analytics-grid">
+                      {/* Win Probability Bar */}
+                      <div className="analytics-item">
+                        <div className="analytics-labels">
+                          <span>{homeName}: {m.home_win_pct}%</span>
+                          <span>Draw: {m.draw_pct}%</span>
+                          <span>{awayName}: {m.away_win_pct}%</span>
+                        </div>
+                        <div className="win-pct-bar">
+                          <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
+                          <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
+                          <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
+                        </div>
+                      </div>
 
-                  {/* Over/Under Total */}
-                  <div className="over-under-container">
-                    <span className="over-under-label">Over/Under</span>
-                    <span className="over-under-value">{m.over_under_line}</span>
+                      {/* Goals Expectation Over/Under Bar */}
+                      <div className="analytics-item">
+                        <div className="analytics-labels">
+                          <span>Under {m.over_under_line}: {underPct}% (odds: {underOdds})</span>
+                          <span>Over {m.over_under_line}: {overPct}% (odds: {overOdds})</span>
+                        </div>
+                        <div className="ou-pct-bar">
+                          <div className="ou-pct-segment under" style={{ width: `${underPct}%` }}></div>
+                          <div className="ou-pct-segment over" style={{ width: `${overPct}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* User Prediction */}

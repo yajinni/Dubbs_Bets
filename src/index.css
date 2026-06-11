@@ -872,3 +872,79 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--success);
   box-shadow: 0 0 6px var(--success);
 }
+
+/* Unified Match Analytics Box (Option 3) */
+.match-analytics-box {
+  grid-column: 1 / -1;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.analytics-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding-bottom: 6px;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 600px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.analytics-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.analytics-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* Over/Under Goal Probability Bar styling */
+.ou-pct-bar {
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  width: 100%;
+}
+
+.ou-pct-segment {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.ou-pct-segment.under {
+  background: var(--info);
+}
+
+.ou-pct-segment.over {
+  background: var(--warning);
+}
+
