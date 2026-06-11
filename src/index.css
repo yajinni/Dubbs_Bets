@@ -1196,25 +1196,37 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 600px) {
+  #root {
+    padding: 0 8px 24px !important;
+  }
+  .glass-panel {
+    padding: 16px 10px !important;
+  }
   .hide-mobile {
     display: none !important;
   }
   .leaderboard-row {
-    grid-template-columns: 32px 1fr 60px 70px !important;
-    padding: 10px 12px !important;
-    font-size: 13px !important;
-    gap: 8px !important;
+    grid-template-columns: 28px 1fr 40px 48px 32px 48px !important;
+    padding: 10px 6px !important;
+    font-size: 11.5px !important;
+    gap: 6px !important;
   }
   .leaderboard-row.header-row {
-    grid-template-columns: 32px 1fr 60px 70px !important;
-    padding: 4px 12px !important;
+    grid-template-columns: 28px 1fr 40px 48px 32px 48px !important;
+    padding: 4px 6px !important;
   }
   .points-cell {
-    font-size: 13px !important;
+    font-size: 12px !important;
     text-align: right !important;
   }
   .stat-cell {
     text-align: center !important;
+  }
+  .participant-name {
+    font-size: 13px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

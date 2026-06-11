@@ -1,7 +1,6 @@
-import React from 'react';
-import { User, Award, CheckCircle, BarChart2 } from 'lucide-react';
+import { Award } from 'lucide-react';
 
-export default function Leaderboard({ leaderboard, activeParticipantId, setActiveParticipantId }) {
+export default function Leaderboard({ leaderboard, activeParticipantId }) {
   return (
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -17,9 +16,9 @@ export default function Leaderboard({ leaderboard, activeParticipantId, setActiv
           <div>Rank</div>
           <div>Participant</div>
           <div className="stat-cell" title="Correct Exact Scores">Scores</div>
-          <div className="stat-cell hide-mobile" title="Correct Winners">Winners</div>
-          <div className="stat-cell hide-mobile" title="Correct Over/Unders">O/U</div>
-          <div className="points-cell" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Points</div>
+          <div className="stat-cell" title="Correct Winners">Winners</div>
+          <div className="stat-cell" title="Correct Over/Unders">O/U</div>
+          <div className="points-cell">Points</div>
         </div>
 
         {/* Rows */}
@@ -44,7 +43,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId, setActiv
                   </div>
                 </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                   <span className="participant-name">{p.name}</span>
                   {isActive && (
                     <span 
@@ -55,7 +54,8 @@ export default function Leaderboard({ leaderboard, activeParticipantId, setActiv
                         padding: '1px 6px', 
                         borderRadius: '10px', 
                         fontWeight: '700',
-                        textTransform: 'uppercase'
+                        textTransform: 'uppercase',
+                        flexShrink: 0
                       }}
                     >
                       Active
@@ -67,11 +67,11 @@ export default function Leaderboard({ leaderboard, activeParticipantId, setActiv
                   {p.correct_scores}
                 </div>
                 
-                <div className="stat-cell hide-mobile" style={{ color: p.correct_winners > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
+                <div className="stat-cell" style={{ color: p.correct_winners > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
                   {p.correct_winners}
                 </div>
                 
-                <div className="stat-cell hide-mobile" style={{ color: p.correct_ou > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
+                <div className="stat-cell" style={{ color: p.correct_ou > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
                   {p.correct_ou}
                 </div>
                 
