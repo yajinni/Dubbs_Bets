@@ -144,13 +144,15 @@ function MatchCard({ m, pred, activeParticipantId, onSave }) {
   const formatMatchDate = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
-    return date.toLocaleString('en-US', {
+    const dateStr = date.toLocaleString('en-US', {
+      timeZone: 'America/New_York',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
     });
+    return `${dateStr} ET`;
   };
 
   return (
@@ -161,8 +163,8 @@ function MatchCard({ m, pred, activeParticipantId, onSave }) {
         <span style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--primary-hover)', letterSpacing: '0.05em' }}>
           {getRoundLabel(m)}
         </span>
-        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Calendar size={12} />
+        <span style={{ fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+          <Calendar size={14} />
           {formatMatchDate(m.local_date)}
         </span>
       </div>
