@@ -48,12 +48,21 @@ export async function onRequest(context) {
     }
 
     // 2. Perform Sync
-    const apiKey = env.API_FOOTBALL_KEY;
+    const apiKeyOdds = env.THE_ODDS_API_KEY;
+    const apiKeyFootball = env.API_FOOTBALL_KEY;
     let syncResults = { source: 'mock', matchesUpdated: 0, oddsUpdated: 0 };
 
-    if (apiKey && apiKey !== '') {
+    if (apiKeyOdds && apiKeyOdds !== '') {
       try {
-        syncResults = await syncFromAPIFootball(env.db, apiKey);
+        syncResults = await syncFromTheOddsAPI(env.db, apiKeyOdds);
+      } catch (err) {
+        console.error('The Odds API sync failed, falling back to mock sync:', err.message);
+        syncResults = await runMockSync(env.db);
+        syncResults.warning = `The Odds API failed (${err.message}). Gracefully fell back to mock simulation.`;
+      }
+    } else if (apiKeyFootball && apiKeyFootball !== '') {
+      try {
+        syncResults = await syncFromAPIFootball(env.db, apiKeyFootball);
       } catch (err) {
         console.error('API-Football sync failed, falling back to mock sync:', err.message);
         syncResults = await runMockSync(env.db);
@@ -376,4 +385,169 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
       WHERE participant_id = ? AND match_id = ?
     `).bind(pWinner, pOu, pScore, totalPoints, pred.participant_id, matchId).run();
   }
+}
+
+// --------------------------------------------------------
+// The Odds API Sync Implementation
+// --------------------------------------------------------
+async function syncFromTheOddsAPI(db, apiKey) {
+  console.log('Syncing from The Odds API...');
+  const sportKey = 'soccer_fifa_world_cup';
+  
+  // 1. Fetch Odds & Fixtures
+  const oddsRes = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${apiKey}&regions=us&markets=h2h,totals&oddsFormat=decimal`);
+  const oddsData = await oddsRes.json();
+  
+  if (oddsRes.status !== 200) {
+    throw new Error(`The Odds API odds error: ${JSON.stringify(oddsData)}`);
+  }
+  
+  // 2. Fetch Scores
+  const scoresRes = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/scores/?apiKey=${apiKey}&daysFrom=3`);
+  const scoresData = await scoresRes.json();
+  
+  if (scoresRes.status !== 200) {
+    throw new Error(`The Odds API scores error: ${JSON.stringify(scoresData)}`);
+  }
+  
+  const { results: dbMatches } = await db.prepare('SELECT * FROM matches').all();
+  let matchesUpdated = 0;
+  let oddsUpdated = 0;
+  
+  // Map odds to a lookup object
+  const oddsMap = {};
+  for (const match of oddsData) {
+    oddsMap[`${match.home_team.toLowerCase()}::${match.away_team.toLowerCase()}`] = match;
+  }
+  
+  // Process Scores & Match status updates
+  for (const event of scoresData) {
+    const key = `${event.home_team.toLowerCase()}::${event.away_team.toLowerCase()}`;
+    const oddsEvent = oddsMap[key];
+    
+    // Find matching match in D1 database
+    const dbMatch = dbMatches.find(m => 
+      m.home_team_name.toLowerCase() === event.home_team.toLowerCase() && 
+      m.away_team_name.toLowerCase() === event.away_team.toLowerCase()
+    );
+    
+    if (dbMatch) {
+      let homePct = dbMatch.home_win_pct;
+      let awayPct = dbMatch.away_win_pct;
+      let drawPct = dbMatch.draw_pct;
+      let ouLine = dbMatch.over_under_line;
+      let overOdds = dbMatch.over_odds;
+      let underOdds = dbMatch.under_odds;
+      
+      // Parse odds if available
+      if (oddsEvent && oddsEvent.bookmakers && oddsEvent.bookmakers.length > 0) {
+        const bookmaker = oddsEvent.bookmakers.find(b => {
+          const markets = b.markets || [];
+          return markets.some(mk => mk.key === 'h2h') && markets.some(mk => mk.key === 'totals');
+        }) || oddsEvent.bookmakers[0];
+        
+        if (bookmaker) {
+          const h2h = bookmaker.markets.find(mk => mk.key === 'h2h');
+          if (h2h) {
+            const homeOutcome = h2h.outcomes.find(o => o.name === event.home_team);
+            const awayOutcome = h2h.outcomes.find(o => o.name === event.away_team);
+            const drawOutcome = h2h.outcomes.find(o => o.name === 'Draw');
+            
+            if (homeOutcome && awayOutcome && drawOutcome) {
+              const pHome = 1.0 / homeOutcome.price;
+              const pAway = 1.0 / awayOutcome.price;
+              const pDraw = 1.0 / drawOutcome.price;
+              const sum = pHome + pAway + pDraw;
+              homePct = Math.round((pHome / sum) * 1000) / 10;
+              awayPct = Math.round((pAway / sum) * 1000) / 10;
+              drawPct = Math.round((pDraw / sum) * 1000) / 10;
+              oddsUpdated++;
+            }
+          }
+          
+          const totals = bookmaker.markets.find(mk => mk.key === 'totals');
+          if (totals) {
+            const overOutcome = totals.outcomes.find(o => o.name === 'Over');
+            const underOutcome = totals.outcomes.find(o => o.name === 'Under');
+            if (overOutcome) {
+              ouLine = overOutcome.point;
+              overOdds = overOutcome.price;
+            }
+            if (underOutcome) {
+              underOdds = underOutcome.price;
+            }
+          }
+        }
+      }
+      
+      // Parse scores if completed or currently live
+      let homeScore = dbMatch.home_score;
+      let awayScore = dbMatch.away_score;
+      let finished = dbMatch.finished;
+      let status = dbMatch.status;
+      
+      if (event.scores && event.scores.length > 0) {
+        const hScoreObj = event.scores.find(s => s.name === event.home_team);
+        const aScoreObj = event.scores.find(s => s.name === event.away_team);
+        if (hScoreObj && aScoreObj) {
+          homeScore = parseInt(hScoreObj.score) || 0;
+          awayScore = parseInt(aScoreObj.score) || 0;
+        }
+      }
+      
+      if (event.completed === true) {
+        status = 'finished';
+        finished = 1;
+      } else if (event.completed === false) {
+        // If commenced in the past but not completed, mark as live
+        const startTime = new Date(event.commence_time).getTime();
+        if (Date.now() >= startTime) {
+          status = 'live';
+        } else {
+          status = 'scheduled';
+        }
+        finished = 0;
+      }
+      
+      // Update D1 database
+      await db.prepare(`
+        UPDATE matches
+        SET
+          home_score = ?,
+          away_score = ?,
+          status = ?,
+          finished = ?,
+          home_win_pct = ?,
+          away_win_pct = ?,
+          draw_pct = ?,
+          over_under_line = ?,
+          over_odds = ?,
+          under_odds = ?,
+          local_date = ?
+        WHERE id = ?
+      `).bind(
+        homeScore,
+        awayScore,
+        status,
+        finished,
+        homePct,
+        awayPct,
+        drawPct,
+        ouLine,
+        overOdds,
+        underOdds,
+        event.commence_time.replace('Z', ''),
+        dbMatch.id
+      ).run();
+      
+      // Recalculate predictions if finished
+      if (finished === 1) {
+        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine);
+      }
+      
+      matchesUpdated++;
+    }
+  }
+  
+  return { source: 'the-odds-api', matchesUpdated, oddsUpdated };
 }
