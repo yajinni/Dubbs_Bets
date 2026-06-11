@@ -913,7 +913,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: #ffffff;
   letter-spacing: 0.05em;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   padding-bottom: 6px;
@@ -941,8 +941,8 @@ h1, h2, h3, h4, h5, h6 {
 .analytics-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: 13px;
+  color: #ffffff;
   font-weight: 600;
 }
 

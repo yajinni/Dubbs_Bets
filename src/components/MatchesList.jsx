@@ -289,13 +289,13 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       {/* Analytics Box */}
       <div className="match-analytics-box">
         <div className="analytics-title">
-          <TrendingUp size={14} className="text-secondary" />
+          <TrendingUp size={14} />
           3rd Party Match Analysis
         </div>
         <div className="analytics-grid">
           {/* Winner Probability */}
           <div className="analytics-item">
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
+            <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
               Match Winner (%)
             </div>
             <div className="analytics-labels">
@@ -307,14 +307,14 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
               <span>Draw: {m.draw_pct}%</span>
             </div>
           </div>
 
           {/* First Team to Score Probability */}
           <div className="analytics-item">
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
+            <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
               First Team to Score (%)
             </div>
             <div className="analytics-labels">
@@ -326,14 +326,14 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <div className="win-pct-segment draw" style={{ width: `${noGoalPct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${awayFirstPct}%` }}></div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
               <span>No Goal: {noGoalPct}%</span>
             </div>
           </div>
 
           {/* Goals Over/Under Probability */}
           <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
+            <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
               Score O/U ({m.over_under_line})
             </div>
             <div className="analytics-labels">
@@ -348,7 +348,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
           {/* Cards Over/Under Probability */}
           <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
+            <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
               Cards Over / Under ({m.cards_line || 3.5})
             </div>
             <div className="analytics-labels">
