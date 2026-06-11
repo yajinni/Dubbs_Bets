@@ -64,7 +64,7 @@ export async function onRequest(context) {
       }
 
       // 1. Fetch match to verify it exists and check if it has already started
-      const match = await env.db.prepare('SELECT local_date, status, finished FROM matches WHERE id = ?').bind(matchId).first();
+      const match = await env.db.prepare('SELECT local_date, status, finished, home_score, away_score, over_under_line FROM matches WHERE id = ?').bind(matchId).first();
 
       if (!match) {
         return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
@@ -113,6 +113,35 @@ export async function onRequest(context) {
         await env.db.prepare(insertQuery)
           .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore)
           .run();
+      }
+
+      // 4. Immediately calculate points for this prediction if the match is already finished
+      if (match.finished === 1) {
+        const homeScore = match.home_score;
+        const awayScore = match.away_score;
+        const ouLine = match.over_under_line;
+        
+        let winnerResult = 'draw';
+        if (homeScore > awayScore) winnerResult = 'home';
+        else if (awayScore > homeScore) winnerResult = 'away';
+        
+        const totalGoals = homeScore + awayScore;
+        const ouResult = totalGoals > ouLine ? 'over' : 'under';
+        
+        const pWinner = predictedWinner === winnerResult ? 1 : 0;
+        const pOu = predictedOverUnder === ouResult ? 1 : 0;
+        const pScore = (pHomeScore === homeScore && pAwayScore === awayScore) ? 1 : 0;
+        const totalPoints = pWinner + pOu + (pScore * 3);
+        
+        await env.db.prepare(`
+          UPDATE predictions 
+          SET 
+            points_winner = ?,
+            points_ou = ?,
+            points_score = ?,
+            total_points = ?
+          WHERE participant_id = ? AND match_id = ?
+        `).bind(pWinner, pOu, pScore, totalPoints, participantId, matchId).run();
       }
 
       const savedPrediction = await env.db.prepare('SELECT * FROM predictions WHERE participant_id = ? AND match_id = ?')
