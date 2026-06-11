@@ -24,7 +24,9 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
-  const [lastSavedTime, setLastSavedTime] = useState('');
+  const [lastSavedTime, setLastSavedTime] = useState(() => {
+    return localStorage.getItem(`save_timestamp_${activeParticipantId}_${m.id}`) || '';
+  });
 
   // Sync inputs with existing prediction or reset on participant switch
   useEffect(() => {
@@ -41,7 +43,8 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
     }
     setError('');
     setSuccessMsg('');
-  }, [pred, activeParticipantId]);
+    setLastSavedTime(localStorage.getItem(`save_timestamp_${activeParticipantId}_${m.id}`) || '');
+  }, [pred, activeParticipantId, m.id]);
 
   const hasChanges = (() => {
     const currentWinner = winner || '';
@@ -130,6 +133,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
         hour12: true
       });
       setLastSavedTime(timeStr);
+      localStorage.setItem(`save_timestamp_${activeParticipantId}_${m.id}`, timeStr);
       setTimeout(() => setSuccessMsg(''), 2500);
       onSave(); // Refresh all state
     } catch (err) {
