@@ -16,7 +16,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const overPct = sumOU > 0 ? Math.round((pOver / sumOU) * 100) : 50;
   const underPct = 100 - overPct;
 
-  // Calculate implied First Team to Score Odds
+  // Calculate implied First Team to Score Probability
   const homeWinPct = m.home_win_pct || 33.3;
   const awayWinPct = m.away_win_pct || 33.3;
   const drawPct = m.draw_pct || 33.3;
@@ -25,9 +25,9 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const anyGoalProb = 100 - noGoalProb;
   const homeFirstProb = totalWinSum > 0 ? (homeWinPct / totalWinSum) * anyGoalProb : anyGoalProb / 2;
   const awayFirstProb = totalWinSum > 0 ? (awayWinPct / totalWinSum) * anyGoalProb : anyGoalProb / 2;
-  const homeFirstOdds = homeFirstProb > 0 ? (100 / homeFirstProb).toFixed(2) : '2.00';
-  const awayFirstOdds = awayFirstProb > 0 ? (100 / awayFirstProb).toFixed(2) : '2.00';
-  const noGoalOdds = noGoalProb > 0 ? (100 / noGoalProb).toFixed(2) : '10.00';
+  const homeFirstPct = Math.round(homeFirstProb);
+  const noGoalPct = Math.round(noGoalProb);
+  const awayFirstPct = 100 - homeFirstPct - noGoalPct;
 
   // Local state for the inline prediction inputs
   const [winner, setWinner] = useState('');
@@ -259,20 +259,20 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           </div>
           <div className="analytics-item" style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', fontWeight: '700' }}>
-              First Team to Score (Implied Odds)
+              First Team to Score (%)
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{homeName}</span>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--primary-hover)' }}>{homeFirstOdds}</span>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--primary-hover)' }}>{homeFirstPct}%</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>No Goal</span>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)' }}>{noGoalOdds}</span>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)' }}>{noGoalPct}%</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{awayName}</span>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--success)' }}>{awayFirstOdds}</span>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--success)' }}>{awayFirstPct}%</span>
               </div>
             </div>
           </div>
