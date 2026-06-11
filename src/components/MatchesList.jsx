@@ -258,22 +258,18 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
             </div>
           </div>
           <div className="analytics-item" style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', fontWeight: '700' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
               First Team to Score (%)
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{homeName}</span>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--primary-hover)' }}>{homeFirstPct}%</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>No Goal</span>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)' }}>{noGoalPct}%</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '8px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{awayName}</span>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--success)' }}>{awayFirstPct}%</span>
-              </div>
+            <div className="analytics-labels">
+              <span>{homeName}: {homeFirstPct}%</span>
+              <span>No Goal: {noGoalPct}%</span>
+              <span>{awayName}: {awayFirstPct}%</span>
+            </div>
+            <div className="win-pct-bar">
+              <div className="win-pct-segment home" style={{ width: `${homeFirstPct}%` }}></div>
+              <div className="win-pct-segment draw" style={{ width: `${noGoalPct}%` }}></div>
+              <div className="win-pct-segment away" style={{ width: `${awayFirstPct}%` }}></div>
             </div>
           </div>
         </div>
