@@ -4,6 +4,7 @@ import Leaderboard from './components/Leaderboard';
 import MatchesList from './components/MatchesList';
 import AdminPanel from './components/AdminPanel';
 import MatchView from './components/MatchView';
+import StatsView from './components/StatsView';
 import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 
 export default function App() {
@@ -302,6 +303,14 @@ export default function App() {
               allPredictions={allPredictions}
               leaderboard={leaderboard}
               activeParticipantId={activeParticipantId}
+            />
+          )}
+
+          {activeTab === 'stats' && (
+            <StatsView 
+              matches={matches}
+              allPredictions={allPredictions}
+              leaderboard={leaderboard}
             />
           )}
 

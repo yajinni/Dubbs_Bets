@@ -78,6 +78,13 @@ export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigge
         >
           Results
         </button>
+        <button 
+          id="nav-stats"
+          className={`nav-btn ${activeTab === 'stats' ? 'active' : ''}`}
+          onClick={() => setActiveTab('stats')}
+        >
+          Stats
+        </button>
       </nav>
 
       <div className="header-actions">
