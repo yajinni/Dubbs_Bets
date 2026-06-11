@@ -585,22 +585,26 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           </div>
         )}
 
-        {/* Other Players' Picks */}
+        {/* Players' Picks */}
         {activeParticipantId && (
           <div style={{ marginTop: '16px', borderTop: '1px dashed var(--glass-border)', paddingTop: '12px' }}>
             <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Users size={12} strokeWidth={2.5} />
-              Other Players' Picks
+              Players' Picks
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
-              {otherParticipants.length === 0 ? (
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No other players yet.</span>
+              {leaderboard.length === 0 ? (
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No players yet.</span>
               ) : (
-                otherParticipants.map(op => {
+                leaderboard.map(op => {
                   const opPred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === op.id);
+                  const isSelf = op.id === activeParticipantId;
                   return (
-                    <div key={op.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.01)', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--glass-border)' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>{op.name}</span>
+                    <div key={op.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', padding: '6px 10px', borderRadius: '6px', border: isSelf ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid var(--glass-border)' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {op.name}
+                        {isSelf && <span style={{ fontSize: '9px', background: 'var(--primary)', color: '#fff', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>You</span>}
+                      </span>
                       {opPred ? (
                         <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '600' }}>
                           {opPred.predicted_winner === 'home' ? m.home_code || 'H' : opPred.predicted_winner === 'away' ? m.away_code || 'A' : 'D'}
