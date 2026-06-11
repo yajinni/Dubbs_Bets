@@ -173,8 +173,8 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
                       {/* Goals Expectation Over/Under Bar */}
                       <div className="analytics-item">
                         <div className="analytics-labels">
-                          <span>Under {m.over_under_line}: {underPct}% (odds: {underOdds})</span>
-                          <span>Over {m.over_under_line}: {overPct}% (odds: {overOdds})</span>
+                          <span>Under {m.over_under_line}: {underPct}%</span>
+                          <span>Over {m.over_under_line}: {overPct}%</span>
                         </div>
                         <div className="ou-pct-bar">
                           <div className="ou-pct-segment under" style={{ width: `${underPct}%` }}></div>
