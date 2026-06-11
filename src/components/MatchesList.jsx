@@ -238,13 +238,15 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           <div className="analytics-item">
             <div className="analytics-labels">
               <span>{homeName}: {m.home_win_pct}%</span>
-              <span>Draw: {m.draw_pct}%</span>
               <span>{awayName}: {m.away_win_pct}%</span>
             </div>
-            <div className="win-pct-bar">
+            <div className="win-pct-bar" style={{ marginBottom: '4px' }}>
               <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
               <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>
+              <span>Draw: {m.draw_pct}%</span>
             </div>
           </div>
           <div className="analytics-item">
@@ -263,13 +265,15 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
             </div>
             <div className="analytics-labels">
               <span>{homeName}: {homeFirstPct}%</span>
-              <span>No Goal: {noGoalPct}%</span>
               <span>{awayName}: {awayFirstPct}%</span>
             </div>
-            <div className="win-pct-bar">
+            <div className="win-pct-bar" style={{ marginBottom: '4px' }}>
               <div className="win-pct-segment home" style={{ width: `${homeFirstPct}%` }}></div>
               <div className="win-pct-segment draw" style={{ width: `${noGoalPct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${awayFirstPct}%` }}></div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>
+              <span>No Goal: {noGoalPct}%</span>
             </div>
           </div>
         </div>
