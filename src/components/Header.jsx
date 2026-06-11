@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Trophy, RefreshCw, CheckCircle, Clock } from 'lucide-react';
 
-export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigger }) {
+export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigger, leaderboard = [], activeParticipantId, setActiveParticipantId }) {
   const [syncing, setSyncing] = useState(false);
 
   const handleSync = async () => {
@@ -57,6 +57,24 @@ export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigge
       </nav>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {leaderboard.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', color: '#ff4a4a', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pick Your Name:</span>
+            <select
+              id="active-player-select"
+              className="admin-select"
+              style={{ width: 'auto', padding: '6px 12px', fontSize: '13px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+              value={activeParticipantId || ''}
+              onChange={(e) => setActiveParticipantId(parseInt(e.target.value) || null)}
+            >
+              <option value="" style={{ background: '#120b2e', color: 'var(--text-muted)' }}>-- Choose Name --</option>
+              {leaderboard.map((p) => (
+                <option key={p.id} value={p.id} style={{ background: '#120b2e', color: 'var(--text-primary)' }}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="locked-icon-container" style={{ background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
           <Clock size={14} className="text-muted" />
           <span style={{ fontSize: '12px' }}>

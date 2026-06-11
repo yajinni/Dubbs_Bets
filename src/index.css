@@ -977,7 +977,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .inline-prediction-grid {
   display: grid;
-  grid-template-columns: 2.2fr 1.8fr 1fr 90px;
+  grid-template-columns: 2fr 1.6fr 1fr 200px;
   gap: 16px;
   align-items: flex-end;
 }

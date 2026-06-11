@@ -24,6 +24,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [lastSavedTime, setLastSavedTime] = useState('');
 
   // Sync inputs with existing prediction or reset on participant switch
   useEffect(() => {
@@ -121,6 +122,14 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       }
 
       setSuccessMsg('Saved!');
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+      setLastSavedTime(timeStr);
       setTimeout(() => setSuccessMsg(''), 2500);
       onSave(); // Refresh all state
     } catch (err) {
@@ -366,17 +375,22 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                 </div>
 
                 {/* Save button */}
-                <div className="prediction-col action">
+                <div className="prediction-col action" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', width: '100%' }}>
                   <button
                     type="button"
                     className="btn-primary"
-                    style={{ padding: '8px 16px', fontSize: '13px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    style={{ padding: '8px 16px', fontSize: '13px', width: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexShrink: 0 }}
                     onClick={handleSave}
                     disabled={saving || !hasChanges}
                   >
                     <Save size={13} />
                     {saving ? 'Saving...' : 'Save'}
                   </button>
+                  {lastSavedTime && (
+                    <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                      Saved at {lastSavedTime}
+                    </span>
+                  )}
                 </div>
               </div>
               {error && <div className="inline-error-text">{error}</div>}

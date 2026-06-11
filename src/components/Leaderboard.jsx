@@ -9,23 +9,6 @@ export default function Leaderboard({ leaderboard, activeParticipantId, setActiv
           <Award size={20} color="#8b5cf6" />
           Leaderboard Standings
         </h2>
-        {leaderboard.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Predicting As:</span>
-            <select
-              id="active-player-select"
-              className="admin-select"
-              style={{ width: 'auto', padding: '4px 8px', fontSize: '13px' }}
-              value={activeParticipantId || ''}
-              onChange={(e) => setActiveParticipantId(parseInt(e.target.value) || null)}
-            >
-              <option value="">-- Choose Name --</option>
-              {leaderboard.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       <div className="leaderboard-container">

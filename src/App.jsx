@@ -161,6 +161,9 @@ export default function App() {
         setActiveTab={setActiveTab} 
         lastSync={lastSync}
         onSyncTrigger={forceSync}
+        leaderboard={leaderboard}
+        activeParticipantId={activeParticipantId}
+        setActiveParticipantId={setActiveParticipantId}
       />
 
       {loading ? (
