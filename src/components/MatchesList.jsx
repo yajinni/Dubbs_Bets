@@ -157,12 +157,16 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
   const formatMatchDate = (isoString) => {
     if (!isoString) return '';
-    const date = new Date(isoString);
+    let normalized = isoString.replace(' ', 'T');
+    if (!normalized.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(normalized)) {
+      normalized += 'Z';
+    }
+    const date = new Date(normalized);
     const dateStr = date.toLocaleString('en-US', {
       timeZone: 'America/New_York',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
+      hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
