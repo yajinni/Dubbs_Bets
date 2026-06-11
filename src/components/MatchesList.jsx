@@ -465,6 +465,37 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                   </div>
                 </div>
 
+                {/* First Team to Score Select */}
+                <div className="prediction-col">
+                  <label>First Scorer (1 pt)</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${firstScorer === 'home' ? 'active' : ''}`}
+                      onClick={() => setFirstScorer('home')}
+                      disabled={saving}
+                    >
+                      {homeName}
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${firstScorer === 'none' ? 'active' : ''}`}
+                      onClick={() => setFirstScorer('none')}
+                      disabled={saving}
+                    >
+                      No Goal
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${firstScorer === 'away' ? 'active' : ''}`}
+                      onClick={() => setFirstScorer('away')}
+                      disabled={saving}
+                    >
+                      {awayName}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Over/Under Select */}
                 <div className="prediction-col">
                   <label>Score O/U (1 pt)</label>
@@ -511,34 +542,21 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                   </div>
                 </div>
 
-                {/* First Team to Score Select */}
+                {/* Total Cards exact input */}
                 <div className="prediction-col">
-                  <label>First Scorer (1 pt)</label>
-                  <div className="inline-choice-group">
-                    <button
-                      type="button"
-                      className={`choice-btn ${firstScorer === 'home' ? 'active' : ''}`}
-                      onClick={() => setFirstScorer('home')}
+                  <label>Total Cards (2 pts)</label>
+                  <div className="inline-score-inputs" style={{ justifyContent: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={totalCards}
+                      onChange={(e) => setTotalCards(e.target.value)}
+                      placeholder="Cards"
+                      aria-label="Exact cards prediction"
                       disabled={saving}
-                    >
-                      {homeName}
-                    </button>
-                    <button
-                      type="button"
-                      className={`choice-btn ${firstScorer === 'none' ? 'active' : ''}`}
-                      onClick={() => setFirstScorer('none')}
-                      disabled={saving}
-                    >
-                      No Goal
-                    </button>
-                    <button
-                      type="button"
-                      className={`choice-btn ${firstScorer === 'away' ? 'active' : ''}`}
-                      onClick={() => setFirstScorer('away')}
-                      disabled={saving}
-                    >
-                      {awayName}
-                    </button>
+                      style={{ width: '70px', textAlign: 'center' }}
+                    />
                   </div>
                 </div>
 
@@ -566,24 +584,6 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       placeholder="A"
                       aria-label="Away score prediction"
                       disabled={saving}
-                    />
-                  </div>
-                </div>
-
-                {/* Total Cards exact input */}
-                <div className="prediction-col">
-                  <label>Total Cards (2 pts)</label>
-                  <div className="inline-score-inputs" style={{ justifyContent: 'center' }}>
-                    <input
-                      type="number"
-                      min="0"
-                      max="20"
-                      value={totalCards}
-                      onChange={(e) => setTotalCards(e.target.value)}
-                      placeholder="Cards"
-                      aria-label="Exact cards prediction"
-                      disabled={saving}
-                      style={{ width: '70px', textAlign: 'center' }}
                     />
                   </div>
                 </div>

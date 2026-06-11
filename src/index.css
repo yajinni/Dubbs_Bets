@@ -996,23 +996,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .inline-prediction-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: flex-end;
 }
 
 /* Mobile responsive prediction grid */
-@media (max-width: 900px) {
-  .inline-prediction-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  .prediction-col.action {
-    grid-column: span 2;
-  }
-}
-
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .inline-prediction-grid {
     grid-template-columns: 1fr;
     gap: 12px;
