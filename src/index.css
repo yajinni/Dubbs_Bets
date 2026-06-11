@@ -122,6 +122,12 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 32px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .logo-container {
   display: flex;
   align-items: center;
@@ -1157,6 +1163,61 @@ h1, h2, h3, h4, h5, h6 {
     border-color: var(--glass-border);
   }
 }
+
+/* Responsive adjustments for Mobile header and leaderboard */
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column !important;
+    gap: 16px !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 16px 8px !important;
+    margin-bottom: 20px !important;
+  }
+  .app-header .logo-container {
+    margin-bottom: 4px;
+  }
+  .app-header .nav-links {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .header-actions {
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+  #active-player-select {
+    width: 100% !important;
+    max-width: 250px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .hide-mobile {
+    display: none !important;
+  }
+  .leaderboard-row {
+    grid-template-columns: 32px 1fr 60px 70px !important;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+    gap: 8px !important;
+  }
+  .leaderboard-row.header-row {
+    grid-template-columns: 32px 1fr 60px 70px !important;
+    padding: 4px 12px !important;
+  }
+  .points-cell {
+    font-size: 13px !important;
+    text-align: right !important;
+  }
+  .stat-cell {
+    text-align: center !important;
+  }
+}
+
 
 
 

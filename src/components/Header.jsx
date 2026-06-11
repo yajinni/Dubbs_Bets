@@ -56,7 +56,7 @@ export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigge
         </button>
       </nav>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div className="header-actions">
         {leaderboard.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '12px', color: '#ff4a4a', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pick Your Name:</span>

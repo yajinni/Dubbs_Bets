@@ -17,8 +17,8 @@ export default function Leaderboard({ leaderboard, activeParticipantId, setActiv
           <div>Rank</div>
           <div>Participant</div>
           <div className="stat-cell" title="Correct Exact Scores">Scores</div>
-          <div className="stat-cell" title="Correct Winners">Winners</div>
-          <div className="stat-cell" title="Correct Over/Unders">O/U</div>
+          <div className="stat-cell hide-mobile" title="Correct Winners">Winners</div>
+          <div className="stat-cell hide-mobile" title="Correct Over/Unders">O/U</div>
           <div className="points-cell" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Points</div>
         </div>
 
@@ -67,11 +67,11 @@ export default function Leaderboard({ leaderboard, activeParticipantId, setActiv
                   {p.correct_scores}
                 </div>
                 
-                <div className="stat-cell" style={{ color: p.correct_winners > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
+                <div className="stat-cell hide-mobile" style={{ color: p.correct_winners > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
                   {p.correct_winners}
                 </div>
                 
-                <div className="stat-cell" style={{ color: p.correct_ou > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
+                <div className="stat-cell hide-mobile" style={{ color: p.correct_ou > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
                   {p.correct_ou}
                 </div>
                 
