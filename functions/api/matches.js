@@ -136,7 +136,7 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
     const pWinner = pred.predicted_winner === winner ? 1 : 0;
     const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
     const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
-    const totalPoints = pWinner + pOu + pScore;
+    const totalPoints = pWinner + pOu + (pScore * 3);
 
     await db.prepare(`
       UPDATE predictions 

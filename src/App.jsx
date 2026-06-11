@@ -212,7 +212,7 @@ export default function App() {
                         className="choice-btn"
                         style={{ padding: '4px 8px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        <ChevronLeft size={16} />
+                        <ChevronLeft size={16} strokeWidth={3} />
                       </button>
                       <button 
                         onClick={() => setSelectedWeek(prev => Math.min(6, prev + 1))}
@@ -220,7 +220,7 @@ export default function App() {
                         className="choice-btn"
                         style={{ padding: '4px 8px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        <ChevronRight size={16} />
+                        <ChevronRight size={16} strokeWidth={3} />
                       </button>
                     </div>
                   </div>
