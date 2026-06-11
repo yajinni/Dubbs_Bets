@@ -986,7 +986,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--primary-hover);
+  color: #ffffff;
   letter-spacing: 0.05em;
   border-bottom: 1px solid rgba(139, 92, 246, 0.1);
   padding-bottom: 6px;
@@ -1025,10 +1025,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .prediction-col label {
-  font-size: 11px;
+  font-size: 13px;
   text-transform: uppercase;
   font-weight: 700;
-  color: var(--text-muted);
+  color: #ffffff;
   letter-spacing: 0.05em;
   text-align: center;
 }
