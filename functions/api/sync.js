@@ -50,6 +50,26 @@ export async function onRequest(context) {
     // 2. Perform Sync
     const apiKeyOdds = env.THE_ODDS_API_KEY;
     const apiKeyFootball = env.API_FOOTBALL_KEY;
+
+    // Diagnostic Helpers
+    const checkBets = url.searchParams.get('checkBets') === 'true';
+    if (checkBets && apiKeyFootball) {
+      const betsRes = await fetch(`https://v3.football.api-sports.io/odds/bets`, {
+        headers: { 'x-apisports-key': apiKeyFootball }
+      });
+      const betsData = await betsRes.json();
+      return new Response(JSON.stringify(betsData), { status: 200, headers });
+    }
+
+    const checkOddsFixture = url.searchParams.get('checkOddsFixture');
+    if (checkOddsFixture && apiKeyFootball) {
+      const oddsRes = await fetch(`https://v3.football.api-sports.io/odds?fixture=${checkOddsFixture}`, {
+        headers: { 'x-apisports-key': apiKeyFootball }
+      });
+      const oddsData = await oddsRes.json();
+      return new Response(JSON.stringify(oddsData), { status: 200, headers });
+    }
+
     let syncResults = { source: 'mock', matchesUpdated: 0, oddsUpdated: 0 };
 
     if (apiKeyOdds && apiKeyOdds !== '') {
