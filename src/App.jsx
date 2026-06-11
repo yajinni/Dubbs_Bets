@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
 import MatchesList from './components/MatchesList';
-import PredictionModal from './components/PredictionModal';
 import AdminPanel from './components/AdminPanel';
 import { Calendar, Users, Award, Play } from 'lucide-react';
 
@@ -17,9 +16,6 @@ export default function App() {
   });
   const [lastSync, setLastSync] = useState(null);
   
-  // Modal states
-  const [selectedMatch, setSelectedMatch] = useState(null);
-  const [isPredictModalOpen, setIsPredictModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Load active player on change
@@ -104,18 +100,10 @@ export default function App() {
     }
   };
 
-  const handlePredictClick = (match) => {
-    setSelectedMatch(match);
-    setIsPredictModalOpen(true);
-  };
+
 
   const getActiveParticipantObj = () => {
     return leaderboard.find(p => p.id === activeParticipantId) || null;
-  };
-
-  const getActivePredictionForSelectedMatch = () => {
-    if (!selectedMatch) return null;
-    return predictions.find(p => p.match_id === selectedMatch.id) || null;
   };
 
   // Helper stats for dashboard
