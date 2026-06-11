@@ -184,7 +184,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       </div>
 
       {/* Match Score & Teams */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', width: '100%', gap: '16px' }}>
+      <div className="match-teams-grid">
         <div className="team-container home">
           <span className="team-name">{homeName}</span>
           {m.home_flag && <img src={m.home_flag} alt={`${homeName} flag`} className="flag-icon" />}

@@ -398,6 +398,14 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+.match-teams-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  gap: 16px;
+}
+
 .team-container {
   display: flex;
   align-items: center;
@@ -1094,6 +1102,12 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Mobile optimizations for Match Card layout */
 @media (max-width: 768px) {
+  .match-teams-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
   .match-card {
     display: flex !important;
     flex-direction: column !important;
