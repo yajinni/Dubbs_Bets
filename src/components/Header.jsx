@@ -3,11 +3,29 @@ import { Trophy, RefreshCw, CheckCircle, Clock } from 'lucide-react';
 
 export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigger, leaderboard = [], activeParticipantId, setActiveParticipantId }) {
   const [syncing, setSyncing] = useState(false);
+  const [trophyClicks, setTrophyClicks] = useState(0);
+  const [lastTrophyClickTime, setLastTrophyClickTime] = useState(0);
 
   const handleSync = async () => {
     setSyncing(true);
     await onSyncTrigger();
     setSyncing(false);
+  };
+
+  const handleTrophyClick = () => {
+    const now = Date.now();
+    if (now - lastTrophyClickTime < 1000) {
+      const nextCount = trophyClicks + 1;
+      if (nextCount >= 3) {
+        setActiveTab('admin');
+        setTrophyClicks(0);
+      } else {
+        setTrophyClicks(nextCount);
+      }
+    } else {
+      setTrophyClicks(1);
+    }
+    setLastTrophyClickTime(now);
   };
 
   const formatLastSync = (isoString) => {
@@ -27,8 +45,14 @@ export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigge
 
   return (
     <header className="app-header">
-      <div className="logo-container">
-        <Trophy className="logo-icon" size={32} color="#fbbf24" style={{ filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.4))' }} />
+      <div className="logo-container" style={{ userSelect: 'none' }}>
+        <Trophy 
+          className="logo-icon" 
+          size={32} 
+          color="#fbbf24" 
+          style={{ filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.4))', cursor: 'pointer' }}
+          onClick={handleTrophyClick}
+        />
         <h1 className="logo-text">Dubbs Bets</h1>
       </div>
 
@@ -53,13 +77,6 @@ export default function Header({ activeTab, setActiveTab, lastSync, onSyncTrigge
           onClick={() => setActiveTab('match-view')}
         >
           Results
-        </button>
-        <button 
-          id="nav-admin"
-          className={`nav-btn ${activeTab === 'admin' ? 'active' : ''}`}
-          onClick={() => setActiveTab('admin')}
-        >
-          Admin
         </button>
       </nav>
 
