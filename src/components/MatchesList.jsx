@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Lock, TrendingUp, HelpCircle, Save } from 'lucide-react';
+import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users } from 'lucide-react';
 
-function MatchCard({ m, pred, activeParticipantId, onSave }) {
+function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [] }) {
   const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
   const homeName = m.home_team_name || m.home_team_label || 'TBD';
   const awayName = m.away_team_name || m.away_team_label || 'TBD';
+  const otherParticipants = leaderboard.filter(p => p.id !== activeParticipantId);
 
   // Calculate implied Over/Under probabilities
   const overOdds = m.over_odds || 1.9;
@@ -387,12 +388,55 @@ function MatchCard({ m, pred, activeParticipantId, onSave }) {
             Please select your name from the leaderboard dropdown to place predictions.
           </div>
         )}
+
+        {/* Other Players' Picks */}
+        {activeParticipantId && (
+          <div style={{ marginTop: '16px', borderTop: '1px dashed var(--glass-border)', paddingTop: '12px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Users size={12} strokeWidth={2.5} />
+              Other Players' Picks
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+              {otherParticipants.length === 0 ? (
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No other players yet.</span>
+              ) : (
+                otherParticipants.map(op => {
+                  const opPred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === op.id);
+                  return (
+                    <div key={op.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.01)', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--glass-border)' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>{op.name}</span>
+                      {opPred ? (
+                        isLocked ? (
+                          <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '600' }}>
+                            {opPred.predicted_winner === 'home' ? m.home_code || 'H' : opPred.predicted_winner === 'away' ? m.away_code || 'A' : 'D'}
+                            {` | `}
+                            <span style={{ color: 'var(--warning)' }}>{opPred.predicted_over_under.toUpperCase()}</span>
+                            {` | `}
+                            {opPred.predicted_home_score}-{opPred.predicted_away_score}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }} title="Predictions are hidden until match starts">
+                            Placed 🔒
+                          </span>
+                        )
+                      ) : (
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          None ⏳
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch }) {
+export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, allPredictions = [], leaderboard = [] }) {
   const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
 
   useEffect(() => {
@@ -477,6 +521,8 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
               pred={getPredictionForMatch(m.id)}
               activeParticipantId={activeParticipantId}
               onSave={onSave}
+              allPredictions={allPredictions}
+              leaderboard={leaderboard}
             />
           ))
         )}

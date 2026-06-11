@@ -25,6 +25,7 @@ export default function App() {
     const week = Math.floor(diffDays / 7) + 1;
     return Math.min(6, Math.max(1, week));
   });
+  const [allPredictions, setAllPredictions] = useState([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -90,6 +91,10 @@ export default function App() {
       const leaderboardRes = await fetch('/api/leaderboard');
       const leaderboardData = await leaderboardRes.json();
       setLeaderboard(leaderboardData);
+
+      const allPredsRes = await fetch('/api/predictions');
+      const allPredsData = await allPredsRes.json();
+      setAllPredictions(allPredsData);
 
       // If active participant is set, reload predictions
       if (activeParticipantId) {
@@ -269,6 +274,8 @@ export default function App() {
               onSave={refreshAllData}
               selectedMatchId={selectedMatchId}
               onSelectMatch={setSelectedMatchId}
+              allPredictions={allPredictions}
+              leaderboard={leaderboard}
             />
           )}
 

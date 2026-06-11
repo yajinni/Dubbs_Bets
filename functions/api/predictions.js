@@ -28,8 +28,12 @@ export async function onRequest(context) {
       const participantId = url.searchParams.get('participantId');
 
       if (!participantId) {
-        // Return all predictions in system
-        const { results } = await env.db.prepare('SELECT * FROM predictions').all();
+        // Return all predictions in system with participant names
+        const { results } = await env.db.prepare(`
+          SELECT pr.*, p.name AS participant_name
+          FROM predictions pr
+          INNER JOIN participants p ON pr.participant_id = p.id
+        `).all();
         return new Response(JSON.stringify(results), { status: 200, headers });
       }
 
