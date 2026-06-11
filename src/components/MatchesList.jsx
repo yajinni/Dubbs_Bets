@@ -334,7 +334,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           {/* Goals Over/Under Probability */}
           <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
-              Goals Over / Under ({m.over_under_line})
+              Score O/U ({m.over_under_line})
             </div>
             <div className="analytics-labels">
               <span>Under {m.over_under_line}: {underPct}%</span>
@@ -467,7 +467,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
                 {/* Over/Under Select */}
                 <div className="prediction-col">
-                  <label>Total Goals (1 pt)</label>
+                  <label>Score O/U (1 pt)</label>
                   <div className="inline-choice-group">
                     <button
                       type="button"
