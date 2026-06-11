@@ -37,7 +37,10 @@ export async function onRequest(context) {
     // Diagnostic Helpers
     const apiKeyFootball = env.API_FOOTBALL_KEY;
     const checkBets = url.searchParams.get('checkBets') === 'true';
-    if (checkBets && apiKeyFootball) {
+    if (checkBets) {
+      if (!apiKeyFootball) {
+        return new Response(JSON.stringify({ error: 'API_FOOTBALL_KEY environment variable is missing or empty.' }), { status: 400, headers });
+      }
       const betsRes = await fetch(`https://v3.football.api-sports.io/odds/bets`, {
         headers: { 'x-apisports-key': apiKeyFootball }
       });
@@ -46,7 +49,10 @@ export async function onRequest(context) {
     }
 
     const checkOddsFixture = url.searchParams.get('checkOddsFixture');
-    if (checkOddsFixture && apiKeyFootball) {
+    if (checkOddsFixture) {
+      if (!apiKeyFootball) {
+        return new Response(JSON.stringify({ error: 'API_FOOTBALL_KEY environment variable is missing or empty.' }), { status: 400, headers });
+      }
       const oddsRes = await fetch(`https://v3.football.api-sports.io/odds?fixture=${checkOddsFixture}`, {
         headers: { 'x-apisports-key': apiKeyFootball }
       });
