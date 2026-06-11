@@ -207,7 +207,7 @@ export default function App() {
                                 setActiveTab('matches');
                               }}
                             >
-                              View Odds
+                              View
                             </button>
                           </div>
                         );
