@@ -74,7 +74,7 @@ export async function onRequest(context) {
       const matchStartTime = new Date(match.local_date).getTime();
       const currentTime = Date.now();
 
-      if (matchId !== 999 && (currentTime >= matchStartTime || match.status !== 'scheduled' || match.finished === 1)) {
+      if (currentTime >= matchStartTime || match.status !== 'scheduled' || match.finished === 1) {
         return new Response(JSON.stringify({ error: 'Predictions are locked. This match has already started or finished.' }), { status: 403, headers });
       }
 
