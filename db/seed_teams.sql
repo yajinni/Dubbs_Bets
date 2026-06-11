@@ -47,3 +47,6 @@ INSERT OR REPLACE INTO teams (id, name_en, flag, fifa_code, group_name) VALUES (
 INSERT OR REPLACE INTO teams (id, name_en, flag, fifa_code, group_name) VALUES (46, 'Croatia', 'https://flagcdn.com/w80/hr.png', 'CRO', 'L');
 INSERT OR REPLACE INTO teams (id, name_en, flag, fifa_code, group_name) VALUES (47, 'Ghana', 'https://flagcdn.com/w80/gh.png', 'GHA', 'L');
 INSERT OR REPLACE INTO teams (id, name_en, flag, fifa_code, group_name) VALUES (48, 'Panama', 'https://flagcdn.com/w80/pa.png', 'PAN', 'L');
+INSERT OR REPLACE INTO teams (id, name_en, flag, fifa_code, group_name) VALUES (991, 'Fats', '', 'FTS', 'Test');
+INSERT OR REPLACE INTO teams (id, name_en, flag, fifa_code, group_name) VALUES (992, 'Skinnies', '', 'SKN', 'Test');
+

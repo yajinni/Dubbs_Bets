@@ -156,7 +156,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave }) {
   };
 
   return (
-    <div className="glass-panel match-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div id={`match-card-${m.id}`} className="glass-panel match-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
       {/* Header: Stage and Date */}
       <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
@@ -392,8 +392,30 @@ function MatchCard({ m, pred, activeParticipantId, onSave }) {
   );
 }
 
-export default function MatchesList({ matches, predictions, activeParticipantId, onSave }) {
+export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch }) {
   const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
+
+  useEffect(() => {
+    if (selectedMatchId) {
+      const match = matches.find(m => m.id === selectedMatchId);
+      if (match) {
+        setFilterStage('all');
+        setTimeout(() => {
+          const element = document.getElementById(`match-card-${selectedMatchId}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('match-card-highlight');
+            setTimeout(() => {
+              element.classList.remove('match-card-highlight');
+            }, 3000);
+          }
+          if (onSelectMatch) {
+            onSelectMatch(null);
+          }
+        }, 150);
+      }
+    }
+  }, [selectedMatchId, matches, onSelectMatch]);
 
   // Filter stage tabs definitions
   const stages = [

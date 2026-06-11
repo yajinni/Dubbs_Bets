@@ -1138,4 +1138,25 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* Match Card Selection Highlight animation */
+.match-card-highlight {
+  animation: pulse-highlight 3s ease-in-out;
+}
+
+@keyframes pulse-highlight {
+  0% {
+    box-shadow: 0 0 0 2px var(--primary), 0 10px 25px -5px rgba(139, 92, 246, 0.3);
+    border-color: var(--primary);
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--primary-hover), 0 10px 25px -5px rgba(139, 92, 246, 0.4);
+    border-color: var(--primary-hover);
+  }
+  100% {
+    box-shadow: none;
+    border-color: var(--glass-border);
+  }
+}
+
+
 

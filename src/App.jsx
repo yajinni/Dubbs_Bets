@@ -3,7 +3,7 @@ import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
 import MatchesList from './components/MatchesList';
 import AdminPanel from './components/AdminPanel';
-import { Calendar, Users, Award, Play } from 'lucide-react';
+import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'matches', 'admin'
@@ -15,6 +15,16 @@ export default function App() {
     return saved ? parseInt(saved) : null;
   });
   const [lastSync, setLastSync] = useState(null);
+  const [selectedMatchId, setSelectedMatchId] = useState(null);
+  const [selectedWeek, setSelectedWeek] = useState(() => {
+    const startDate = new Date('2026-06-11T00:00:00');
+    const today = new Date();
+    const diffTime = today - startDate;
+    if (diffTime < 0) return 1;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const week = Math.floor(diffDays / 7) + 1;
+    return Math.min(6, Math.max(1, week));
+  });
   
   const [loading, setLoading] = useState(true);
 
@@ -125,8 +135,18 @@ export default function App() {
     return `${dateStr} ET`;
   };
 
-  const getUpcomingMatches = () => {
-    return matches.filter(m => m.status === 'scheduled').slice(0, 4);
+  const getWeekNumber = (dateString) => {
+    if (!dateString) return 1;
+    const startDate = new Date('2026-06-11T00:00:00');
+    const d = new Date(dateString);
+    const diffTime = d - startDate;
+    if (diffTime < 0) return 1;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return Math.floor(diffDays / 7) + 1;
+  };
+
+  const getMatchesForWeek = (weekNum) => {
+    return matches.filter(m => getWeekNumber(m.local_date) === weekNum);
   };
 
   return (
@@ -180,16 +200,36 @@ export default function App() {
               {/* Right Column: Upcoming Matches Feed */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: '700', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Calendar size={18} className="text-secondary" />
-                    Upcoming Fixtures
-                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                      <Calendar size={18} className="text-secondary" />
+                      Week {selectedWeek} Fixtures
+                    </h3>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button 
+                        onClick={() => setSelectedWeek(prev => Math.max(1, prev - 1))}
+                        disabled={selectedWeek === 1}
+                        className="choice-btn"
+                        style={{ padding: '4px 8px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button 
+                        onClick={() => setSelectedWeek(prev => Math.min(6, prev + 1))}
+                        disabled={selectedWeek === 6}
+                        className="choice-btn"
+                        style={{ padding: '4px 8px', width: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {getUpcomingMatches().length === 0 ? (
-                      <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No upcoming matches.</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '380px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {getMatchesForWeek(selectedWeek).length === 0 ? (
+                      <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No matches this week.</span>
                     ) : (
-                      getUpcomingMatches().map(m => {
+                      getMatchesForWeek(selectedWeek).map(m => {
                         const home = m.home_team_name || m.home_team_label || 'TBD';
                         const away = m.away_team_name || m.away_team_label || 'TBD';
                         return (
@@ -204,6 +244,7 @@ export default function App() {
                               className="btn-primary" 
                               style={{ padding: '6px 12px', fontSize: '12px' }}
                               onClick={() => {
+                                setSelectedMatchId(m.id);
                                 setActiveTab('matches');
                               }}
                             >
@@ -226,6 +267,8 @@ export default function App() {
               predictions={predictions}
               activeParticipantId={activeParticipantId}
               onSave={refreshAllData}
+              selectedMatchId={selectedMatchId}
+              onSelectMatch={setSelectedMatchId}
             />
           )}
 
