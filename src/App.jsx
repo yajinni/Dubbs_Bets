@@ -6,6 +6,7 @@ import AdminPanel from './components/AdminPanel';
 import MatchView from './components/MatchView';
 import StatsView from './components/StatsView';
 import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import { shortenTeamName } from './utils/teamNames';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'matches', 'admin'
@@ -244,8 +245,8 @@ export default function App() {
                       <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No matches this week.</span>
                     ) : (
                       getMatchesForWeek(selectedWeek).map(m => {
-                        const home = m.home_team_name || m.home_team_label || 'TBD';
-                        const away = m.away_team_name || m.away_team_label || 'TBD';
+                        const home = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
+                        const away = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
                         return (
                           <div key={m.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users } from 'lucide-react';
+import { shortenTeamName } from '../utils/teamNames';
 
 function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [] }) {
   const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
-  const homeName = m.home_team_name || m.home_team_label || 'TBD';
-  const awayName = m.away_team_name || m.away_team_label || 'TBD';
+  const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
+  const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
   const otherParticipants = leaderboard.filter(p => p.id !== activeParticipantId);
 
   // Calculate implied Over/Under probabilities

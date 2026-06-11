@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, Users, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { shortenTeamName } from '../utils/teamNames';
 
 export default function MatchView({ matches, allPredictions = [], leaderboard = [], activeParticipantId }) {
   const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
@@ -83,8 +84,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
           </div>
         ) : (
           filteredMatches.map(m => {
-            const homeName = m.home_team_name || m.home_team_label || 'TBD';
-            const awayName = m.away_team_name || m.away_team_label || 'TBD';
+            const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
+            const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
             const homeCode = m.home_code || 'H';
             const awayCode = m.away_code || 'A';
             

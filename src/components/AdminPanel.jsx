@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, UserPlus, Trash2, Edit, Save, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
+import { shortenTeamName } from '../utils/teamNames';
 
 export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
   const [password, setPassword] = useState(() => localStorage.getItem('admin_pass') || '');
@@ -327,8 +328,8 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
               >
                 <option value="">-- Choose Match --</option>
                 {matches.map(m => {
-                  const home = m.home_team_name || m.home_team_label || 'TBD';
-                  const away = m.away_team_name || m.away_team_label || 'TBD';
+                  const home = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
+                  const away = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
                   return (
                     <option key={m.id} value={m.id}>
                       {m.id}: {home} vs {away} ({m.status.toUpperCase()})
