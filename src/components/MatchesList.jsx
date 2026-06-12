@@ -690,7 +690,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <Users size={12} strokeWidth={2.5} />
               Players' Picks
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '8px' }}>
               {leaderboard.length === 0 ? (
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No players yet.</span>
               ) : (
@@ -710,6 +710,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                           <span style={{ color: 'var(--warning)' }}>{opPred.predicted_over_under.toUpperCase()}</span>
                           {` | `}
                           {opPred.predicted_home_score}-{opPred.predicted_away_score}
+                          {opPred.predicted_first_scorer && ` | SF:${opPred.predicted_first_scorer === 'home' ? m.home_code || 'H' : opPred.predicted_first_scorer === 'away' ? m.away_code || 'A' : '-'}`}
+                          {opPred.predicted_total_cards !== null && opPred.predicted_total_cards !== undefined && ` | TC:${opPred.predicted_total_cards}`}
+                          {opPred.predicted_highest_scoring_half && ` | H:${opPred.predicted_highest_scoring_half === 'first' ? '1st' : opPred.predicted_highest_scoring_half === 'second' ? '2nd' : '='}`}
+                          {opPred.predicted_clean_sheet && ` | CS:${opPred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}`}
                         </span>
                       ) : (
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
