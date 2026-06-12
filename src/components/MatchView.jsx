@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, Users, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 
@@ -14,6 +14,34 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
       }
     });
   };
+
+  // Pre-calculate running points totals for each participant chronologically up to and including each match
+  const runningPointsMap = useMemo(() => {
+    const map = {}; // key: `${participantId}_${matchId}` -> runningTotal
+    
+    // Sort all matches chronologically (by date, then id)
+    const sorted = [...matches].sort((a, b) => {
+      const dateA = new Date((a.local_date || '').replace(' ', 'T'));
+      const dateB = new Date((b.local_date || '').replace(' ', 'T'));
+      if (dateA - dateB !== 0) return dateA - dateB;
+      return a.id - b.id;
+    });
+
+    leaderboard.forEach(p => {
+      let runningSum = 0;
+      sorted.forEach(m => {
+        if (m.finished === 1) {
+          const pred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === p.id);
+          if (pred) {
+            runningSum += pred.total_points || 0;
+          }
+        }
+        map[`${p.id}_${m.id}`] = runningSum;
+      });
+    });
+
+    return map;
+  }, [matches, allPredictions, leaderboard]);
 
   // Stage tab definitions
   const stages = [
@@ -235,6 +263,9 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             </span>
                             <span style={{ color: 'var(--success)', fontWeight: '700', fontSize: '11px' }}>
                               [Match: {pred && m.finished === 1 ? pred.total_points : 0} pts]
+                            </span>
+                            <span style={{ color: 'var(--info)', fontWeight: '700', fontSize: '11px' }}>
+                              [Current: {runningPointsMap[`${p.id}_${m.id}`] || 0} pts]
                             </span>
                             <span style={{ color: 'var(--primary-hover)', fontWeight: '700', fontSize: '11px' }}>
                               [Total: {p.total_points} pts]
