@@ -451,39 +451,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               </div>
               {pred ? (
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    Pick: <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
-                      {pred.predicted_winner === 'home' ? homeName : pred.predicted_winner === 'away' ? awayName : 'Draw'}
-                    </span>
-                    {` | `}
-                    <span style={{ color: 'var(--warning)', fontWeight: '700' }}>
-                      {pred.predicted_over_under.toUpperCase()} {m.over_under_line} Goals
-                    </span>
-                    {` | `}
-                    <span style={{ color: 'var(--success)', fontWeight: '700' }}>
-                      {m.home_win_pct < m.away_win_pct ? `Underdog: ${homeName}` : m.away_win_pct < m.home_win_pct ? `Underdog: ${awayName}` : ''}
-                    </span>
-                    {` | Score: `}
-                    <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
-                      {pred.predicted_home_score}-{pred.predicted_away_score}
-                    </span>
-                    {` | Scored First: `}
-                    <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>
-                      {pred.predicted_first_scorer === 'home' ? homeName : pred.predicted_first_scorer === 'away' ? awayName : 'No Goal'}
-                    </span>
-                    {` | Total Cards: `}
-                    <span style={{ color: 'var(--secondary-hover)', fontWeight: '700' }}>
-                      {pred.predicted_total_cards}
-                    </span>
-                    {` | Half: `}
-                    <span style={{ color: '#c084fc', fontWeight: '700' }}>
-                      {pred.predicted_highest_scoring_half === 'first' ? '1st Half' : pred.predicted_highest_scoring_half === 'second' ? '2nd Half' : 'Equal'}
-                    </span>
-                    {` | Clean Sheet: `}
-                    <span style={{ color: '#38bdf8', fontWeight: '700' }}>
-                      {pred.predicted_clean_sheet?.toUpperCase()}
-                    </span>
-                  </span>
+
                   {m.finished === 1 && (
                     <div className="prediction-badge-display" style={{ justifyContent: 'flex-end', marginTop: '6px' }}>
                       <span className={`p-point-dot ${pred.points_winner ? 'earned' : ''}`}></span>
