@@ -168,187 +168,215 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                   </div>
                 </div>
 
-                {/* Players' Picks Cards */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {leaderboard.length === 0 ? (
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No players yet.</span>
-                  ) : (
-                    leaderboard.map(p => {
-                      const pred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === p.id);
-                      const isSelf = p.id === activeParticipantId;
-                      
-                      // Evaluate predictions correctness
-                      const hasWinnerPred = pred && pred.predicted_winner;
-                      const isWinnerCorrect = m.finished === 1 && hasWinnerPred && pred.predicted_winner === actualWinner;
+                {/* Players' Picks Cards Container */}
+                <div style={{ width: '100%', overflowX: 'auto', paddingBottom: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 'max-content' }}>
+                    {leaderboard.length === 0 ? (
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px' }}>No players yet.</span>
+                    ) : (
+                      leaderboard.map(p => {
+                        const pred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === p.id);
+                        const isSelf = p.id === activeParticipantId;
+                        
+                        // Evaluate predictions correctness
+                        const hasWinnerPred = pred && pred.predicted_winner;
+                        const isWinnerCorrect = m.finished === 1 && hasWinnerPred && pred.predicted_winner === actualWinner;
 
-                      const hasOUPred = pred && pred.predicted_over_under;
-                      const isOUCorrect = m.finished === 1 && hasOUPred && pred.predicted_over_under === actualOU;
+                        const hasOUPred = pred && pred.predicted_over_under;
+                        const isOUCorrect = m.finished === 1 && hasOUPred && pred.predicted_over_under === actualOU;
 
-                      // Underdog bonus evaluation
-                      const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.home_win_pct < m.away_win_pct;
-                      const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.away_win_pct < m.home_win_pct;
-                      const pickedUnderdog = pred && (
-                        (pred.predicted_winner === 'home' && homeIsUnderdog) ||
-                        (pred.predicted_winner === 'away' && awayIsUnderdog)
-                      );
-                      const underdogBonusEarned = pred && pred.points_cards_ou > 0;
+                        // Underdog bonus evaluation
+                        const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.home_win_pct < m.away_win_pct;
+                        const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.away_win_pct < m.home_win_pct;
+                        const pickedUnderdog = pred && (
+                          (pred.predicted_winner === 'home' && homeIsUnderdog) ||
+                          (pred.predicted_winner === 'away' && awayIsUnderdog)
+                        );
+                        const underdogBonusEarned = pred && pred.points_cards_ou > 0;
 
-                      const hasFirstScorerPred = pred && pred.predicted_first_scorer;
-                      const isFirstScorerCorrect = m.finished === 1 && hasFirstScorerPred && pred.predicted_first_scorer === m.actual_first_scorer;
+                        const hasFirstScorerPred = pred && pred.predicted_first_scorer;
+                        const isFirstScorerCorrect = m.finished === 1 && hasFirstScorerPred && pred.predicted_first_scorer === m.actual_first_scorer;
 
-                      const hasHalfPred = pred && pred.predicted_highest_scoring_half;
-                      const isHalfCorrect = m.finished === 1 && hasHalfPred && pred.predicted_highest_scoring_half === actualHighestHalf;
+                        const hasHalfPred = pred && pred.predicted_highest_scoring_half;
+                        const isHalfCorrect = m.finished === 1 && hasHalfPred && pred.predicted_highest_scoring_half === actualHighestHalf;
 
-                      const hasCleanPred = pred && pred.predicted_clean_sheet;
-                      const isCleanCorrect = m.finished === 1 && hasCleanPred && pred.predicted_clean_sheet === actualCleanSheet;
+                        const hasCleanPred = pred && pred.predicted_clean_sheet;
+                        const isCleanCorrect = m.finished === 1 && hasCleanPred && pred.predicted_clean_sheet === actualCleanSheet;
 
-                      const hasScorePred = pred && pred.predicted_home_score !== null && pred.predicted_away_score !== null;
-                      const isScoreCorrect = m.finished === 1 && hasScorePred && pred.predicted_home_score === m.home_score && pred.predicted_away_score === m.away_score;
+                        const hasScorePred = pred && pred.predicted_home_score !== null && pred.predicted_away_score !== null;
+                        const isScoreCorrect = m.finished === 1 && hasScorePred && pred.predicted_home_score === m.home_score && pred.predicted_away_score === m.away_score;
 
-                      const hasTotalCardsPred = pred && pred.predicted_total_cards !== null;
-                      const isTotalCardsCorrect = m.finished === 1 && hasTotalCardsPred && pred.predicted_total_cards === m.actual_cards;
+                        const hasTotalCardsPred = pred && pred.predicted_total_cards !== null;
+                        const isTotalCardsCorrect = m.finished === 1 && hasTotalCardsPred && pred.predicted_total_cards === m.actual_cards;
 
-                       return (
-                        <div key={p.id} className="player-result-row" style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', borderRadius: '6px', border: isSelf ? '2px solid var(--primary)' : '1px solid var(--glass-border)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              {p.name}
-                              <span style={{ color: 'var(--success)', fontWeight: '700' }}>[Match: {pred && m.finished === 1 ? pred.total_points : 0} pts]</span>
-                              <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>[Total: {p.total_points} pts]</span>
-                            </span>
-                          </div>
-                          <div style={{ width: '100%', overflowX: 'auto' }}>
-                            {pred ? (
-                              <div style={{ 
-                                display: 'grid', 
-                                gridTemplateColumns: '45px 22px 36px 52px 62px 48px 48px 42px', 
-                                gap: '4px', 
-                                marginTop: '4px',
-                                width: '100%',
-                                minWidth: '360px'
-                              }}>
-                                {/* Winner */}
-                                <span style={{ 
-                                  padding: '4px 6px', 
-                                  borderRadius: '6px', 
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  color: '#ffffff',
-                                  textAlign: 'center',
-                                  background: m.finished === 1 ? (isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
-                                  border: m.finished === 1 ? (isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
-                                }}>
-                                  {pred.predicted_winner === 'home' ? homeCode : pred.predicted_winner === 'away' ? awayCode : pred.predicted_winner === 'draw' ? 'Draw' : '-'}
-                                </span>
-
-                                {/* O/U */}
-                                <span style={{ 
-                                  padding: '4px 6px', 
-                                  borderRadius: '6px', 
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  color: '#ffffff',
-                                  textAlign: 'center',
-                                  background: pred.predicted_over_under ? (m.finished === 1 ? (isOUCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                                  border: pred.predicted_over_under ? (m.finished === 1 ? (isOUCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
-                                }}>
-                                  {pred.predicted_over_under === 'over' ? 'O' : pred.predicted_over_under === 'under' ? 'U' : '-'}
-                                </span>
-
-                                {/* Score */}
-                                <span style={{ 
-                                  padding: '4px 6px', 
-                                  borderRadius: '6px', 
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  color: '#ffffff',
-                                  textAlign: 'center',
-                                  background: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                                  border: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
-                                }}>
-                                  {hasScorePred ? `${pred.predicted_home_score}-${pred.predicted_away_score}` : '-'}
-                                </span>
-
-                                {/* Underdog Pick */}
-                                <span style={{ 
-                                  padding: '4px 6px', 
-                                  borderRadius: '6px', 
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  color: '#ffffff',
-                                  textAlign: 'center',
-                                  background: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : (pickedUnderdog ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)')) : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                                  border: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : (pickedUnderdog ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
-                                }}>
-                                  {(pred.predicted_winner && pred.predicted_winner !== 'draw') ? (pickedUnderdog ? 'Bonus' : 'fav') : '-'}
-                                </span>
-
-                                {/* Scored First */}
-                                <span style={{ 
-                                  padding: '4px 6px', 
-                                  borderRadius: '6px', 
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  color: '#ffffff',
-                                  textAlign: 'center',
-                                  background: hasFirstScorerPred ? (m.finished === 1 ? (isFirstScorerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                                  border: hasFirstScorerPred ? (m.finished === 1 ? (isFirstScorerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
-                                }}>
-                                  {hasFirstScorerPred ? `SF:${pred.predicted_first_scorer === 'home' ? homeCode : pred.predicted_first_scorer === 'away' ? awayCode : 'None'}` : '-'}
-                                </span>
-
-                                {/* Total Cards */}
-                                <span style={{ 
-                                  padding: '4px 6px', 
-                                  borderRadius: '6px', 
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  color: '#ffffff',
-                                  textAlign: 'center',
-                                  background: hasTotalCardsPred ? (m.finished === 1 ? (isTotalCardsCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                                  border: hasTotalCardsPred ? (m.finished === 1 ? (isTotalCardsCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
-                                }}>
-                                  {hasTotalCardsPred ? `TC:${pred.predicted_total_cards}` : '-'}
-                                </span>
-
-                                {/* Highest scoring half */}
-                                <span style={{ 
-                                  padding: '4px 6px', 
-                                  borderRadius: '6px', 
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  color: '#ffffff',
-                                  textAlign: 'center',
-                                  background: hasHalfPred ? (m.finished === 1 ? (isHalfCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                                  border: hasHalfPred ? (m.finished === 1 ? (isHalfCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
-                                }}>
-                                  {hasHalfPred ? `H:${pred.predicted_highest_scoring_half === 'first' ? '1st' : pred.predicted_highest_scoring_half === 'second' ? '2nd' : 'Eq'}` : '-'}
-                                </span>
-
-                                {/* Clean sheet */}
-                                <span style={{ 
-                                  padding: '4px 6px', 
-                                  borderRadius: '6px', 
-                                  fontSize: '12px',
-                                  fontWeight: '600',
-                                  color: '#ffffff',
-                                  textAlign: 'center',
-                                  background: hasCleanPred ? (m.finished === 1 ? (isCleanCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                                  border: hasCleanPred ? (m.finished === 1 ? (isCleanCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
-                                }}>
-                                  {hasCleanPred ? `CS:${pred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}` : '-'}
-                                </span>
-                              </div>
-                            ) : (
-                              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'block' }}>
-                                None ⏳
+                        return (
+                          <div key={p.id} className="player-result-row" style={{ 
+                            display: 'flex', 
+                            flexDirection: 'row', 
+                            alignItems: 'center', 
+                            background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', 
+                            borderRadius: '6px', 
+                            border: '1px solid var(--glass-border)',
+                            minWidth: 'fit-content',
+                            padding: 0
+                          }}>
+                            {/* Sticky Player Name & Standing */}
+                            <div style={{ 
+                              position: 'sticky', 
+                              left: 0, 
+                              zIndex: 2, 
+                              background: isSelf ? '#160f29' : '#0a0516', 
+                              padding: '10px 12px',
+                              minWidth: '150px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '2px',
+                              borderRight: '1px solid var(--glass-border)',
+                              alignSelf: 'stretch',
+                              justifyContent: 'center',
+                              borderRadius: '6px 0 0 6px'
+                            }}>
+                              <span style={{ fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
+                                {p.name}
                               </span>
-                            )}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                                <span style={{ color: 'var(--success)', fontWeight: '700', fontSize: '11px' }}>[Match: {pred && m.finished === 1 ? pred.total_points : 0} pts]</span>
+                                <span style={{ color: 'var(--primary-hover)', fontWeight: '700', fontSize: '11px' }}>[Total: {p.total_points} pts]</span>
+                              </div>
+                            </div>
+
+                            {/* Prediction Badges Grid */}
+                            <div style={{ padding: '8px 10px', flex: 1 }}>
+                              {pred ? (
+                                <div style={{ 
+                                  display: 'grid', 
+                                  gridTemplateColumns: '45px 22px 36px 52px 62px 48px 48px 42px', 
+                                  gap: '4px',
+                                  minWidth: '360px'
+                                }}>
+                                  {/* Winner */}
+                                  <span style={{ 
+                                    padding: '4px 6px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#ffffff',
+                                    textAlign: 'center',
+                                    background: m.finished === 1 ? (isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
+                                    border: m.finished === 1 ? (isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
+                                  }}>
+                                    {pred.predicted_winner === 'home' ? homeCode : pred.predicted_winner === 'away' ? awayCode : pred.predicted_winner === 'draw' ? 'Draw' : '-'}
+                                  </span>
+
+                                  {/* O/U */}
+                                  <span style={{ 
+                                    padding: '4px 6px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#ffffff',
+                                    textAlign: 'center',
+                                    background: pred.predicted_over_under ? (m.finished === 1 ? (isOUCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                    border: pred.predicted_over_under ? (m.finished === 1 ? (isOUCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                  }}>
+                                    {pred.predicted_over_under === 'over' ? 'O' : pred.predicted_over_under === 'under' ? 'U' : '-'}
+                                  </span>
+
+                                  {/* Score */}
+                                  <span style={{ 
+                                    padding: '4px 6px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#ffffff',
+                                    textAlign: 'center',
+                                    background: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                    border: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                  }}>
+                                    {hasScorePred ? `${pred.predicted_home_score}-${pred.predicted_away_score}` : '-'}
+                                  </span>
+
+                                  {/* Underdog Pick */}
+                                  <span style={{ 
+                                    padding: '4px 6px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#ffffff',
+                                    textAlign: 'center',
+                                    background: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : (pickedUnderdog ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)')) : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                    border: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : (pickedUnderdog ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                  }}>
+                                    {(pred.predicted_winner && pred.predicted_winner !== 'draw') ? (pickedUnderdog ? 'Bonus' : 'fav') : '-'}
+                                  </span>
+
+                                  {/* Scored First */}
+                                  <span style={{ 
+                                    padding: '4px 6px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#ffffff',
+                                    textAlign: 'center',
+                                    background: hasFirstScorerPred ? (m.finished === 1 ? (isFirstScorerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                    border: hasFirstScorerPred ? (m.finished === 1 ? (isFirstScorerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                  }}>
+                                    {hasFirstScorerPred ? `SF:${pred.predicted_first_scorer === 'home' ? homeCode : pred.predicted_first_scorer === 'away' ? awayCode : 'None'}` : '-'}
+                                  </span>
+
+                                  {/* Total Cards */}
+                                  <span style={{ 
+                                    padding: '4px 6px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#ffffff',
+                                    textAlign: 'center',
+                                    background: hasTotalCardsPred ? (m.finished === 1 ? (isTotalCardsCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                    border: hasTotalCardsPred ? (m.finished === 1 ? (isTotalCardsCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                  }}>
+                                    {hasTotalCardsPred ? `TC:${pred.predicted_total_cards}` : '-'}
+                                  </span>
+
+                                  {/* Highest scoring half */}
+                                  <span style={{ 
+                                    padding: '4px 6px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#ffffff',
+                                    textAlign: 'center',
+                                    background: hasHalfPred ? (m.finished === 1 ? (isHalfCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                    border: hasHalfPred ? (m.finished === 1 ? (isHalfCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                  }}>
+                                    {hasHalfPred ? `H:${pred.predicted_highest_scoring_half === 'first' ? '1st' : pred.predicted_highest_scoring_half === 'second' ? '2nd' : 'Eq'}` : '-'}
+                                  </span>
+
+                                  {/* Clean sheet */}
+                                  <span style={{ 
+                                    padding: '4px 6px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#ffffff',
+                                    textAlign: 'center',
+                                    background: hasCleanPred ? (m.finished === 1 ? (isCleanCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                    border: hasCleanPred ? (m.finished === 1 ? (isCleanCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                  }}>
+                                    {hasCleanPred ? `CS:${pred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}` : '-'}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'block', minWidth: '360px', padding: '4px 0' }}>
+                                  None ⏳
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
             );
