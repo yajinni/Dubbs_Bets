@@ -5,7 +5,7 @@ import MatchesList from './components/MatchesList';
 import AdminPanel from './components/AdminPanel';
 import MatchView from './components/MatchView';
 import StatsView from './components/StatsView';
-import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp } from 'lucide-react';
 import { shortenTeamName } from './utils/teamNames';
 
 export default function App() {
@@ -31,6 +31,27 @@ export default function App() {
   const [allPredictions, setAllPredictions] = useState([]);
   
   const [loading, setLoading] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Scroll to top listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
 
   // Load active player on change
   useEffect(() => {
@@ -363,6 +384,34 @@ export default function App() {
             />
           )}
         </main>
+      )}
+
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 1000,
+            background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '50%',
+            width: '44px',
+            height: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(139, 92, 246, 0.4), var(--shadow-glow)',
+            transition: 'all 0.25s ease',
+          }}
+          className="scroll-to-top-btn"
+          title="Scroll to top"
+        >
+          <ArrowUp size={20} strokeWidth={2.5} />
+        </button>
       )}
     </>
   );
