@@ -153,13 +153,13 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                       <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Winner Pick</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under ({m.over_under_line})</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>🐉 Underdog Bonus</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>O/U</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Underdog</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Scored First</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Highest Half</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Clean Sheet</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Score</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Total Cards</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>CS</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Score</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'right' }}>Points</th>
                       </tr>
                     </thead>
@@ -238,7 +238,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                               {hasOUPred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: '600', textTransform: 'uppercase', color: 'var(--warning)' }}>
-                                    {pred.predicted_over_under}
+                                    {pred.predicted_over_under === 'over' ? 'O' : 'U'}
                                   </span>
                                   {m.finished === 1 && (
                                     isOUCorrect ? (
@@ -258,9 +258,9 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                               {pred && pred.predicted_winner && pred.predicted_winner !== 'draw' ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   {pickedUnderdog ? (
-                                    <span style={{ color: '#fbbf24', fontWeight: '700' }}>⭐ Underdog Pick</span>
+                                    <span style={{ color: '#fbbf24', fontWeight: '700' }}>Bonus</span>
                                   ) : (
-                                    <span style={{ color: 'var(--text-muted)' }}>Favourite</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>fav</span>
                                   )}
                                   {m.finished === 1 && pickedUnderdog && (
                                     underdogBonusEarned
@@ -358,7 +358,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                               {hasTotalCardsPred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: '600', color: 'var(--secondary-hover)' }}>
-                                    {pred.predicted_total_cards} cards
+                                    {pred.predicted_total_cards}
                                   </span>
                                   {m.finished === 1 && (
                                     isTotalCardsCorrect ? (
