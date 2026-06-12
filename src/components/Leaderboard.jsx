@@ -15,7 +15,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
         <div className="leaderboard-row header-row">
           <div>Rank</div>
           <div>Participant</div>
-          <div className="stat-cell" title="Correct Exact Scores">Scores</div>
+          <div className="stat-cell" title="Correct Exact Scores">Score</div>
           <div className="stat-cell" title="Correct Winners">Winners</div>
           <div className="stat-cell" title="Correct Over/Unders">O/U</div>
           <div className="stat-cell hide-mobile" title="Correct Scored First">SF</div>
