@@ -208,12 +208,20 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                             <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                               {p.name}
-                              <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>[{p.total_points} pts]</span>
+                              <span style={{ color: 'var(--success)', fontWeight: '700' }}>[Match: {pred && m.finished === 1 ? pred.total_points : 0} pts]</span>
+                              <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>[Total: {p.total_points} pts]</span>
                             </span>
                           </div>
-                          <div style={{ width: '100%' }}>
+                          <div style={{ width: '100%', overflowX: 'auto' }}>
                             {pred ? (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                              <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: 'minmax(100px, 1.4fr) minmax(45px, 0.6fr) minmax(55px, 0.8fr) minmax(60px, 0.8fr) minmax(85px, 1.2fr) minmax(60px, 0.8fr) minmax(75px, 1fr) minmax(65px, 0.8fr)', 
+                                gap: '6px', 
+                                marginTop: '4px',
+                                width: '100%',
+                                minWidth: '600px'
+                              }}>
                                 {/* Winner */}
                                 <span style={{ 
                                   padding: '4px 8px', 
@@ -221,10 +229,11 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontSize: '12px',
                                   fontWeight: '600',
                                   color: '#ffffff',
+                                  textAlign: 'center',
                                   background: m.finished === 1 ? (isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
                                   border: m.finished === 1 ? (isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                 }}>
-                                  {pred.predicted_winner === 'home' ? homeName : pred.predicted_winner === 'away' ? awayName : 'Draw'}
+                                  {pred.predicted_winner === 'home' ? homeName : pred.predicted_winner === 'away' ? awayName : pred.predicted_winner === 'draw' ? 'Draw' : '-'}
                                 </span>
 
                                 {/* O/U */}
@@ -234,10 +243,11 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontSize: '12px',
                                   fontWeight: '600',
                                   color: '#ffffff',
-                                  background: m.finished === 1 ? (isOUCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
-                                  border: m.finished === 1 ? (isOUCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
+                                  textAlign: 'center',
+                                  background: pred.predicted_over_under ? (m.finished === 1 ? (isOUCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                  border: pred.predicted_over_under ? (m.finished === 1 ? (isOUCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
-                                  {pred.predicted_over_under === 'over' ? 'O' : 'U'}
+                                  {pred.predicted_over_under === 'over' ? 'O' : pred.predicted_over_under === 'under' ? 'U' : '-'}
                                 </span>
 
                                 {/* Score */}
@@ -247,86 +257,82 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontSize: '12px',
                                   fontWeight: '600',
                                   color: '#ffffff',
-                                  background: m.finished === 1 ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
-                                  border: m.finished === 1 ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
+                                  textAlign: 'center',
+                                  background: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                  border: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
-                                  {pred.predicted_home_score}-{pred.predicted_away_score}
+                                  {hasScorePred ? `${pred.predicted_home_score}-${pred.predicted_away_score}` : '-'}
                                 </span>
 
                                 {/* Underdog Pick */}
-                                {pred.predicted_winner && pred.predicted_winner !== 'draw' && (
-                                  <span style={{ 
-                                    padding: '4px 8px', 
-                                    borderRadius: '6px', 
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: '#ffffff',
-                                    background: m.finished === 1 ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : (pickedUnderdog ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)')) : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : (pickedUnderdog ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px solid rgba(255, 255, 255, 0.1)'
-                                  }}>
-                                    {pickedUnderdog ? 'Bonus' : 'fav'}
-                                  </span>
-                                )}
+                                <span style={{ 
+                                  padding: '4px 8px', 
+                                  borderRadius: '6px', 
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  color: '#ffffff',
+                                  textAlign: 'center',
+                                  background: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : (pickedUnderdog ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)')) : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                  border: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : (pickedUnderdog ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                }}>
+                                  {(pred.predicted_winner && pred.predicted_winner !== 'draw') ? (pickedUnderdog ? 'Bonus' : 'fav') : '-'}
+                                </span>
 
                                 {/* Scored First */}
-                                {pred.predicted_first_scorer && (
-                                  <span style={{ 
-                                    padding: '4px 8px', 
-                                    borderRadius: '6px', 
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: '#ffffff',
-                                    background: m.finished === 1 ? (isFirstScorerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? (isFirstScorerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
-                                  }}>
-                                    SF:{pred.predicted_first_scorer === 'home' ? homeName : pred.predicted_first_scorer === 'away' ? awayName : 'None'}
-                                  </span>
-                                )}
+                                <span style={{ 
+                                  padding: '4px 8px', 
+                                  borderRadius: '6px', 
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  color: '#ffffff',
+                                  textAlign: 'center',
+                                  background: hasFirstScorerPred ? (m.finished === 1 ? (isFirstScorerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                  border: hasFirstScorerPred ? (m.finished === 1 ? (isFirstScorerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                }}>
+                                  {hasFirstScorerPred ? `SF:${pred.predicted_first_scorer === 'home' ? homeCode : pred.predicted_first_scorer === 'away' ? awayCode : 'None'}` : '-'}
+                                </span>
 
                                 {/* Total Cards */}
-                                {pred.predicted_total_cards !== null && pred.predicted_total_cards !== undefined && (
-                                  <span style={{ 
-                                    padding: '4px 8px', 
-                                    borderRadius: '6px', 
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: '#ffffff',
-                                    background: m.finished === 1 ? (isTotalCardsCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? (isTotalCardsCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
-                                  }}>
-                                    TC:{pred.predicted_total_cards}
-                                  </span>
-                                )}
+                                <span style={{ 
+                                  padding: '4px 8px', 
+                                  borderRadius: '6px', 
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  color: '#ffffff',
+                                  textAlign: 'center',
+                                  background: hasTotalCardsPred ? (m.finished === 1 ? (isTotalCardsCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                  border: hasTotalCardsPred ? (m.finished === 1 ? (isTotalCardsCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                }}>
+                                  {hasTotalCardsPred ? `TC:${pred.predicted_total_cards}` : '-'}
+                                </span>
 
                                 {/* Highest scoring half */}
-                                {pred.predicted_highest_scoring_half && (
-                                  <span style={{ 
-                                    padding: '4px 8px', 
-                                    borderRadius: '6px', 
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: '#ffffff',
-                                    background: m.finished === 1 ? (isHalfCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? (isHalfCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
-                                  }}>
-                                    H:{pred.predicted_highest_scoring_half === 'first' ? '1st' : pred.predicted_highest_scoring_half === 'second' ? '2nd' : 'Equal'}
-                                  </span>
-                                )}
+                                <span style={{ 
+                                  padding: '4px 8px', 
+                                  borderRadius: '6px', 
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  color: '#ffffff',
+                                  textAlign: 'center',
+                                  background: hasHalfPred ? (m.finished === 1 ? (isHalfCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                  border: hasHalfPred ? (m.finished === 1 ? (isHalfCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                }}>
+                                  {hasHalfPred ? `H:${pred.predicted_highest_scoring_half === 'first' ? '1st' : pred.predicted_highest_scoring_half === 'second' ? '2nd' : 'Eq'}` : '-'}
+                                </span>
 
                                 {/* Clean sheet */}
-                                {pred.predicted_clean_sheet && (
-                                  <span style={{ 
-                                    padding: '4px 8px', 
-                                    borderRadius: '6px', 
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: '#ffffff',
-                                    background: m.finished === 1 ? (isCleanCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? (isCleanCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
-                                  }}>
-                                    CS:{pred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}
-                                  </span>
-                                )}
+                                <span style={{ 
+                                  padding: '4px 8px', 
+                                  borderRadius: '6px', 
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  color: '#ffffff',
+                                  textAlign: 'center',
+                                  background: hasCleanPred ? (m.finished === 1 ? (isCleanCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                  border: hasCleanPred ? (m.finished === 1 ? (isCleanCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                }}>
+                                  {hasCleanPred ? `CS:${pred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}` : '-'}
+                                </span>
                               </div>
                             ) : (
                               <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'block' }}>
