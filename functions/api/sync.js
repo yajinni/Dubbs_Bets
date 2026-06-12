@@ -81,9 +81,20 @@ export async function onRequest(context) {
     try {
       syncResults = await syncFromESPN(env.db);
     } catch (err) {
-      console.error('ESPN sync failed, falling back to mock sync:', err.message);
-      syncResults = await runMockSync(env.db);
-      syncResults.warning = `ESPN sync failed (${err.message}). Gracefully fell back to mock simulation.`;
+      console.error('ESPN sync failed:', err.message);
+      syncResults = { source: 'fallback', matchesUpdated: 0, oddsUpdated: 0, warning: `ESPN sync failed: ${err.message}` };
+    }
+
+    // Always run mock sync as a post-processing step to finish simulated/mock matches in the past
+    try {
+      const mockResults = await runMockSync(env.db);
+      syncResults.matchesUpdated += mockResults.matchesUpdated;
+      syncResults.oddsUpdated += mockResults.oddsUpdated;
+      if (mockResults.matchesUpdated > 0) {
+        syncResults.source += ' + mock_simulation';
+      }
+    } catch (err) {
+      console.error('Mock sync post-processing failed:', err.message);
     }
 
     if (apiKeyOdds && apiKeyOdds !== '') {
@@ -117,10 +128,21 @@ export async function onRequest(context) {
 // --------------------------------------------------------
 // Helper to normalize team names for ESPN matching
 function normalizeTeamName(name) {
-  const n = name.toLowerCase().trim();
-  if (n.includes('czech')) return 'czech';
+  let n = name.toLowerCase().trim()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // strip accents (e.g. Curaçao -> curacao)
+  
+  // Clean database encoding anomalies like 'CuraÃ§ao'
+  if (n.includes('curaã§ao') || n.includes('cura') && n.includes('ao')) {
+    n = 'curacao';
+  }
+
+  if (n.includes('czech') || n === 'czechia') return 'czech';
   if (n.includes('korea')) return 'korea';
   if (n.includes('united states') || n === 'usa') return 'usa';
+  if (n.includes('bosnia')) return 'bosnia';
+  if (n.includes('turkey') || n.includes('turkiye')) return 'turkey';
+  if (n.includes('congo') || n.includes('drc')) return 'congo';
+  if (n.includes('curacao')) return 'curacao';
   return n;
 }
 
