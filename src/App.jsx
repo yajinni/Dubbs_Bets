@@ -163,11 +163,25 @@ export default function App() {
 
   const handleTabChange = (tab) => {
     if (tab === 'matches') {
-      if (activeParticipantId && predictions.length > 0) {
-        const userPredictedMatches = matches.filter(m => predictions.some(p => p.match_id === m.id));
-        if (userPredictedMatches.length > 0) {
-          userPredictedMatches.sort((a, b) => new Date(b.local_date) - new Date(a.local_date));
-          setSelectedMatchId(userPredictedMatches[0].id);
+      if (activeParticipantId) {
+        // Find upcoming matches that have no predictions by the user yet
+        const unpredictedMatches = matches.filter(m => 
+          m.status === 'scheduled' && 
+          m.finished === 0 && 
+          !predictions.some(p => p.match_id === m.id)
+        );
+
+        if (unpredictedMatches.length > 0) {
+          // Sort by local_date ascending (earliest first)
+          unpredictedMatches.sort((a, b) => new Date(a.local_date) - new Date(b.local_date));
+          setSelectedMatchId(unpredictedMatches[0].id);
+        } else {
+          // Fallback: latest predicted match
+          const userPredictedMatches = matches.filter(m => predictions.some(p => p.match_id === m.id));
+          if (userPredictedMatches.length > 0) {
+            userPredictedMatches.sort((a, b) => new Date(b.local_date) - new Date(a.local_date));
+            setSelectedMatchId(userPredictedMatches[0].id);
+          }
         }
       }
     } else if (tab === 'match-view') {
