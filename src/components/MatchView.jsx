@@ -229,8 +229,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontSize: '12px',
                                   fontWeight: '600',
                                   color: '#ffffff',
-                                  background: m.finished === 1 ? (isWinnerCorrect ? '#10b981' : '#ef4444') : 'rgba(255, 255, 255, 0.05)',
-                                  border: m.finished === 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                                  background: m.finished === 1 ? (isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
+                                  border: m.finished === 1 ? (isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                 }}>
                                   {pred.predicted_winner === 'home' ? homeName : pred.predicted_winner === 'away' ? awayName : 'Draw'}
                                 </span>
@@ -242,8 +242,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontSize: '12px',
                                   fontWeight: '600',
                                   color: '#ffffff',
-                                  background: m.finished === 1 ? (isOUCorrect ? '#10b981' : '#ef4444') : 'rgba(255, 255, 255, 0.05)',
-                                  border: m.finished === 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                                  background: m.finished === 1 ? (isOUCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
+                                  border: m.finished === 1 ? (isOUCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                 }}>
                                   {pred.predicted_over_under === 'over' ? 'O' : 'U'}
                                 </span>
@@ -255,8 +255,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontSize: '12px',
                                   fontWeight: '600',
                                   color: '#ffffff',
-                                  background: m.finished === 1 ? (isScoreCorrect ? '#10b981' : '#ef4444') : 'rgba(255, 255, 255, 0.05)',
-                                  border: m.finished === 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                                  background: m.finished === 1 ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
+                                  border: m.finished === 1 ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                 }}>
                                   {pred.predicted_home_score}-{pred.predicted_away_score}
                                 </span>
@@ -269,8 +269,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                     fontSize: '12px',
                                     fontWeight: '600',
                                     color: '#ffffff',
-                                    background: m.finished === 1 ? (underdogBonusEarned ? '#10b981' : (pickedUnderdog ? '#ef4444' : 'rgba(255, 255, 255, 0.05)')) : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                                    background: m.finished === 1 ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : (pickedUnderdog ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)')) : 'rgba(255, 255, 255, 0.05)',
+                                    border: m.finished === 1 ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : (pickedUnderdog ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px solid rgba(255, 255, 255, 0.1)'
                                   }}>
                                     {pickedUnderdog ? 'Bonus' : 'fav'}
                                   </span>
@@ -284,8 +284,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                     fontSize: '12px',
                                     fontWeight: '600',
                                     color: '#ffffff',
-                                    background: m.finished === 1 ? (isFirstScorerCorrect ? '#10b981' : '#ef4444') : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                                    background: m.finished === 1 ? (isFirstScorerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
+                                    border: m.finished === 1 ? (isFirstScorerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                   }}>
                                     SF:{pred.predicted_first_scorer === 'home' ? homeName : pred.predicted_first_scorer === 'away' ? awayName : 'None'}
                                   </span>
@@ -299,8 +299,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                     fontSize: '12px',
                                     fontWeight: '600',
                                     color: '#ffffff',
-                                    background: m.finished === 1 ? (isTotalCardsCorrect ? '#10b981' : '#ef4444') : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                                    background: m.finished === 1 ? (isTotalCardsCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
+                                    border: m.finished === 1 ? (isTotalCardsCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                   }}>
                                     TC:{pred.predicted_total_cards}
                                   </span>
@@ -314,8 +314,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                     fontSize: '12px',
                                     fontWeight: '600',
                                     color: '#ffffff',
-                                    background: m.finished === 1 ? (isHalfCorrect ? '#10b981' : '#ef4444') : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                                    background: m.finished === 1 ? (isHalfCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
+                                    border: m.finished === 1 ? (isHalfCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                   }}>
                                     H:{pred.predicted_highest_scoring_half === 'first' ? '1st' : pred.predicted_highest_scoring_half === 'second' ? '2nd' : 'Equal'}
                                   </span>
@@ -329,8 +329,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                     fontSize: '12px',
                                     fontWeight: '600',
                                     color: '#ffffff',
-                                    background: m.finished === 1 ? (isCleanCorrect ? '#10b981' : '#ef4444') : 'rgba(255, 255, 255, 0.05)',
-                                    border: m.finished === 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                                    background: m.finished === 1 ? (isCleanCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
+                                    border: m.finished === 1 ? (isCleanCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                   }}>
                                     CS:{pred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}
                                   </span>
