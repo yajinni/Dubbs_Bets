@@ -784,9 +784,9 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                         {displayPred ? (
                           <div style={{ 
                             display: 'grid', 
-                            gridTemplateColumns: '45px 22px 36px 52px 62px 48px 48px 42px', 
+                            gridTemplateColumns: '45px 22px 46px 52px 62px 48px 48px 42px', 
                             gap: '4px',
-                            minWidth: '360px'
+                            minWidth: '370px'
                           }}>
                             {/* Winner */}
                             <span style={{ 
@@ -824,6 +824,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                               fontWeight: '600',
                               color: '#ffffff',
                               textAlign: 'center',
+                              whiteSpace: 'nowrap',
                               background: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
                               border: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                             }}>
