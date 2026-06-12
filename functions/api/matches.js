@@ -92,11 +92,6 @@ export async function onRequest(context) {
       const cLine = cardsLine !== undefined ? parseFloat(cardsLine) : 3.5;
       const actCards = (actualCards !== undefined && actualCards !== '') ? parseInt(actualCards) : null;
       let actFirstScorer = actualFirstScorer || null;
-      if (finishedVal === 1 && (actFirstScorer === null || actFirstScorer === 'none' || actFirstScorer === '')) {
-        if (hScore > 0 && aScore === 0) actFirstScorer = 'home';
-        else if (aScore > 0 && hScore === 0) actFirstScorer = 'away';
-        else if (hScore === 0 && aScore === 0) actFirstScorer = 'none';
-      }
 
       const updateQuery = `
         UPDATE matches 
@@ -149,13 +144,14 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
   const ouResult = totalGoals > ouLine ? 'over' : 'under';
 
   // Calculate highest scoring half
-  const hHt = homeHtScore !== null && homeHtScore !== undefined ? homeHtScore : 0;
-  const aHt = awayHtScore !== null && awayHtScore !== undefined ? awayHtScore : 0;
-  const firstHalfGoals = hHt + aHt;
-  const secondHalfGoals = totalGoals - firstHalfGoals;
-  let winnerHalf = 'equal';
-  if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
-  else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
+  let winnerHalf = null;
+  if (homeHtScore !== null && homeHtScore !== undefined && awayHtScore !== null && awayHtScore !== undefined) {
+    const firstHalfGoals = homeHtScore + awayHtScore;
+    const secondHalfGoals = totalGoals - firstHalfGoals;
+    if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
+    else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
+    else winnerHalf = 'equal';
+  }
 
   // Calculate clean sheet
   const cleanSheetHappened = (homeScore === 0 || awayScore === 0) ? 'yes' : 'no';

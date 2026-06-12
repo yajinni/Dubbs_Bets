@@ -102,13 +102,13 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
               const totalGoals = m.home_score + m.away_score;
               actualOU = totalGoals > m.over_under_line ? 'over' : 'under';
 
-              const hHt = m.home_ht_score !== null && m.home_ht_score !== undefined ? m.home_ht_score : 0;
-              const aHt = m.away_ht_score !== null && m.away_ht_score !== undefined ? m.away_ht_score : 0;
-              const firstHalfGoals = hHt + aHt;
-              const secondHalfGoals = totalGoals - firstHalfGoals;
-              if (firstHalfGoals > secondHalfGoals) actualHighestHalf = 'first';
-              else if (secondHalfGoals > firstHalfGoals) actualHighestHalf = 'second';
-              else actualHighestHalf = 'equal';
+              if (m.home_ht_score !== null && m.home_ht_score !== undefined && m.away_ht_score !== null && m.away_ht_score !== undefined) {
+                const firstHalfGoals = m.home_ht_score + m.away_ht_score;
+                const secondHalfGoals = totalGoals - firstHalfGoals;
+                if (firstHalfGoals > secondHalfGoals) actualHighestHalf = 'first';
+                else if (secondHalfGoals > firstHalfGoals) actualHighestHalf = 'second';
+                else actualHighestHalf = 'equal';
+              }
 
               actualCleanSheet = (m.home_score === 0 || m.away_score === 0) ? 'yes' : 'no';
             }

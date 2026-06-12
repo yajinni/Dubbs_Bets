@@ -413,9 +413,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Highest Half</span>
                 <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
                   {(() => {
-                    const hHt = m.home_ht_score !== null && m.home_ht_score !== undefined ? m.home_ht_score : 0;
-                    const aHt = m.away_ht_score !== null && m.away_ht_score !== undefined ? m.away_ht_score : 0;
-                    const firstHalfGoals = hHt + aHt;
+                    if (m.home_ht_score === null || m.home_ht_score === undefined || m.away_ht_score === null || m.away_ht_score === undefined) {
+                      return 'TBD';
+                    }
+                    const firstHalfGoals = m.home_ht_score + m.away_ht_score;
                     const secondHalfGoals = (m.home_score + m.away_score) - firstHalfGoals;
                     return firstHalfGoals > secondHalfGoals ? '1st Half' : secondHalfGoals > firstHalfGoals ? '2nd Half' : 'Equal';
                   })()}

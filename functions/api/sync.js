@@ -255,15 +255,37 @@ async function syncFromAPIFootball(db, apiKey) {
         actualCards = Math.floor(Math.random() * 5) + 1;
       }
 
-      let inferredFirstScorer = dbMatch.actual_first_scorer;
-      if (finished === 1 && (inferredFirstScorer === null || inferredFirstScorer === 'none' || inferredFirstScorer === '')) {
-        if (homeScore > 0 && awayScore === 0) inferredFirstScorer = 'home';
-        else if (awayScore > 0 && homeScore === 0) inferredFirstScorer = 'away';
-        else if (homeScore === 0 && awayScore === 0) inferredFirstScorer = 'none';
-      }
-
       const homeHtScore = apiFix.score?.halftime?.home !== null && apiFix.score?.halftime?.home !== undefined ? apiFix.score.halftime.home : null;
       const awayHtScore = apiFix.score?.halftime?.away !== null && apiFix.score?.halftime?.away !== undefined ? apiFix.score.halftime.away : null;
+
+      let actualFirstScorer = dbMatch.actual_first_scorer;
+      if ((status === 'live' || finished === 1) && (actualFirstScorer === null || actualFirstScorer === undefined || actualFirstScorer === '')) {
+        try {
+          const eventsRes = await fetch(`https://${API_HOST}/fixtures/events?fixture=${apiFixId}`, {
+            headers: { 'x-apisports-key': apiKey }
+          });
+          const eventsData = await eventsRes.json();
+          const events = eventsData.response || [];
+          const goalEvents = events.filter(e => e.type === 'Goal');
+          if (goalEvents.length > 0) {
+            goalEvents.sort((a, b) => {
+              const aTime = (a.time?.elapsed || 0) + (a.time?.extra || 0);
+              const bTime = (b.time?.elapsed || 0) + (b.time?.extra || 0);
+              return aTime - bTime;
+            });
+            const firstGoal = goalEvents[0];
+            if (firstGoal.team.id === apiHome.id || (firstGoal.team.name && firstGoal.team.name.toLowerCase() === apiHome.name.toLowerCase())) {
+              actualFirstScorer = 'home';
+            } else if (firstGoal.team.id === apiAway.id || (firstGoal.team.name && firstGoal.team.name.toLowerCase() === apiAway.name.toLowerCase())) {
+              actualFirstScorer = 'away';
+            }
+          } else if (finished === 1) {
+            actualFirstScorer = 'none';
+          }
+        } catch (e) {
+          console.error(`Failed to fetch events for fixture ${apiFixId}:`, e.message);
+        }
+      }
 
       // Update match record
       await db.prepare(`
@@ -307,14 +329,14 @@ async function syncFromAPIFootball(db, apiKey) {
         overOdds,
         underOdds,
         actualCards,
-        inferredFirstScorer,
+        actualFirstScorer,
         apiFix.fixture.date || dbMatch.local_date,
         dbMatch.id
       ).run();
 
       // Recalculate predictions if finished
       if (finished === 1) {
-        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards, inferredFirstScorer, homePct, awayPct, homeHtScore, awayHtScore);
+        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards, actualFirstScorer, homePct, awayPct, homeHtScore, awayHtScore);
       }
 
       matchesUpdated++;
@@ -437,13 +459,14 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
   const ouResult = totalGoals > ouLine ? 'over' : 'under';
 
   // Calculate highest scoring half
-  const hHt = homeHtScore !== null && homeHtScore !== undefined ? homeHtScore : 0;
-  const aHt = awayHtScore !== null && awayHtScore !== undefined ? awayHtScore : 0;
-  const firstHalfGoals = hHt + aHt;
-  const secondHalfGoals = totalGoals - firstHalfGoals;
-  let winnerHalf = 'equal';
-  if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
-  else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
+  let winnerHalf = null;
+  if (homeHtScore !== null && homeHtScore !== undefined && awayHtScore !== null && awayHtScore !== undefined) {
+    const firstHalfGoals = homeHtScore + awayHtScore;
+    const secondHalfGoals = totalGoals - firstHalfGoals;
+    if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
+    else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
+    else winnerHalf = 'equal';
+  }
 
   // Calculate clean sheet
   const cleanSheetHappened = (homeScore === 0 || awayScore === 0) ? 'yes' : 'no';
@@ -659,11 +682,6 @@ async function syncFromTheOddsAPI(db, apiKey) {
       }
       
       let inferredFirstScorer = dbMatch.actual_first_scorer;
-      if (finished === 1 && (inferredFirstScorer === null || inferredFirstScorer === 'none' || inferredFirstScorer === '')) {
-        if (homeScore > 0 && awayScore === 0) inferredFirstScorer = 'home';
-        else if (awayScore > 0 && homeScore === 0) inferredFirstScorer = 'away';
-        else if (homeScore === 0 && awayScore === 0) inferredFirstScorer = 'none';
-      }
 
       // Update D1 database with the latest scores and match status
       await db.prepare(`

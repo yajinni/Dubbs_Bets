@@ -166,13 +166,14 @@ export async function onRequest(context) {
         }
 
         // Halftime scorer calculations
-        const hHt = match.home_ht_score !== null && match.home_ht_score !== undefined ? match.home_ht_score : 0;
-        const aHt = match.away_ht_score !== null && match.away_ht_score !== undefined ? match.away_ht_score : 0;
-        const firstHalfGoals = hHt + aHt;
-        const secondHalfGoals = totalGoals - firstHalfGoals;
-        let winnerHalf = 'equal';
-        if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
-        else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
+        let winnerHalf = null;
+        if (match.home_ht_score !== null && match.home_ht_score !== undefined && match.away_ht_score !== null && match.away_ht_score !== undefined) {
+          const firstHalfGoals = match.home_ht_score + match.away_ht_score;
+          const secondHalfGoals = totalGoals - firstHalfGoals;
+          if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
+          else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
+          else winnerHalf = 'equal';
+        }
 
         let pHalf = 0;
         if (pHalfPick !== null) {
