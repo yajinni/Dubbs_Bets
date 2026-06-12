@@ -671,14 +671,14 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       <div style={{ width: '100%' }}>
                         {opPred ? (
                           <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500', display: 'block' }}>
-                            {opPred.predicted_winner === 'home' ? m.home_code || 'H' : opPred.predicted_winner === 'away' ? m.away_code || 'A' : 'D'}
+                            {opPred.predicted_winner === 'home' ? m.home_code || 'H' : opPred.predicted_winner === 'away' ? m.away_code || 'A' : 'Draw'}
                             {` | `}
                             <span style={{ color: 'var(--warning)' }}>{opPred.predicted_over_under.toUpperCase()}</span>
                             {` | `}
                             {opPred.predicted_home_score}-{opPred.predicted_away_score}
-                            {opPred.predicted_first_scorer && ` | SF:${opPred.predicted_first_scorer === 'home' ? m.home_code || 'H' : opPred.predicted_first_scorer === 'away' ? m.away_code || 'A' : '-'}`}
+                            {opPred.predicted_first_scorer && ` | SF:${opPred.predicted_first_scorer === 'home' ? m.home_code || 'H' : opPred.predicted_first_scorer === 'away' ? m.away_code || 'A' : 'None'}`}
                             {opPred.predicted_total_cards !== null && opPred.predicted_total_cards !== undefined && ` | TC:${opPred.predicted_total_cards}`}
-                            {opPred.predicted_highest_scoring_half && ` | H:${opPred.predicted_highest_scoring_half === 'first' ? '1st' : opPred.predicted_highest_scoring_half === 'second' ? '2nd' : '='}`}
+                            {opPred.predicted_highest_scoring_half && ` | H:${opPred.predicted_highest_scoring_half === 'first' ? '1st' : opPred.predicted_highest_scoring_half === 'second' ? '2nd' : 'Equal'}`}
                             {opPred.predicted_clean_sheet && ` | CS:${opPred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}`}
                           </span>
                         ) : (
