@@ -390,7 +390,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <CheckCircle size={14} />
               Confirmed Match Results
             </div>
-            <div className="analytics-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginTop: '8px' }}>
+            <div className="results-analytics-grid">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Winner</span>
                 <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
