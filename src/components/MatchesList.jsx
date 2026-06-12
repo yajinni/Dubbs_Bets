@@ -723,11 +723,13 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                   const hasOUPred = displayPred && displayPred.predicted_over_under;
                   const isOUCorrect = m.finished === 1 && hasOUPred && displayPred.predicted_over_under === actualOU;
 
-                  const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.home_win_pct < m.away_win_pct;
-                  const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.away_win_pct < m.home_win_pct;
+                  const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.home_win_pct < Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
+                  const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.away_win_pct < Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
+                  const drawIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.draw_pct < Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
                   const pickedUnderdog = displayPred && (
                     (displayPred.predicted_winner === 'home' && homeIsUnderdog) ||
-                    (displayPred.predicted_winner === 'away' && awayIsUnderdog)
+                    (displayPred.predicted_winner === 'away' && awayIsUnderdog) ||
+                    (displayPred.predicted_winner === 'draw' && drawIsUnderdog)
                   );
                   const underdogBonusEarned = displayPred && displayPred.points_cards_ou > 0;
 

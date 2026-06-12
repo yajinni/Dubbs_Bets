@@ -223,9 +223,9 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                       const isOUCorrect = m.finished === 1 && hasOUPred && pred.predicted_over_under === actualOU;
 
                       // Underdog bonus evaluation
-                      const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.home_win_pct === Math.min(m.home_win_pct, m.away_win_pct, m.draw_pct);
-                      const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.away_win_pct === Math.min(m.home_win_pct, m.away_win_pct, m.draw_pct);
-                      const drawIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.draw_pct === Math.min(m.home_win_pct, m.away_win_pct, m.draw_pct);
+                      const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.home_win_pct < Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
+                      const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.away_win_pct < Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
+                      const drawIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.draw_pct < Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
                       const pickedUnderdog = pred && (
                         (pred.predicted_winner === 'home' && homeIsUnderdog) ||
                         (pred.predicted_winner === 'away' && awayIsUnderdog) ||

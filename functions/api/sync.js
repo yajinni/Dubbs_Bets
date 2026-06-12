@@ -410,13 +410,13 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
     const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
     const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
 
-    // Underdog Bonus: +1 if player picked the option with lowest win/draw% AND that outcome occurred
+    // Underdog Bonus: +1 if player picked the option and that outcome occurred, provided it was not the option with the highest win probability (favorite)
     let pUnderdog = 0;
     if (pWinner > 0 && homeWinPct != null && awayWinPct != null && drawWinPct != null) {
-      const minPct = Math.min(homeWinPct, awayWinPct, drawWinPct);
-      if (winner === 'home' && homeWinPct === minPct) pUnderdog = 1;
-      else if (winner === 'away' && awayWinPct === minPct) pUnderdog = 1;
-      else if (winner === 'draw' && drawWinPct === minPct) pUnderdog = 1;
+      const maxPct = Math.max(homeWinPct, awayWinPct, drawWinPct);
+      if (winner === 'home' && homeWinPct < maxPct) pUnderdog = 1;
+      else if (winner === 'away' && awayWinPct < maxPct) pUnderdog = 1;
+      else if (winner === 'draw' && drawWinPct < maxPct) pUnderdog = 1;
     }
 
     let pTotalCardsEarned = 0;

@@ -148,13 +148,13 @@ export async function onRequest(context) {
         const pOu = predictedOverUnder === ouResult ? 1 : 0;
         const pScore = (pHomeScore === homeScore && pAwayScore === awayScore) ? 1 : 0;
 
-        // Underdog Bonus: +1 if player picked the option with lowest win/draw% AND that outcome occurred
+        // Underdog Bonus: +1 if player picked the option and that outcome occurred, provided it was not the option with the highest win probability (favorite)
         let pUnderdog = 0;
         if (pWinner > 0 && match.home_win_pct != null && match.away_win_pct != null && match.draw_pct != null) {
-          const minPct = Math.min(match.home_win_pct, match.away_win_pct, match.draw_pct);
-          if (winnerResult === 'home' && match.home_win_pct === minPct) pUnderdog = 1;
-          else if (winnerResult === 'away' && match.away_win_pct === minPct) pUnderdog = 1;
-          else if (winnerResult === 'draw' && match.draw_pct === minPct) pUnderdog = 1;
+          const maxPct = Math.max(match.home_win_pct, match.away_win_pct, match.draw_pct);
+          if (winnerResult === 'home' && match.home_win_pct < maxPct) pUnderdog = 1;
+          else if (winnerResult === 'away' && match.away_win_pct < maxPct) pUnderdog = 1;
+          else if (winnerResult === 'draw' && match.draw_pct < maxPct) pUnderdog = 1;
         }
 
         let pTotalCardsEarned = 0;

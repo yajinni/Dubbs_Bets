@@ -1,5 +1,4 @@
-// Temporary local scratch script to update all completed predictions with the new rules
-import { checkAndInitDb } from '../functions/api/db_helper.js';
+import { checkAndInitDb } from './db_helper.js';
 
 export async function onRequest(context) {
   const { env } = context;
@@ -50,10 +49,10 @@ export async function onRequest(context) {
 
         let pUnderdog = 0;
         if (pWinner > 0 && homeWinPct != null && awayWinPct != null && drawWinPct != null) {
-          const minPct = Math.min(homeWinPct, awayWinPct, drawWinPct);
-          if (winner === 'home' && homeWinPct === minPct) pUnderdog = 1;
-          else if (winner === 'away' && awayWinPct === minPct) pUnderdog = 1;
-          else if (winner === 'draw' && drawWinPct === minPct) pUnderdog = 1;
+          const maxPct = Math.max(homeWinPct, awayWinPct, drawWinPct);
+          if (winner === 'home' && homeWinPct < maxPct) pUnderdog = 1;
+          else if (winner === 'away' && awayWinPct < maxPct) pUnderdog = 1;
+          else if (winner === 'draw' && drawWinPct < maxPct) pUnderdog = 1;
         }
 
         let pTotalCardsEarned = 0;
