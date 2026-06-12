@@ -398,7 +398,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
                     />
                   </div>
                   <div className="admin-input-group">
-                    <label>First Scorer</label>
+                    <label>Scored First</label>
                     <select
                       className="admin-select"
                       value={actualFirstScorer}

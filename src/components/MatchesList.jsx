@@ -113,7 +113,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       return;
     }
     if (!firstScorer) {
-      setError('Select First Scorer.');
+      setError('Select Scored First.');
       return;
     }
     if (!highestScoringHalf) {
@@ -329,7 +329,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           {/* First Team to Score Probability */}
           <div className="analytics-item">
             <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
-              First Team to Score (%)
+              Scored First (%)
             </div>
             <div className="analytics-labels">
               <span>{homeName}: {homeFirstPct}%</span>
@@ -398,7 +398,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                 </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>First Scorer</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Scored First</span>
                 <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
                   {m.actual_first_scorer === 'home' ? homeName : m.actual_first_scorer === 'away' ? awayName : 'No Goal'}
                 </span>
@@ -466,7 +466,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                     <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
                       {pred.predicted_home_score}-{pred.predicted_away_score}
                     </span>
-                    {` | First Scorer: `}
+                    {` | Scored First: `}
                     <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>
                       {pred.predicted_first_scorer === 'home' ? homeName : pred.predicted_first_scorer === 'away' ? awayName : 'No Goal'}
                     </span>
@@ -554,7 +554,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
                 {/* First Team to Score Select */}
                 <div className="prediction-col">
-                  <label>First Scorer (1 pt)</label>
+                  <label>Scored First (1 pt)</label>
                   <div className="inline-choice-group">
                     <button
                       type="button"
@@ -906,7 +906,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             {/* First Scorer */}
             <div className="glass-panel" style={{ borderLeft: '4px solid #ec4899', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '15px', fontWeight: '800' }}>🎯 First Team to Score</span>
+                <span style={{ fontSize: '15px', fontWeight: '800' }}>🎯 Scored First</span>
                 <span style={{ background: 'rgba(236,72,153,0.2)', color: '#f472b6', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>1 pt</span>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
@@ -974,7 +974,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
                 { label: 'Winner', pts: 1, color: '#a855f7' },
                 { label: 'Goals O/U', pts: 1, color: '#22c55e' },
                 { label: 'Underdog Bonus', pts: 1, color: '#fbbf24' },
-                { label: 'First Scorer', pts: 1, color: '#ec4899' },
+                { label: 'Scored First', pts: 1, color: '#ec4899' },
                 { label: 'Exact Score', pts: 3, color: '#eab308' },
                 { label: 'Exact Cards', pts: 2, color: '#06b6d4' },
                 { label: 'Highest scoring Half', pts: 1, color: '#c084fc' },
