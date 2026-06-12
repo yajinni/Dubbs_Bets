@@ -536,8 +536,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
           draw_pct = ?,
           over_under_line = ?,
           over_odds = ?,
-          under_odds = ?,
-          local_date = ?
+          under_odds = ?
         WHERE id = ?
       `).bind(
         homePct,
@@ -546,7 +545,6 @@ async function syncFromTheOddsAPI(db, apiKey) {
         ouLine,
         overOdds,
         underOdds,
-        match.commence_time,
         dbMatch.id
       ).run();
       

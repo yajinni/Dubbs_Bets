@@ -132,10 +132,15 @@ export default function App() {
   const formatMatchDate = (isoString) => {
     if (!isoString) return '';
     let normalized = isoString.replace(' ', 'T');
-    if (!normalized.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(normalized)) {
-      normalized += 'Z';
+    const hasTimezone = normalized.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(normalized);
+    
+    let date;
+    if (hasTimezone) {
+      date = new Date(normalized);
+    } else {
+      date = new Date(normalized + '-04:00');
     }
-    const date = new Date(normalized);
+    
     const dateStr = date.toLocaleString('en-US', {
       timeZone: 'America/New_York',
       month: 'short',
