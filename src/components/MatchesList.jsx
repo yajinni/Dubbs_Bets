@@ -452,29 +452,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               {pred ? (
                 <div style={{ textAlign: 'right' }}>
 
-                  {m.finished === 1 && (
-                    <div className="prediction-badge-display" style={{ justifyContent: 'flex-end', marginTop: '6px' }}>
-                      <span className={`p-point-dot ${pred.points_winner ? 'earned' : ''}`}></span>
-                      <span style={{ color: pred.points_winner ? 'var(--success)' : 'var(--text-muted)' }}>W</span>
-                      <span className={`p-point-dot ${pred.points_ou ? 'earned' : ''}`}></span>
-                      <span style={{ color: pred.points_ou ? 'var(--success)' : 'var(--text-muted)' }}>O/U</span>
-                      <span className={`p-point-dot ${pred.points_cards_ou ? 'earned' : ''}`}></span>
-                      <span style={{ color: pred.points_cards_ou ? 'var(--success)' : 'var(--text-muted)' }}>🐉</span>
-                      <span className={`p-point-dot ${pred.points_first_scorer ? 'earned' : ''}`}></span>
-                      <span style={{ color: pred.points_first_scorer ? 'var(--success)' : 'var(--text-muted)' }}>FS</span>
-                      <span className={`p-point-dot ${pred.points_total_cards ? 'earned' : ''}`}></span>
-                      <span style={{ color: pred.points_total_cards ? 'var(--success)' : 'var(--text-muted)' }}>TC</span>
-                      <span className={`p-point-dot ${pred.points_score ? 'earned' : ''}`}></span>
-                      <span style={{ color: pred.points_score ? 'var(--success)' : 'var(--text-muted)' }}>S</span>
-                      <span className={`p-point-dot ${pred.points_highest_scoring_half ? 'earned' : ''}`}></span>
-                      <span style={{ color: pred.points_highest_scoring_half ? 'var(--success)' : 'var(--text-muted)' }}>HSH</span>
-                      <span className={`p-point-dot ${pred.points_clean_sheet ? 'earned' : ''}`}></span>
-                      <span style={{ color: pred.points_clean_sheet ? 'var(--success)' : 'var(--text-muted)' }}>CS</span>
-                      <span style={{ marginLeft: '6px', color: 'var(--primary-hover)', fontWeight: '700' }}>
-                        (+{pred.total_points} pts)
-                      </span>
-                    </div>
-                  )}
+
                 </div>
               ) : (
                 <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
