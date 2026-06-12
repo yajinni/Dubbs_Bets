@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users } from 'lucide-react';
+import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 
 function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [] }) {
