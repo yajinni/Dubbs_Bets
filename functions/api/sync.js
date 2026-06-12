@@ -76,27 +76,24 @@ export async function onRequest(context) {
 
     // 2. Perform Sync
     const apiKeyOdds = env.THE_ODDS_API_KEY;
+    let syncResults = { source: 'espn', matchesUpdated: 0, oddsUpdated: 0 };
 
-    let syncResults = { source: 'mock', matchesUpdated: 0, oddsUpdated: 0 };
+    try {
+      syncResults = await syncFromESPN(env.db);
+    } catch (err) {
+      console.error('ESPN sync failed, falling back to mock sync:', err.message);
+      syncResults = await runMockSync(env.db);
+      syncResults.warning = `ESPN sync failed (${err.message}). Gracefully fell back to mock simulation.`;
+    }
 
     if (apiKeyOdds && apiKeyOdds !== '') {
       try {
-        syncResults = await syncFromTheOddsAPI(env.db, apiKeyOdds);
+        const oddsResults = await syncFromTheOddsAPI(env.db, apiKeyOdds);
+        syncResults.oddsUpdated = oddsResults.oddsUpdated;
+        syncResults.source += ' + the-odds-api';
       } catch (err) {
-        console.error('The Odds API sync failed, falling back to mock sync:', err.message);
-        syncResults = await runMockSync(env.db);
-        syncResults.warning = `The Odds API failed (${err.message}). Gracefully fell back to mock simulation.`;
+        console.error('The Odds API sync failed:', err.message);
       }
-    } else if (apiKeyFootball && apiKeyFootball !== '') {
-      try {
-        syncResults = await syncFromAPIFootball(env.db, apiKeyFootball);
-      } catch (err) {
-        console.error('API-Football sync failed, falling back to mock sync:', err.message);
-        syncResults = await runMockSync(env.db);
-        syncResults.warning = `API-Football failed (${err.message}). Gracefully fell back to mock simulation.`;
-      }
-    } else {
-      syncResults = await runMockSync(env.db);
     }
 
     // 3. Update last sync time
@@ -118,243 +115,155 @@ export async function onRequest(context) {
 // --------------------------------------------------------
 // API-Football Sync Implementation
 // --------------------------------------------------------
-async function syncFromAPIFootball(db, apiKey) {
-  console.log('Syncing from API-Football...');
-  const API_HOST = 'v3.football.api-sports.io';
+// Helper to normalize team names for ESPN matching
+function normalizeTeamName(name) {
+  const n = name.toLowerCase().trim();
+  if (n.includes('czech')) return 'czech';
+  if (n.includes('korea')) return 'korea';
+  if (n.includes('united states') || n === 'usa') return 'usa';
+  return n;
+}
+
+// --------------------------------------------------------
+// ESPN Scoreboard Sync Implementation (Free, Keyless)
+// --------------------------------------------------------
+async function syncFromESPN(db) {
+  console.log('Syncing from ESPN Scoreboard API...');
+  const res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard');
+  const data = await res.json();
+  const events = data.events || [];
   
-  // 1. Fetch World Cup 2026 Fixtures (League ID 1, Season 2026)
-  const fixturesRes = await fetch(`https://${API_HOST}/fixtures?league=1&season=2026`, {
-    headers: { 'x-apisports-key': apiKey }
-  });
-  const fixturesData = await fixturesRes.json();
-
-  if (fixturesData.errors && (Array.isArray(fixturesData.errors) ? fixturesData.errors.length > 0 : Object.keys(fixturesData.errors).length > 0)) {
-    throw new Error(`API Error details: ${JSON.stringify(fixturesData.errors)}`);
-  }
-
-  const apiFixtures = fixturesData.response || [];
-
-  if (apiFixtures.length === 0) {
-    throw new Error('API-Football returned no fixtures. Ensure the World Cup 2026 (League ID 1, Season 2026) is available on your plan.');
-  }
-
-  // 2. Fetch World Cup 2026 Odds
-  // We'll fetch odds for the league/season if available
-  const oddsRes = await fetch(`https://${API_HOST}/odds?league=1&season=2026`, {
-    headers: { 'x-apisports-key': apiKey }
-  });
-  const oddsData = await oddsRes.json();
-  if (oddsData.errors && (Array.isArray(oddsData.errors) ? oddsData.errors.length > 0 : Object.keys(oddsData.errors).length > 0)) {
-    console.warn('API-Football Odds Error:', JSON.stringify(oddsData.errors));
-  }
-  const apiOddsList = oddsData.response || [];
-
-  // Create an odds map by fixture ID
-  const oddsMap = {};
-  for (const item of apiOddsList) {
-    const fixtureId = item.fixture.id;
-    const bookmakers = item.bookmakers || [];
-    const mainBookie = bookmakers.find(b => b.name === 'Bet365') || bookmakers[0];
-    
-    if (mainBookie) {
-      const bets = mainBookie.bets || [];
-      const matchWinnerBet = bets.find(b => b.name === 'Match Winner');
-      const overUnderBet = bets.find(b => b.name === 'Goals Over/Under');
-
-      oddsMap[fixtureId] = {
-        winner: matchWinnerBet ? matchWinnerBet.values : null,
-        overUnder: overUnderBet ? overUnderBet.values : null
-      };
-    }
-  }
-
-  // Load existing matches to map teams and find slots
   const { results: dbMatches } = await db.prepare('SELECT * FROM matches').all();
-  
   let matchesUpdated = 0;
-  let oddsUpdated = 0;
-
-  for (const apiFix of apiFixtures) {
-    const apiFixId = apiFix.fixture.id;
-    const apiHome = apiFix.teams.home;
-    const apiAway = apiFix.teams.away;
-    const apiStatus = apiFix.fixture.status.short;
-    const apiHomeScore = apiFix.goals.home;
-    const apiAwayScore = apiFix.goals.away;
-    const apiRound = apiFix.league.round; // e.g. "Group Stage - 1", "Round of 16", etc.
-
-    // Determine status
-    let status = 'scheduled';
-    if (['1H', '2H', 'HT', 'ET', 'P'].includes(apiStatus)) status = 'live';
-    else if (['FT', 'AET', 'PEN'].includes(apiStatus)) status = 'finished';
-
-    const finished = status === 'finished' ? 1 : 0;
-    const homeScore = apiHomeScore !== null ? apiHomeScore : 0;
-    const awayScore = apiAwayScore !== null ? apiAwayScore : 0;
-
-    // Try to find a match in the DB that matches this API fixture
-    let dbMatch = dbMatches.find(m => m.home_team_name.toLowerCase() === apiHome.name.toLowerCase() && m.away_team_name.toLowerCase() === apiAway.name.toLowerCase());
-
-    // If it's a knockout match, teams might have just been resolved
-    if (!dbMatch && !['group', 'group stage'].includes(apiRound.toLowerCase())) {
-      // Find a knockout match of the same type that doesn't have teams filled, or matches by round
-      const roundType = getRoundType(apiRound);
-      dbMatch = dbMatches.find(m => m.type === roundType && (m.home_team_id === 0 || m.home_team_id === null));
-    }
-
+  
+  for (const event of events) {
+    const comp = event.competitions[0];
+    if (!comp) continue;
+    
+    const homeCompetitor = comp.competitors.find(c => c.homeAway === 'home');
+    const awayCompetitor = comp.competitors.find(c => c.homeAway === 'away');
+    if (!homeCompetitor || !awayCompetitor) continue;
+    
+    const homeName = homeCompetitor.team.name;
+    const awayName = awayCompetitor.team.name;
+    
+    // Find matching match in the database
+    const dbMatch = dbMatches.find(m => {
+      const dbHome = normalizeTeamName(m.home_team_name);
+      const dbAway = normalizeTeamName(m.away_team_name);
+      const espnHome = normalizeTeamName(homeName);
+      const espnAway = normalizeTeamName(awayName);
+      return (dbHome === espnHome && dbAway === espnAway);
+    });
+    
     if (dbMatch) {
-      // Fetch odds if we have them in the odds map
-      let homePct = dbMatch.home_win_pct;
-      let awayPct = dbMatch.away_win_pct;
-      let drawPct = dbMatch.draw_pct;
-      let ouLine = dbMatch.over_under_line;
-      let overOdds = dbMatch.over_odds;
-      let underOdds = dbMatch.under_odds;
-
-      const odds = oddsMap[apiFixId];
-      if (odds) {
-        // Parse match winner odds to percentages
-        // value format: [{ value: 'Home', odd: '1.95' }, { value: 'Draw', odd: '3.40' }, { value: 'Away', odd: '4.10' }]
-        if (odds.winner) {
-          const homeOdd = parseFloat(odds.winner.find(v => v.value === 'Home')?.odd || 0);
-          const drawOdd = parseFloat(odds.winner.find(v => v.value === 'Draw')?.odd || 0);
-          const awayOdd = parseFloat(odds.winner.find(v => v.value === 'Away')?.odd || 0);
-
-          if (homeOdd && drawOdd && awayOdd) {
-            const pHome = 1.0 / homeOdd;
-            const pDraw = 1.0 / drawOdd;
-            const pAway = 1.0 / awayOdd;
-            const sum = pHome + pDraw + pAway;
-            homePct = Math.round((pHome / sum) * 1000) / 10;
-            drawPct = Math.round((pDraw / sum) * 1000) / 10;
-            awayPct = Math.round((pAway / sum) * 1000) / 10;
-            oddsUpdated++;
-          }
+      const homeScore = parseInt(homeCompetitor.score) || 0;
+      const awayScore = parseInt(awayCompetitor.score) || 0;
+      
+      const state = comp.status?.type?.state;
+      const completed = comp.status?.type?.completed;
+      
+      let status = 'scheduled';
+      if (state === 'in') status = 'live';
+      else if (state === 'post') status = 'finished';
+      
+      const finished = completed ? 1 : 0;
+      
+      // Parse details/timeline for Halftime scores, Cards, and First Scorer
+      let homeHtScore = 0;
+      let awayHtScore = 0;
+      let actualFirstScorer = 'none';
+      let firstGoalTime = Infinity;
+      let actualCards = 0;
+      
+      const details = comp.details || [];
+      for (const detail of details) {
+        // Count cards
+        if (detail.yellowCard || detail.redCard || (detail.type && (detail.type.text.toLowerCase().includes('card') || detail.type.text.toLowerCase().includes('yellow') || detail.type.text.toLowerCase().includes('red')))) {
+          actualCards++;
         }
-
-        // Parse Over/Under 2.5 goals
-        // value format: [{ value: 'Over 2.5', odd: '1.85' }, { value: 'Under 2.5', odd: '1.95' }]
-        if (odds.overUnder) {
-          const ouMatch = odds.overUnder.find(v => v.value.startsWith('Over') || v.value.startsWith('Under'));
-          if (ouMatch) {
-            // Extract the line (e.g. 2.5)
-            const lineMatch = ouMatch.value.match(/\d+\.\d+/);
-            if (lineMatch) ouLine = parseFloat(lineMatch[0]);
-
-            const overOddVal = odds.overUnder.find(v => v.value.startsWith('Over'))?.odd;
-            const underOddVal = odds.overUnder.find(v => v.value.startsWith('Under'))?.odd;
-
-            if (overOddVal) overOdds = parseFloat(overOddVal);
-            if (underOddVal) underOdds = parseFloat(underOddVal);
+        
+        // Process goals
+        const isGoal = detail.scoringPlay || (detail.type && detail.type.text.toLowerCase().includes('goal'));
+        if (isGoal) {
+          const isHome = detail.team?.id === homeCompetitor.team?.id;
+          const clockVal = detail.clock?.value || 0;
+          
+          // Halftime score (clock value <= 2700 seconds/45 minutes)
+          if (clockVal <= 2700) {
+            if (isHome) homeHtScore++;
+            else awayHtScore++;
+          }
+          
+          // First scorer
+          if (clockVal < firstGoalTime) {
+            firstGoalTime = clockVal;
+            actualFirstScorer = isHome ? 'home' : 'away';
           }
         }
       }
-
-      let actualCards = dbMatch.actual_cards;
-      if (finished === 1 && (actualCards === null || actualCards === undefined)) {
-        actualCards = Math.floor(Math.random() * 5) + 1;
+      
+      // If live and no goals yet, keep first scorer as null
+      if (!finished && actualFirstScorer === 'none') {
+        actualFirstScorer = null;
       }
-
-      const homeHtScore = apiFix.score?.halftime?.home !== null && apiFix.score?.halftime?.home !== undefined ? apiFix.score.halftime.home : null;
-      const awayHtScore = apiFix.score?.halftime?.away !== null && apiFix.score?.halftime?.away !== undefined ? apiFix.score.halftime.away : null;
-
-      let actualFirstScorer = dbMatch.actual_first_scorer;
-      if ((status === 'live' || finished === 1) && (actualFirstScorer === null || actualFirstScorer === undefined || actualFirstScorer === '')) {
-        try {
-          const eventsRes = await fetch(`https://${API_HOST}/fixtures/events?fixture=${apiFixId}`, {
-            headers: { 'x-apisports-key': apiKey }
-          });
-          const eventsData = await eventsRes.json();
-          const events = eventsData.response || [];
-          const goalEvents = events.filter(e => e.type === 'Goal');
-          if (goalEvents.length > 0) {
-            goalEvents.sort((a, b) => {
-              const aTime = (a.time?.elapsed || 0) + (a.time?.extra || 0);
-              const bTime = (b.time?.elapsed || 0) + (b.time?.extra || 0);
-              return aTime - bTime;
-            });
-            const firstGoal = goalEvents[0];
-            if (firstGoal.team.id === apiHome.id || (firstGoal.team.name && firstGoal.team.name.toLowerCase() === apiHome.name.toLowerCase())) {
-              actualFirstScorer = 'home';
-            } else if (firstGoal.team.id === apiAway.id || (firstGoal.team.name && firstGoal.team.name.toLowerCase() === apiAway.name.toLowerCase())) {
-              actualFirstScorer = 'away';
-            }
-          } else if (finished === 1) {
-            actualFirstScorer = 'none';
-          }
-        } catch (e) {
-          console.error(`Failed to fetch events for fixture ${apiFixId}:`, e.message);
-        }
+      
+      // If scheduled, keep everything clean/null
+      if (status === 'scheduled') {
+        homeHtScore = null;
+        awayHtScore = null;
+        actualFirstScorer = null;
+        actualCards = null;
       }
-
-      // Update match record
+      
+      // Update D1 database
       await db.prepare(`
-        UPDATE matches 
-        SET 
-          home_team_id = ?,
-          away_team_id = ?,
-          home_team_name = ?,
-          away_team_name = ?,
+        UPDATE matches
+        SET
           home_score = ?,
           away_score = ?,
           home_ht_score = ?,
           away_ht_score = ?,
           status = ?,
           finished = ?,
-          home_win_pct = ?,
-          away_win_pct = ?,
-          draw_pct = ?,
-          over_under_line = ?,
-          over_odds = ?,
-          under_odds = ?,
           actual_cards = ?,
-          actual_first_scorer = ?,
-          local_date = ?
+          actual_first_scorer = ?
         WHERE id = ?
       `).bind(
-        apiHome.id, 
-        apiAway.id, 
-        apiHome.name, 
-        apiAway.name, 
-        homeScore, 
-        awayScore, 
+        homeScore,
+        awayScore,
         homeHtScore,
         awayHtScore,
-        status, 
-        finished, 
-        homePct, 
-        awayPct, 
-        drawPct,
-        ouLine,
-        overOdds,
-        underOdds,
+        status,
+        finished,
         actualCards,
         actualFirstScorer,
-        apiFix.fixture.date || dbMatch.local_date,
         dbMatch.id
       ).run();
-
-      // Recalculate predictions if finished
+      
+      // Recalculate predictions if the match has finished
       if (finished === 1) {
-        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards, actualFirstScorer, homePct, awayPct, homeHtScore, awayHtScore);
+        await recalculateMatchPredictionsInSync(
+          db, 
+          dbMatch.id, 
+          homeScore, 
+          awayScore, 
+          dbMatch.over_under_line,
+          dbMatch.cards_line || 3.5,
+          actualCards,
+          actualFirstScorer,
+          dbMatch.home_win_pct,
+          dbMatch.away_win_pct,
+          homeHtScore,
+          awayHtScore
+        );
       }
-
+      
       matchesUpdated++;
     }
   }
-
-  return { source: 'api-football', matchesUpdated, oddsUpdated };
-}
-
-function getRoundType(apiRound) {
-  const r = apiRound.toLowerCase();
-  if (r.includes('round of 32')) return 'r32';
-  if (r.includes('round of 16')) return 'r16';
-  if (r.includes('quarter')) return 'qf';
-  if (r.includes('semi')) return 'sf';
-  if (r.includes('third') || r.includes('3rd')) return 'third';
-  if (r.includes('final')) return 'final';
-  return 'group';
+  
+  return { source: 'espn', matchesUpdated, oddsUpdated: 0 };
 }
 
 // --------------------------------------------------------
@@ -652,7 +561,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
       m.away_team_name.toLowerCase() === event.away_team.toLowerCase()
     );
     
-    if (dbMatch) {
+    if (dbMatch && dbMatch.finished === 0) {
       let homeScore = dbMatch.home_score;
       let awayScore = dbMatch.away_score;
       let finished = dbMatch.finished;
