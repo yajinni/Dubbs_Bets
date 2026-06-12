@@ -661,28 +661,32 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                   const opPred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === op.id);
                   const isSelf = op.id === activeParticipantId;
                   return (
-                    <div key={op.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', padding: '6px 10px', borderRadius: '6px', border: isSelf ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid var(--glass-border)' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        {op.name}
-                        {isSelf && <span style={{ fontSize: '9px', background: 'var(--primary)', color: '#fff', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>You</span>}
-                      </span>
-                      {opPred ? (
-                        <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '600' }}>
-                          {opPred.predicted_winner === 'home' ? m.home_code || 'H' : opPred.predicted_winner === 'away' ? m.away_code || 'A' : 'D'}
-                          {` | `}
-                          <span style={{ color: 'var(--warning)' }}>{opPred.predicted_over_under.toUpperCase()}</span>
-                          {` | `}
-                          {opPred.predicted_home_score}-{opPred.predicted_away_score}
-                          {opPred.predicted_first_scorer && ` | SF:${opPred.predicted_first_scorer === 'home' ? m.home_code || 'H' : opPred.predicted_first_scorer === 'away' ? m.away_code || 'A' : '-'}`}
-                          {opPred.predicted_total_cards !== null && opPred.predicted_total_cards !== undefined && ` | TC:${opPred.predicted_total_cards}`}
-                          {opPred.predicted_highest_scoring_half && ` | H:${opPred.predicted_highest_scoring_half === 'first' ? '1st' : opPred.predicted_highest_scoring_half === 'second' ? '2nd' : '='}`}
-                          {opPred.predicted_clean_sheet && ` | CS:${opPred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}`}
+                    <div key={op.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', padding: '8px 10px', borderRadius: '6px', border: isSelf ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid var(--glass-border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          {op.name}
+                          {isSelf && <span style={{ fontSize: '9px', background: 'var(--primary)', color: '#fff', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>You</span>}
                         </span>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                          None ⏳
-                        </span>
-                      )}
+                      </div>
+                      <div style={{ width: '100%' }}>
+                        {opPred ? (
+                          <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500', display: 'block' }}>
+                            {opPred.predicted_winner === 'home' ? m.home_code || 'H' : opPred.predicted_winner === 'away' ? m.away_code || 'A' : 'D'}
+                            {` | `}
+                            <span style={{ color: 'var(--warning)' }}>{opPred.predicted_over_under.toUpperCase()}</span>
+                            {` | `}
+                            {opPred.predicted_home_score}-{opPred.predicted_away_score}
+                            {opPred.predicted_first_scorer && ` | SF:${opPred.predicted_first_scorer === 'home' ? m.home_code || 'H' : opPred.predicted_first_scorer === 'away' ? m.away_code || 'A' : '-'}`}
+                            {opPred.predicted_total_cards !== null && opPred.predicted_total_cards !== undefined && ` | TC:${opPred.predicted_total_cards}`}
+                            {opPred.predicted_highest_scoring_half && ` | H:${opPred.predicted_highest_scoring_half === 'first' ? '1st' : opPred.predicted_highest_scoring_half === 'second' ? '2nd' : '='}`}
+                            {opPred.predicted_clean_sheet && ` | CS:${opPred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}`}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'block' }}>
+                            None ⏳
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })
