@@ -179,7 +179,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>CS</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Score</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'right' }}>Points</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -223,17 +222,18 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             key={p.id} 
                             style={{ 
                               borderBottom: '1px solid rgba(255,255,255,0.02)',
-                              background: isSelf ? 'rgba(139, 92, 246, 0.05)' : 'transparent'
+                              background: isSelf ? 'rgba(139, 92, 246, 0.05)' : 'transparent',
+                              outline: isSelf ? '1.5px solid var(--primary)' : 'none',
+                              outlineOffset: '-1.5px'
                             }}
                           >
-                            {/* Player Name */}
-                            <td style={{ padding: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>{p.name}</span>
-                              {isSelf && <span style={{ fontSize: '9px', background: 'var(--primary)', color: '#fff', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>You</span>}
+                            {/* Player Name with points */}
+                            <td style={{ padding: '12px', fontSize: '13px', fontWeight: '700', verticalAlign: 'middle' }}>
+                              <span>{p.name} ({pred && m.finished === 1 ? pred.total_points : 0})</span>
                             </td>
 
                             {/* Winner Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
                               {hasWinnerPred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: '600' }}>
@@ -253,7 +253,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             </td>
 
                             {/* O/U Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
                               {hasOUPred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: '600', textTransform: 'uppercase', color: 'var(--warning)' }}>
@@ -273,7 +273,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             </td>
 
                             {/* Underdog Bonus Column */}
-                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
                               {pred && pred.predicted_winner && pred.predicted_winner !== 'draw' ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   {pickedUnderdog ? (
@@ -293,7 +293,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             </td>
 
                             {/* First Scorer Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
                               {hasFirstScorerPred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: '600', color: 'var(--primary-hover)' }}>
@@ -313,7 +313,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             </td>
 
                             {/* Highest Scoring Half Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
                               {hasHalfPred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: '600', color: '#c084fc' }}>
@@ -333,7 +333,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             </td>
 
                             {/* Clean Sheet Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
                               {hasCleanPred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: '600', color: '#38bdf8', textTransform: 'uppercase' }}>
@@ -353,7 +353,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             </td>
 
                             {/* Score Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
                               {hasScorePred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: '600', fontFamily: 'monospace' }}>
@@ -373,7 +373,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             </td>
 
                             {/* Exact Cards Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
                               {hasTotalCardsPred ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ fontWeight: '600', color: 'var(--secondary-hover)' }}>
@@ -389,17 +389,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                 </div>
                               ) : (
                                 <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
-                              )}
-                            </td>
-
-                            {/* Points Display */}
-                            <td style={{ padding: '12px', fontSize: '13px', fontWeight: '700', textAlign: 'right' }}>
-                              {pred && m.finished === 1 ? (
-                                <span style={{ color: pred.total_points > 0 ? 'var(--primary-hover)' : 'var(--text-muted)' }}>
-                                  +{pred.total_points} pts
-                                </span>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)' }}>-</span>
                               )}
                             </td>
                           </tr>
