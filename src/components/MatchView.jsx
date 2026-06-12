@@ -151,7 +151,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                         {homeName} vs {awayName}
                       </span>
                       {m.status !== 'scheduled' && (
-                        <span style={{ fontSize: '16px', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'var(--primary-hover)' }}>
+                        <span style={{ fontSize: '16px', fontWeight: '800', fontFamily: 'var(--font-heading)', color: '#ffffff' }}>
                           {m.home_score}-{m.away_score} {m.status === 'live' ? 'LIVE' : 'FT'}
                         </span>
                       )}

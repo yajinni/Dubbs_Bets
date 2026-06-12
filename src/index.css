@@ -1238,6 +1238,9 @@ h1, h2, h3, h4, h5, h6 {
   .glass-panel {
     padding: 16px 10px !important;
   }
+  .inline-prediction-box {
+    padding: 12px 2px !important;
+  }
   .hide-mobile {
     display: none !important;
   }

@@ -446,7 +446,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       onClick={() => setWinner('home')}
                       disabled={saving}
                     >
-                      {homeName}
+                      {m.home_code || homeName}
                     </button>
                     <button
                       type="button"
@@ -462,7 +462,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       onClick={() => setWinner('away')}
                       disabled={saving}
                     >
-                      {awayName}
+                      {m.away_code || awayName}
                     </button>
                   </div>
                 </div>
@@ -477,7 +477,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       onClick={() => setFirstScorer('home')}
                       disabled={saving}
                     >
-                      {homeName}
+                      {m.home_code || homeName}
                     </button>
                     <button
                       type="button"
@@ -493,7 +493,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       onClick={() => setFirstScorer('away')}
                       disabled={saving}
                     >
-                      {awayName}
+                      {m.away_code || awayName}
                     </button>
                   </div>
                 </div>
