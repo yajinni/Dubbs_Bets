@@ -161,11 +161,30 @@ export default function App() {
     return matches.filter(m => getWeekNumber(m.local_date) === weekNum);
   };
 
+  const handleTabChange = (tab) => {
+    if (tab === 'matches') {
+      if (activeParticipantId && predictions.length > 0) {
+        const userPredictedMatches = matches.filter(m => predictions.some(p => p.match_id === m.id));
+        if (userPredictedMatches.length > 0) {
+          userPredictedMatches.sort((a, b) => new Date(b.local_date) - new Date(a.local_date));
+          setSelectedMatchId(userPredictedMatches[0].id);
+        }
+      }
+    } else if (tab === 'match-view') {
+      const completedMatches = matches.filter(m => m.finished === 1);
+      if (completedMatches.length > 0) {
+        completedMatches.sort((a, b) => new Date(b.local_date) - new Date(a.local_date));
+        setSelectedMatchId(completedMatches[0].id);
+      }
+    }
+    setActiveTab(tab);
+  };
+
   return (
     <>
       <Header 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={handleTabChange} 
         lastSync={lastSync}
         onSyncTrigger={forceSync}
         leaderboard={leaderboard}
@@ -304,6 +323,8 @@ export default function App() {
               allPredictions={allPredictions}
               leaderboard={leaderboard}
               activeParticipantId={activeParticipantId}
+              selectedMatchId={selectedMatchId}
+              onClearSelectedMatch={() => setSelectedMatchId(null)}
             />
           )}
 

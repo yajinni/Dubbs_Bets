@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Users, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 
-export default function MatchView({ matches, allPredictions = [], leaderboard = [], activeParticipantId }) {
+export default function MatchView({ matches, allPredictions = [], leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch }) {
   const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
 
   // Stage tab definitions
@@ -12,6 +12,25 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
     { id: 'knockouts', label: 'Knockout Stage' },
     { id: 'live', label: 'Live & Finished' }
   ];
+
+  useEffect(() => {
+    if (selectedMatchId) {
+      setFilterStage('all');
+      setTimeout(() => {
+        const element = document.getElementById(`match-view-card-${selectedMatchId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('match-card-highlight');
+          setTimeout(() => {
+            element.classList.remove('match-card-highlight');
+          }, 3000);
+        }
+        if (onClearSelectedMatch) {
+          onClearSelectedMatch();
+        }
+      }, 150);
+    }
+  }, [selectedMatchId, matches, onClearSelectedMatch]);
 
   // Helper to categorize rounds
   const getMatchCategory = (match) => {
@@ -114,7 +133,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
             }
 
             return (
-              <div key={m.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px' }}>
+              <div key={m.id} id={`match-view-card-${m.id}`} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px' }}>
                 
                 {/* Match Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
