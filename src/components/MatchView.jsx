@@ -92,6 +92,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
             // Determine match results if finished
             let actualWinner = null;
             let actualOU = null;
+            let actualHighestHalf = null;
+            let actualCleanSheet = null;
             if (m.finished === 1) {
               if (m.home_score > m.away_score) actualWinner = 'home';
               else if (m.away_score > m.home_score) actualWinner = 'away';
@@ -99,6 +101,16 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
 
               const totalGoals = m.home_score + m.away_score;
               actualOU = totalGoals > m.over_under_line ? 'over' : 'under';
+
+              const hHt = m.home_ht_score !== null && m.home_ht_score !== undefined ? m.home_ht_score : 0;
+              const aHt = m.away_ht_score !== null && m.away_ht_score !== undefined ? m.away_ht_score : 0;
+              const firstHalfGoals = hHt + aHt;
+              const secondHalfGoals = totalGoals - firstHalfGoals;
+              if (firstHalfGoals > secondHalfGoals) actualHighestHalf = 'first';
+              else if (secondHalfGoals > firstHalfGoals) actualHighestHalf = 'second';
+              else actualHighestHalf = 'equal';
+
+              actualCleanSheet = (m.home_score === 0 || m.away_score === 0) ? 'yes' : 'no';
             }
 
             return (
@@ -144,6 +156,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under ({m.over_under_line})</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>🐉 Underdog Bonus</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>First Scorer</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Highest Half</th>
+                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Clean Sheet</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Score</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Total Cards</th>
                         <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'right' }}>Points</th>
@@ -172,6 +186,12 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
 
                         const hasFirstScorerPred = pred && pred.predicted_first_scorer;
                         const isFirstScorerCorrect = m.finished === 1 && hasFirstScorerPred && pred.predicted_first_scorer === m.actual_first_scorer;
+
+                        const hasHalfPred = pred && pred.predicted_highest_scoring_half;
+                        const isHalfCorrect = m.finished === 1 && hasHalfPred && pred.predicted_highest_scoring_half === actualHighestHalf;
+
+                        const hasCleanPred = pred && pred.predicted_clean_sheet;
+                        const isCleanCorrect = m.finished === 1 && hasCleanPred && pred.predicted_clean_sheet === actualCleanSheet;
 
                         const hasScorePred = pred && pred.predicted_home_score !== null && pred.predicted_away_score !== null;
                         const isScoreCorrect = m.finished === 1 && hasScorePred && pred.predicted_home_score === m.home_score && pred.predicted_away_score === m.away_score;
@@ -262,6 +282,46 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   </span>
                                   {m.finished === 1 && (
                                     isFirstScorerCorrect ? (
+                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
+                                    ) : (
+                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
+                              )}
+                            </td>
+
+                            {/* Highest Scoring Half Prediction */}
+                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                              {hasHalfPred ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontWeight: '600', color: '#c084fc' }}>
+                                    {pred.predicted_highest_scoring_half === 'first' ? '1st Half' : pred.predicted_highest_scoring_half === 'second' ? '2nd Half' : 'Equal'}
+                                  </span>
+                                  {m.finished === 1 && (
+                                    isHalfCorrect ? (
+                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
+                                    ) : (
+                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
+                              )}
+                            </td>
+
+                            {/* Clean Sheet Prediction */}
+                            <td style={{ padding: '12px', fontSize: '13px' }}>
+                              {hasCleanPred ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontWeight: '600', color: '#38bdf8', textTransform: 'uppercase' }}>
+                                    {pred.predicted_clean_sheet}
+                                  </span>
+                                  {m.finished === 1 && (
+                                    isCleanCorrect ? (
                                       <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
                                     ) : (
                                       <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />

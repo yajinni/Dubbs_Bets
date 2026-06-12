@@ -20,6 +20,8 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     const correctScores = pPreds.filter(pred => pred.points_score > 0).length;
     const correctFirstScorers = pPreds.filter(pred => pred.points_first_scorer > 0).length;
     const correctExactCards = pPreds.filter(pred => pred.points_total_cards > 0).length;
+    const correctHalf = pPreds.filter(pred => pred.points_highest_scoring_half > 0).length;
+    const correctClean = pPreds.filter(pred => pred.points_clean_sheet > 0).length;
 
     // Accuracy percentages
     const winnerPct = totalFinishedPreds > 0 ? Math.round((correctWinners / totalFinishedPreds) * 100) : 0;
@@ -27,6 +29,8 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     const scorePct = totalFinishedPreds > 0 ? Math.round((correctScores / totalFinishedPreds) * 100) : 0;
     const firstScorerPct = totalFinishedPreds > 0 ? Math.round((correctFirstScorers / totalFinishedPreds) * 100) : 0;
     const exactCardsPct = totalFinishedPreds > 0 ? Math.round((correctExactCards / totalFinishedPreds) * 100) : 0;
+    const halfPct = totalFinishedPreds > 0 ? Math.round((correctHalf / totalFinishedPreds) * 100) : 0;
+    const cleanPct = totalFinishedPreds > 0 ? Math.round((correctClean / totalFinishedPreds) * 100) : 0;
 
     return {
       id: p.id,
@@ -38,11 +42,15 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       correctScores,
       correctFirstScorers,
       correctExactCards,
+      correctHalf,
+      correctClean,
       winnerPct,
       ouPct,
       scorePct,
       firstScorerPct,
       exactCardsPct,
+      halfPct,
+      cleanPct,
       totalPoints: p.total_points
     };
   });
@@ -144,6 +152,8 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under Goals</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>🐉 Underdog Bonus</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>First Scorer Accuracy</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Highest Half Accuracy</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Clean Sheet Accuracy</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Score Accuracy</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Cards Accuracy</th>
             </tr>
@@ -203,6 +213,32 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.firstScorerPct}%`, height: '100%', background: 'linear-gradient(90deg, #ec4899, #f472b6)', borderRadius: '3px' }}></div>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Highest Half Stat */}
+                <td style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.halfPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctHalf}/{row.totalFinishedPreds}</span>
+                    </div>
+                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${row.halfPct}%`, height: '100%', background: 'linear-gradient(90deg, #c084fc, #e879f9)', borderRadius: '3px' }}></div>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Clean Sheet Stat */}
+                <td style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.cleanPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctClean}/{row.totalFinishedPreds}</span>
+                    </div>
+                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${row.cleanPct}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8, #7dd3fc)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>

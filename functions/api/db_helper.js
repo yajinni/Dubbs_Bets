@@ -15,6 +15,12 @@ export async function checkAndInitDb(db) {
     try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_total_cards INTEGER DEFAULT 0").run(); } catch(e){}
     try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_first_scorer TEXT DEFAULT NULL").run(); } catch(e){}
     try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_first_scorer INTEGER DEFAULT 0").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE matches ADD COLUMN home_ht_score INTEGER DEFAULT NULL").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE matches ADD COLUMN away_ht_score INTEGER DEFAULT NULL").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_highest_scoring_half TEXT DEFAULT NULL").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_clean_sheet TEXT DEFAULT NULL").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_highest_scoring_half INTEGER DEFAULT 0").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_clean_sheet INTEGER DEFAULT 0").run(); } catch(e){}
 
     // 1. Check if matches table exists
     const checkTable = await db.prepare(

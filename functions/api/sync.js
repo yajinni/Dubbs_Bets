@@ -255,6 +255,9 @@ async function syncFromAPIFootball(db, apiKey) {
         actualCards = Math.floor(Math.random() * 5) + 1;
       }
 
+      const homeHtScore = apiFix.score?.halftime?.home !== null && apiFix.score?.halftime?.home !== undefined ? apiFix.score.halftime.home : null;
+      const awayHtScore = apiFix.score?.halftime?.away !== null && apiFix.score?.halftime?.away !== undefined ? apiFix.score.halftime.away : null;
+
       // Update match record
       await db.prepare(`
         UPDATE matches 
@@ -265,6 +268,8 @@ async function syncFromAPIFootball(db, apiKey) {
           away_team_name = ?,
           home_score = ?,
           away_score = ?,
+          home_ht_score = ?,
+          away_ht_score = ?,
           status = ?,
           finished = ?,
           home_win_pct = ?,
@@ -283,6 +288,8 @@ async function syncFromAPIFootball(db, apiKey) {
         apiAway.name, 
         homeScore, 
         awayScore, 
+        homeHtScore,
+        awayHtScore,
         status, 
         finished, 
         homePct, 
@@ -298,7 +305,7 @@ async function syncFromAPIFootball(db, apiKey) {
 
       // Recalculate predictions if finished
       if (finished === 1) {
-        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards, null, homePct, awayPct);
+        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards, null, homePct, awayPct, homeHtScore, awayHtScore);
       }
 
       matchesUpdated++;
@@ -365,20 +372,25 @@ async function runMockSync(db) {
         actualFirstScorer = 'away';
       }
 
+      const homeHtScore = Math.floor(Math.random() * (homeScore + 1));
+      const awayHtScore = Math.floor(Math.random() * (awayScore + 1));
+
       const actualCards = Math.floor(Math.random() * 5) + 1; // 1-5 cards
       await db.prepare(`
         UPDATE matches 
         SET 
           home_score = ?,
           away_score = ?,
+          home_ht_score = ?,
+          away_ht_score = ?,
           status = 'finished',
           finished = 1,
           actual_cards = ?,
           actual_first_scorer = ?
         WHERE id = ?
-      `).bind(homeScore, awayScore, actualCards, actualFirstScorer, m.id).run();
+      `).bind(homeScore, awayScore, homeHtScore, awayHtScore, actualCards, actualFirstScorer, m.id).run();
 
-      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards, actualFirstScorer, m.home_win_pct, m.away_win_pct);
+      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards, actualFirstScorer, m.home_win_pct, m.away_win_pct, homeHtScore, awayHtScore);
       matchesUpdated++;
     }
 
@@ -407,13 +419,25 @@ async function runMockSync(db) {
 // --------------------------------------------------------
 // Prediction Point Distribution
 // --------------------------------------------------------
-async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct) {
+async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct, homeHtScore, awayHtScore) {
   let winner = 'draw';
   if (homeScore > awayScore) winner = 'home';
   else if (awayScore > homeScore) winner = 'away';
 
   const totalGoals = homeScore + awayScore;
   const ouResult = totalGoals > ouLine ? 'over' : 'under';
+
+  // Calculate highest scoring half
+  const hHt = homeHtScore !== null && homeHtScore !== undefined ? homeHtScore : 0;
+  const aHt = awayHtScore !== null && awayHtScore !== undefined ? awayHtScore : 0;
+  const firstHalfGoals = hHt + aHt;
+  const secondHalfGoals = totalGoals - firstHalfGoals;
+  let winnerHalf = 'equal';
+  if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
+  else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
+
+  // Calculate clean sheet
+  const cleanSheetHappened = (homeScore === 0 || awayScore === 0) ? 'yes' : 'no';
 
   const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
 
@@ -439,7 +463,17 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
       pFirstScorerEarned = pred.predicted_first_scorer === actualFirstScorer ? 1 : 0;
     }
 
-    const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3);
+    let pHalf = 0;
+    if (pred.predicted_highest_scoring_half !== null) {
+      pHalf = pred.predicted_highest_scoring_half === winnerHalf ? 1 : 0;
+    }
+
+    let pCleanSheet = 0;
+    if (pred.predicted_clean_sheet !== null) {
+      pCleanSheet = pred.predicted_clean_sheet === cleanSheetHappened ? 1 : 0;
+    }
+
+    const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3) + pHalf + pCleanSheet;
 
     await db.prepare(`
       UPDATE predictions 
@@ -450,9 +484,23 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
         points_cards_ou = ?,
         points_total_cards = ?,
         points_first_scorer = ?,
+        points_highest_scoring_half = ?,
+        points_clean_sheet = ?,
         total_points = ?
       WHERE participant_id = ? AND match_id = ?
-    `).bind(pWinner, pOu, pScore, pUnderdog, pTotalCardsEarned, pFirstScorerEarned, totalPoints, pred.participant_id, matchId).run();
+    `).bind(
+      pWinner, 
+      pOu, 
+      pScore, 
+      pUnderdog, 
+      pTotalCardsEarned, 
+      pFirstScorerEarned, 
+      pHalf,
+      pCleanSheet,
+      totalPoints, 
+      pred.participant_id, 
+      matchId
+    ).run();
   }
 }
 
@@ -620,7 +668,20 @@ async function syncFromTheOddsAPI(db, apiKey) {
       
       // Recalculate predictions if finished
       if (finished === 1) {
-        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, dbMatch.over_under_line);
+        await recalculateMatchPredictionsInSync(
+          db, 
+          dbMatch.id, 
+          homeScore, 
+          awayScore, 
+          dbMatch.over_under_line,
+          dbMatch.cards_line || 3.5,
+          dbMatch.actual_cards,
+          dbMatch.actual_first_scorer,
+          dbMatch.home_win_pct,
+          dbMatch.away_win_pct,
+          dbMatch.home_ht_score,
+          dbMatch.away_ht_score
+        );
       }
     }
   }

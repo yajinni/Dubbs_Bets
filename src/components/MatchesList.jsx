@@ -38,6 +38,8 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const [awayScore, setAwayScore] = useState('');
   const [totalCards, setTotalCards] = useState('');
   const [firstScorer, setFirstScorer] = useState('');
+  const [highestScoringHalf, setHighestScoringHalf] = useState('');
+  const [cleanSheet, setCleanSheet] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -54,6 +56,8 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       setAwayScore(pred.predicted_away_score !== null ? pred.predicted_away_score.toString() : '');
       setTotalCards(pred.predicted_total_cards !== null ? pred.predicted_total_cards.toString() : '');
       setFirstScorer(pred.predicted_first_scorer || '');
+      setHighestScoringHalf(pred.predicted_highest_scoring_half || '');
+      setCleanSheet(pred.predicted_clean_sheet || '');
     } else {
       setWinner('');
       setOverUnder('');
@@ -61,6 +65,8 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       setAwayScore('');
       setTotalCards('');
       setFirstScorer('');
+      setHighestScoringHalf('');
+      setCleanSheet('');
     }
     setError('');
     setSuccessMsg('');
@@ -74,9 +80,11 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
     const currentAway = awayScore || '';
     const currentTotalCards = totalCards || '';
     const currentFirstScorer = firstScorer || '';
+    const currentHalf = highestScoringHalf || '';
+    const currentClean = cleanSheet || '';
 
     if (!pred) {
-      return currentWinner !== '' || currentOU !== '' || currentHome !== '' || currentAway !== '' || currentTotalCards !== '' || currentFirstScorer !== '';
+      return currentWinner !== '' || currentOU !== '' || currentHome !== '' || currentAway !== '' || currentTotalCards !== '' || currentFirstScorer !== '' || currentHalf !== '' || currentClean !== '';
     }
 
     const matchWinner = currentWinner === (pred.predicted_winner || '');
@@ -85,8 +93,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
     const matchAway = currentAway === (pred.predicted_away_score !== null ? pred.predicted_away_score.toString() : '');
     const matchTotalCards = currentTotalCards === (pred.predicted_total_cards !== null ? pred.predicted_total_cards.toString() : '');
     const matchFirstScorer = currentFirstScorer === (pred.predicted_first_scorer || '');
+    const matchHalf = currentHalf === (pred.predicted_highest_scoring_half || '');
+    const matchClean = currentClean === (pred.predicted_clean_sheet || '');
 
-    return !(matchWinner && matchOU && matchHome && matchAway && matchTotalCards && matchFirstScorer);
+    return !(matchWinner && matchOU && matchHome && matchAway && matchTotalCards && matchFirstScorer && matchHalf && matchClean);
   })();
 
   const handleSave = async (e) => {
@@ -104,6 +114,14 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
     }
     if (!firstScorer) {
       setError('Select First Scorer.');
+      return;
+    }
+    if (!highestScoringHalf) {
+      setError('Select Highest Scoring Half.');
+      return;
+    }
+    if (!cleanSheet) {
+      setError('Select Clean Sheet.');
       return;
     }
     if (homeScore === '' || awayScore === '') {
@@ -156,6 +174,17 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       return;
     }
 
+    // Clean sheet validation
+    const hasZeroPredicted = hScore === 0 || aScore === 0;
+    if (cleanSheet === 'yes' && !hasZeroPredicted) {
+      setError('Cannot choose Clean Sheet "Yes" if predicted scores are both greater than 0.');
+      return;
+    }
+    if (cleanSheet === 'no' && hasZeroPredicted) {
+      setError('Cannot choose Clean Sheet "No" if a team is predicted to score 0.');
+      return;
+    }
+
     setSaving(true);
     try {
       const response = await fetch('/api/predictions', {
@@ -169,7 +198,9 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           predictedHomeScore: hScore,
           predictedAwayScore: aScore,
           predictedTotalCards: tCards,
-          predictedFirstScorer: firstScorer
+          predictedFirstScorer: firstScorer,
+          predictedHighestScoringHalf: highestScoringHalf,
+          predictedCleanSheet: cleanSheet
         }),
       });
 
@@ -389,6 +420,14 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                     <span style={{ color: 'var(--secondary-hover)', fontWeight: '700' }}>
                       {pred.predicted_total_cards}
                     </span>
+                    {` | Half: `}
+                    <span style={{ color: '#c084fc', fontWeight: '700' }}>
+                      {pred.predicted_highest_scoring_half === 'first' ? '1st Half' : pred.predicted_highest_scoring_half === 'second' ? '2nd Half' : 'Equal'}
+                    </span>
+                    {` | Clean Sheet: `}
+                    <span style={{ color: '#38bdf8', fontWeight: '700' }}>
+                      {pred.predicted_clean_sheet?.toUpperCase()}
+                    </span>
                   </span>
                   {m.finished === 1 && (
                     <div className="prediction-badge-display" style={{ justifyContent: 'flex-end', marginTop: '6px' }}>
@@ -404,6 +443,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       <span style={{ color: pred.points_total_cards ? 'var(--success)' : 'var(--text-muted)' }}>TC</span>
                       <span className={`p-point-dot ${pred.points_score ? 'earned' : ''}`}></span>
                       <span style={{ color: pred.points_score ? 'var(--success)' : 'var(--text-muted)' }}>S</span>
+                      <span className={`p-point-dot ${pred.points_highest_scoring_half ? 'earned' : ''}`}></span>
+                      <span style={{ color: pred.points_highest_scoring_half ? 'var(--success)' : 'var(--text-muted)' }}>HSH</span>
+                      <span className={`p-point-dot ${pred.points_clean_sheet ? 'earned' : ''}`}></span>
+                      <span style={{ color: pred.points_clean_sheet ? 'var(--success)' : 'var(--text-muted)' }}>CS</span>
                       <span style={{ marginLeft: '6px', color: 'var(--primary-hover)', fontWeight: '700' }}>
                         (+{pred.total_points} pts)
                       </span>
@@ -505,6 +548,60 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       disabled={saving}
                     >
                       Under {m.over_under_line}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Highest Scoring Half Select */}
+                <div className="prediction-col">
+                  <label>Highest scoring Half (1 pt)</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${highestScoringHalf === 'first' ? 'active' : ''}`}
+                      onClick={() => setHighestScoringHalf('first')}
+                      disabled={saving}
+                    >
+                      1st Half
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${highestScoringHalf === 'equal' ? 'active' : ''}`}
+                      onClick={() => setHighestScoringHalf('equal')}
+                      disabled={saving}
+                    >
+                      Equal
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${highestScoringHalf === 'second' ? 'active' : ''}`}
+                      onClick={() => setHighestScoringHalf('second')}
+                      disabled={saving}
+                    >
+                      2nd Half
+                    </button>
+                  </div>
+                </div>
+
+                {/* Clean Sheet Select */}
+                <div className="prediction-col">
+                  <label>Clean Sheet (1 pt)</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${cleanSheet === 'yes' ? 'active' : ''}`}
+                      onClick={() => setCleanSheet('yes')}
+                      disabled={saving}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${cleanSheet === 'no' ? 'active' : ''}`}
+                      onClick={() => setCleanSheet('no')}
+                      disabled={saving}
+                    >
+                      No
                     </button>
                   </div>
                 </div>
@@ -788,6 +885,31 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
               </p>
             </div>
 
+            {/* Highest Scoring Half */}
+            <div className="glass-panel" style={{ borderLeft: '4px solid #c084fc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '15px', fontWeight: '800' }}>⏰ Highest Scoring Half</span>
+                <span style={{ background: 'rgba(192,132,252,0.2)', color: '#c084fc', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>1 pt</span>
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                Predict which half will have more total goals scored — <strong style={{ color: 'var(--text-primary)' }}>1st Half</strong>, <strong style={{ color: 'var(--text-primary)' }}>2nd Half</strong>, or <strong style={{ color: 'var(--text-primary)' }}>Equal</strong>.
+                1 point if correct.
+              </p>
+            </div>
+
+            {/* Clean Sheet */}
+            <div className="glass-panel" style={{ borderLeft: '4px solid #38bdf8', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '15px', fontWeight: '800' }}>🧤 Clean Sheet</span>
+                <span style={{ background: 'rgba(56,189,248,0.2)', color: '#38bdf8', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>1 pt</span>
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                Will at least one team keep a clean sheet (i.e. score 0 goals)?
+                Choose <strong style={{ color: 'var(--text-primary)' }}>Yes</strong> or <strong style={{ color: 'var(--text-primary)' }}>No</strong>.
+                1 point if correct.
+              </p>
+            </div>
+
           </div>
 
           {/* Max points summary */}
@@ -801,6 +923,8 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
                 { label: 'First Scorer', pts: 1, color: '#ec4899' },
                 { label: 'Exact Score', pts: 3, color: '#eab308' },
                 { label: 'Exact Cards', pts: 2, color: '#06b6d4' },
+                { label: 'Highest scoring Half', pts: 1, color: '#c084fc' },
+                { label: 'Clean Sheet', pts: 1, color: '#38bdf8' },
               ].map(item => (
                 <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
                   <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{item.label}</span>
@@ -809,7 +933,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
               ))}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(139,92,246,0.15)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)' }}>
                 <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Total Max</span>
-                <span style={{ fontSize: '16px', fontWeight: '900', color: '#c084fc' }}>9 pts</span>
+                <span style={{ fontSize: '16px', fontWeight: '900', color: '#c084fc' }}>11 pts</span>
               </div>
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>

@@ -50,6 +50,8 @@ export async function onRequest(context) {
         matchId, 
         homeScore, 
         awayScore, 
+        homeHtScore,
+        awayHtScore,
         status, 
         finished,
         homeWinPct,
@@ -78,6 +80,8 @@ export async function onRequest(context) {
       // Convert variables to correct SQL types
       const hScore = homeScore !== undefined ? parseInt(homeScore) : 0;
       const aScore = awayScore !== undefined ? parseInt(awayScore) : 0;
+      const hHtScore = (homeHtScore !== undefined && homeHtScore !== null && homeHtScore !== '') ? parseInt(homeHtScore) : null;
+      const aHtScore = (awayHtScore !== undefined && awayHtScore !== null && awayHtScore !== '') ? parseInt(awayHtScore) : null;
       const finishedVal = finished ? 1 : 0;
       const hPct = homeWinPct !== undefined ? parseFloat(homeWinPct) : 33.3;
       const aPct = awayWinPct !== undefined ? parseFloat(awayWinPct) : 33.3;
@@ -94,6 +98,8 @@ export async function onRequest(context) {
         SET 
           home_score = ?,
           away_score = ?,
+          home_ht_score = ?,
+          away_ht_score = ?,
           status = ?,
           finished = ?,
           home_win_pct = ?,
@@ -109,12 +115,12 @@ export async function onRequest(context) {
       `;
 
       await env.db.prepare(updateQuery)
-        .bind(hScore, aScore, status || 'scheduled', finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, actFirstScorer, matchId)
+        .bind(hScore, aScore, hHtScore, aHtScore, status || 'scheduled', finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, actFirstScorer, matchId)
         .run();
 
       // If finished, we want to recalculate predictions/points for this match
       if (finishedVal === 1) {
-        await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards, actFirstScorer, hPct, aPct);
+        await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards, actFirstScorer, hPct, aPct, hHtScore, aHtScore);
       }
 
       const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
@@ -127,8 +133,7 @@ export async function onRequest(context) {
   }
 }
 
-// Recalculates and stores point awards for a completed match
-async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct) {
+async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct, homeHtScore, awayHtScore) {
   // Determine winner: 'home', 'away', or 'draw'
   let winner = 'draw';
   if (homeScore > awayScore) winner = 'home';
@@ -137,6 +142,18 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
   // Determine over/under: 'over' or 'under'
   const totalGoals = homeScore + awayScore;
   const ouResult = totalGoals > ouLine ? 'over' : 'under';
+
+  // Calculate highest scoring half
+  const hHt = homeHtScore !== null && homeHtScore !== undefined ? homeHtScore : 0;
+  const aHt = awayHtScore !== null && awayHtScore !== undefined ? awayHtScore : 0;
+  const firstHalfGoals = hHt + aHt;
+  const secondHalfGoals = totalGoals - firstHalfGoals;
+  let winnerHalf = 'equal';
+  if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
+  else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
+
+  // Calculate clean sheet
+  const cleanSheetHappened = (homeScore === 0 || awayScore === 0) ? 'yes' : 'no';
 
   // Get all predictions for this match
   const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
@@ -163,7 +180,17 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
       pFirstScorerEarned = pred.predicted_first_scorer === actualFirstScorer ? 1 : 0;
     }
 
-    const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3);
+    let pHalf = 0;
+    if (pred.predicted_highest_scoring_half !== null) {
+      pHalf = pred.predicted_highest_scoring_half === winnerHalf ? 1 : 0;
+    }
+
+    let pCleanSheet = 0;
+    if (pred.predicted_clean_sheet !== null) {
+      pCleanSheet = pred.predicted_clean_sheet === cleanSheetHappened ? 1 : 0;
+    }
+
+    const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3) + pHalf + pCleanSheet;
 
     await db.prepare(`
       UPDATE predictions 
@@ -174,8 +201,22 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
         points_cards_ou = ?,
         points_total_cards = ?,
         points_first_scorer = ?,
+        points_highest_scoring_half = ?,
+        points_clean_sheet = ?,
         total_points = ?
       WHERE participant_id = ? AND match_id = ?
-    `).bind(pWinner, pOu, pScore, pUnderdog, pTotalCardsEarned, pFirstScorerEarned, totalPoints, pred.participant_id, matchId).run();
+    `).bind(
+      pWinner, 
+      pOu, 
+      pScore, 
+      pUnderdog, 
+      pTotalCardsEarned, 
+      pFirstScorerEarned, 
+      pHalf,
+      pCleanSheet,
+      totalPoints, 
+      pred.participant_id, 
+      matchId
+    ).run();
   }
 }

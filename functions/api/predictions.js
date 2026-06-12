@@ -58,7 +58,9 @@ export async function onRequest(context) {
         predictedHomeScore, 
         predictedAwayScore,
         predictedTotalCards,     // integer or null
-        predictedFirstScorer     // 'home', 'away', or 'none'
+        predictedFirstScorer,     // 'home', 'away', or 'none'
+        predictedHighestScoringHalf, // 'first', 'second', or 'equal'
+        predictedCleanSheet      // 'yes' or 'no'
       } = body;
 
       if (!participantId || !matchId) {
@@ -66,7 +68,7 @@ export async function onRequest(context) {
       }
 
       // 1. Fetch match to verify it exists and check if it has already started
-      const match = await env.db.prepare('SELECT local_date, status, finished, home_score, away_score, over_under_line, actual_cards, actual_first_scorer, home_win_pct, away_win_pct FROM matches WHERE id = ?').bind(matchId).first();
+      const match = await env.db.prepare('SELECT local_date, status, finished, home_score, away_score, home_ht_score, away_ht_score, over_under_line, actual_cards, actual_first_scorer, home_win_pct, away_win_pct FROM matches WHERE id = ?').bind(matchId).first();
 
       if (!match) {
         return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
@@ -85,6 +87,8 @@ export async function onRequest(context) {
       const pAwayScore = predictedAwayScore !== null && predictedAwayScore !== undefined ? parseInt(predictedAwayScore) : null;
       const pTotalCards = (predictedTotalCards !== null && predictedTotalCards !== undefined && predictedTotalCards !== '') ? parseInt(predictedTotalCards) : null;
       const pFirstScorer = predictedFirstScorer || null;
+      const pHalfPick = predictedHighestScoringHalf || null;
+      const pCleanPick = predictedCleanSheet || null;
 
       // 3. Upsert prediction
       const checkQuery = 'SELECT 1 FROM predictions WHERE participant_id = ? AND match_id = ?';
@@ -99,11 +103,13 @@ export async function onRequest(context) {
             predicted_home_score = ?, 
             predicted_away_score = ?,
             predicted_total_cards = ?,
-            predicted_first_scorer = ?
+            predicted_first_scorer = ?,
+            predicted_highest_scoring_half = ?,
+            predicted_clean_sheet = ?
           WHERE participant_id = ? AND match_id = ?
         `;
         await env.db.prepare(updateQuery)
-          .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, participantId, matchId)
+          .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, participantId, matchId)
           .run();
       } else {
         const insertQuery = `
@@ -115,11 +121,13 @@ export async function onRequest(context) {
             predicted_home_score, 
             predicted_away_score,
             predicted_total_cards,
-            predicted_first_scorer
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            predicted_first_scorer,
+            predicted_highest_scoring_half,
+            predicted_clean_sheet
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         await env.db.prepare(insertQuery)
-          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer)
+          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick)
           .run();
       }
 
@@ -157,7 +165,28 @@ export async function onRequest(context) {
           pFirstScorerEarned = pFirstScorer === match.actual_first_scorer ? 1 : 0;
         }
 
-        const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3);
+        // Halftime scorer calculations
+        const hHt = match.home_ht_score !== null && match.home_ht_score !== undefined ? match.home_ht_score : 0;
+        const aHt = match.away_ht_score !== null && match.away_ht_score !== undefined ? match.away_ht_score : 0;
+        const firstHalfGoals = hHt + aHt;
+        const secondHalfGoals = totalGoals - firstHalfGoals;
+        let winnerHalf = 'equal';
+        if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
+        else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
+
+        let pHalf = 0;
+        if (pHalfPick !== null) {
+          pHalf = pHalfPick === winnerHalf ? 1 : 0;
+        }
+
+        // Clean sheet calculations
+        const cleanSheetHappened = (homeScore === 0 || awayScore === 0) ? 'yes' : 'no';
+        let pCleanSheet = 0;
+        if (pCleanPick !== null) {
+          pCleanSheet = pCleanPick === cleanSheetHappened ? 1 : 0;
+        }
+
+        const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3) + pHalf + pCleanSheet;
         
         await env.db.prepare(`
           UPDATE predictions 
@@ -168,9 +197,11 @@ export async function onRequest(context) {
             points_cards_ou = ?,
             points_total_cards = ?,
             points_first_scorer = ?,
+            points_highest_scoring_half = ?,
+            points_clean_sheet = ?,
             total_points = ?
           WHERE participant_id = ? AND match_id = ?
-        `).bind(pWinner, pOu, pScore, pUnderdog, pTotalCardsEarned, pFirstScorerEarned, totalPoints, participantId, matchId).run();
+        `).bind(pWinner, pOu, pScore, pUnderdog, pTotalCardsEarned, pFirstScorerEarned, pHalf, pCleanSheet, totalPoints, participantId, matchId).run();
       }
 
       const savedPrediction = await env.db.prepare('SELECT * FROM predictions WHERE participant_id = ? AND match_id = ?')

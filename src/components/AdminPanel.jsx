@@ -28,6 +28,8 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
   const [cardsLine, setCardsLine] = useState(3.5);
   const [actualCards, setActualCards] = useState('');
   const [actualFirstScorer, setActualFirstScorer] = useState('none');
+  const [homeHtScore, setHomeHtScore] = useState('');
+  const [awayHtScore, setAwayHtScore] = useState('');
 
   const [matchError, setMatchError] = useState('');
   const [matchSuccess, setMatchSuccess] = useState('');
@@ -79,6 +81,8 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
       setCardsLine(m.cards_line || 3.5);
       setActualCards(m.actual_cards !== null ? m.actual_cards.toString() : '');
       setActualFirstScorer(m.actual_first_scorer || 'none');
+      setHomeHtScore(m.home_ht_score !== null && m.home_ht_score !== undefined ? m.home_ht_score.toString() : '');
+      setAwayHtScore(m.away_ht_score !== null && m.away_ht_score !== undefined ? m.away_ht_score.toString() : '');
       setMatchError('');
       setMatchSuccess('');
     }
@@ -157,6 +161,8 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
           matchId: selectedMatchId,
           homeScore,
           awayScore,
+          homeHtScore,
+          awayHtScore,
           status: matchStatus,
           finished,
           homeWinPct,
@@ -337,7 +343,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
                 
                 {/* Score & Cards inputs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '16px' }}>
                   <div className="admin-input-group">
                     <label>Home Score</label>
                     <input
@@ -356,6 +362,28 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
                       className="admin-text-input"
                       value={awayScore}
                       onChange={(e) => setAwayScore(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="admin-input-group">
+                    <label>Home HT</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="admin-text-input"
+                      placeholder="Halftime"
+                      value={homeHtScore}
+                      onChange={(e) => setHomeHtScore(e.target.value)}
+                    />
+                  </div>
+                  <div className="admin-input-group">
+                    <label>Away HT</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="admin-text-input"
+                      placeholder="Halftime"
+                      value={awayHtScore}
+                      onChange={(e) => setAwayHtScore(e.target.value)}
                     />
                   </div>
                   <div className="admin-input-group">
