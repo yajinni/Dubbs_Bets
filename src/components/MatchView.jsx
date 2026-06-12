@@ -221,11 +221,11 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                             {pred ? (
                               <div style={{ 
                                 display: 'grid', 
-                                gridTemplateColumns: 'minmax(60px, 1fr) minmax(35px, 0.6fr) minmax(45px, 0.8fr) minmax(55px, 0.9fr) minmax(65px, 1.1fr) minmax(50px, 0.8fr) minmax(60px, 1fr) minmax(50px, 0.8fr)', 
-                                gap: '6px', 
+                                gridTemplateColumns: '45px 22px 36px 52px 62px 48px 48px 42px', 
+                                gap: '4px', 
                                 marginTop: '4px',
                                 width: '100%',
-                                minWidth: '450px'
+                                minWidth: '360px'
                               }}>
                                 {/* Winner */}
                                 <span style={{ 
@@ -235,7 +235,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontWeight: '600',
                                   color: '#ffffff',
                                   textAlign: 'center',
-                                  justifySelf: 'start',
                                   background: m.finished === 1 ? (isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
                                   border: m.finished === 1 ? (isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                 }}>
@@ -250,7 +249,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontWeight: '600',
                                   color: '#ffffff',
                                   textAlign: 'center',
-                                  justifySelf: 'start',
                                   background: pred.predicted_over_under ? (m.finished === 1 ? (isOUCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
                                   border: pred.predicted_over_under ? (m.finished === 1 ? (isOUCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
@@ -265,7 +263,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontWeight: '600',
                                   color: '#ffffff',
                                   textAlign: 'center',
-                                  justifySelf: 'start',
                                   background: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
                                   border: hasScorePred ? (m.finished === 1 ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
@@ -280,7 +277,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontWeight: '600',
                                   color: '#ffffff',
                                   textAlign: 'center',
-                                  justifySelf: 'start',
                                   background: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : (pickedUnderdog ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)')) : 'rgba(255, 255, 255, 0.05)') : 'transparent',
                                   border: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : (pickedUnderdog ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
@@ -295,7 +291,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontWeight: '600',
                                   color: '#ffffff',
                                   textAlign: 'center',
-                                  justifySelf: 'start',
                                   background: hasFirstScorerPred ? (m.finished === 1 ? (isFirstScorerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
                                   border: hasFirstScorerPred ? (m.finished === 1 ? (isFirstScorerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
@@ -310,7 +305,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontWeight: '600',
                                   color: '#ffffff',
                                   textAlign: 'center',
-                                  justifySelf: 'start',
                                   background: hasTotalCardsPred ? (m.finished === 1 ? (isTotalCardsCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
                                   border: hasTotalCardsPred ? (m.finished === 1 ? (isTotalCardsCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
@@ -325,7 +319,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontWeight: '600',
                                   color: '#ffffff',
                                   textAlign: 'center',
-                                  justifySelf: 'start',
                                   background: hasHalfPred ? (m.finished === 1 ? (isHalfCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
                                   border: hasHalfPred ? (m.finished === 1 ? (isHalfCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
@@ -340,7 +333,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontWeight: '600',
                                   color: '#ffffff',
                                   textAlign: 'center',
-                                  justifySelf: 'start',
                                   background: hasCleanPred ? (m.finished === 1 ? (isCleanCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
                                   border: hasCleanPred ? (m.finished === 1 ? (isCleanCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
