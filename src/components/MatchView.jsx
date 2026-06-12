@@ -229,7 +229,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                           >
                             {/* Player Name with points */}
                             <td style={{ padding: '12px', fontSize: '13px', fontWeight: '700', verticalAlign: 'middle' }}>
-                              <span>{p.name} ({pred && m.finished === 1 ? pred.total_points : 0})</span>
+                              <span>{p.name} ({pred && m.finished === 1 ? pred.total_points : 0} pts)</span>
                             </td>
 
                             {/* Winner Prediction */}
