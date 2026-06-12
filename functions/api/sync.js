@@ -373,7 +373,7 @@ async function runMockSync(db) {
     const matchTime = new Date(m.local_date).getTime();
     
     // 1. Check if the match is in the past (date/time has passed)
-    if (currentTime > matchTime && m.status === 'scheduled') {
+    if (currentTime > matchTime && (m.status === 'scheduled' || m.status === 'live')) {
       // Generate simulated scores weighted by home win percentage
       // home_win_pct is stored between 0-100
       let homeScore = 0;
