@@ -30,6 +30,10 @@ export async function onRequest(context) {
         COALESCE(SUM(pred.points_winner), 0) AS correct_winners,
         COALESCE(SUM(pred.points_ou), 0) AS correct_ou,
         COALESCE(SUM(pred.points_score), 0) AS correct_scores,
+        COALESCE(SUM(pred.points_first_scorer), 0) AS correct_first_scorer,
+        COALESCE(SUM(pred.points_total_cards), 0) AS correct_total_cards,
+        COALESCE(SUM(pred.points_highest_scoring_half), 0) AS correct_highest_scoring_half,
+        COALESCE(SUM(pred.points_clean_sheet), 0) AS correct_clean_sheet,
         COUNT(pred.match_id) AS predictions_count
       FROM participants p
       LEFT JOIN predictions pred ON p.id = pred.participant_id

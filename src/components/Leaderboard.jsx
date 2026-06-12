@@ -18,6 +18,10 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
           <div className="stat-cell" title="Correct Exact Scores">Scores</div>
           <div className="stat-cell" title="Correct Winners">Winners</div>
           <div className="stat-cell" title="Correct Over/Unders">O/U</div>
+          <div className="stat-cell hide-mobile" title="Correct Scored First">SF</div>
+          <div className="stat-cell hide-mobile" title="Correct Cards">Cards</div>
+          <div className="stat-cell hide-mobile" title="Correct Highest Half">Half</div>
+          <div className="stat-cell hide-mobile" title="Correct Clean Sheet">CS</div>
           <div className="points-cell">Points</div>
         </div>
 
@@ -73,6 +77,22 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                 
                 <div className="stat-cell" style={{ color: p.correct_ou > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
                   {p.correct_ou}
+                </div>
+
+                <div className="stat-cell hide-mobile" style={{ color: p.correct_first_scorer > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
+                  {p.correct_first_scorer}
+                </div>
+
+                <div className="stat-cell hide-mobile" style={{ color: p.correct_total_cards > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
+                  {p.correct_total_cards}
+                </div>
+
+                <div className="stat-cell hide-mobile" style={{ color: p.correct_highest_scoring_half > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
+                  {p.correct_highest_scoring_half}
+                </div>
+
+                <div className="stat-cell hide-mobile" style={{ color: p.correct_clean_sheet > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
+                  {p.correct_clean_sheet}
                 </div>
                 
                 <div className="points-cell">
