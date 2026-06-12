@@ -276,6 +276,7 @@ async function syncFromESPN(db) {
           actualFirstScorer,
           dbMatch.home_win_pct,
           dbMatch.away_win_pct,
+          dbMatch.draw_pct,
           homeHtScore,
           awayHtScore
         );
@@ -352,7 +353,7 @@ async function runMockSync(db) {
         WHERE id = ?
       `).bind(homeScore, awayScore, homeHtScore, awayHtScore, actualCards, actualFirstScorer, m.id).run();
 
-      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards, actualFirstScorer, m.home_win_pct, m.away_win_pct, homeHtScore, awayHtScore);
+      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards, actualFirstScorer, m.home_win_pct, m.away_win_pct, m.draw_pct, homeHtScore, awayHtScore);
       matchesUpdated++;
     }
 
@@ -381,7 +382,7 @@ async function runMockSync(db) {
 // --------------------------------------------------------
 // Prediction Point Distribution
 // --------------------------------------------------------
-async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct, homeHtScore, awayHtScore) {
+async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct, drawWinPct, homeHtScore, awayHtScore) {
   let winner = 'draw';
   if (homeScore > awayScore) winner = 'home';
   else if (awayScore > homeScore) winner = 'away';
@@ -405,15 +406,17 @@ async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awaySco
   const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
 
   for (const pred of predictions) {
-    const pWinner = pred.predicted_winner === winner ? 1 : 0;
+    const pWinner = pred.predicted_winner === winner ? 2 : 0;
     const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
     const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
 
-    // Underdog Bonus: +1 if player picked the team with lower win% AND they actually won
+    // Underdog Bonus: +1 if player picked the option with lowest win/draw% AND that outcome occurred
     let pUnderdog = 0;
-    if (pWinner === 1 && winner !== 'draw' && homeWinPct != null && awayWinPct != null) {
-      if (winner === 'home' && homeWinPct < awayWinPct) pUnderdog = 1;
-      if (winner === 'away' && awayWinPct < homeWinPct) pUnderdog = 1;
+    if (pWinner > 0 && homeWinPct != null && awayWinPct != null && drawWinPct != null) {
+      const minPct = Math.min(homeWinPct, awayWinPct, drawWinPct);
+      if (winner === 'home' && homeWinPct === minPct) pUnderdog = 1;
+      else if (winner === 'away' && awayWinPct === minPct) pUnderdog = 1;
+      else if (winner === 'draw' && drawWinPct === minPct) pUnderdog = 1;
     }
 
     let pTotalCardsEarned = 0;
@@ -644,6 +647,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
           inferredFirstScorer,
           dbMatch.home_win_pct,
           dbMatch.away_win_pct,
+          dbMatch.draw_pct,
           dbMatch.home_ht_score,
           dbMatch.away_ht_score
         );

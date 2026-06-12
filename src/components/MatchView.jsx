@@ -223,11 +223,13 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                       const isOUCorrect = m.finished === 1 && hasOUPred && pred.predicted_over_under === actualOU;
 
                       // Underdog bonus evaluation
-                      const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.home_win_pct < m.away_win_pct;
-                      const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.away_win_pct < m.home_win_pct;
+                      const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.home_win_pct === Math.min(m.home_win_pct, m.away_win_pct, m.draw_pct);
+                      const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.away_win_pct === Math.min(m.home_win_pct, m.away_win_pct, m.draw_pct);
+                      const drawIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.draw_pct === Math.min(m.home_win_pct, m.away_win_pct, m.draw_pct);
                       const pickedUnderdog = pred && (
                         (pred.predicted_winner === 'home' && homeIsUnderdog) ||
-                        (pred.predicted_winner === 'away' && awayIsUnderdog)
+                        (pred.predicted_winner === 'away' && awayIsUnderdog) ||
+                        (pred.predicted_winner === 'draw' && drawIsUnderdog)
                       );
                       const underdogBonusEarned = pred && pred.points_cards_ou > 0;
 
@@ -336,10 +338,10 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   fontWeight: '600',
                                   color: '#ffffff',
                                   textAlign: 'center',
-                                  background: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : (pickedUnderdog ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)')) : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                                  border: (pred.predicted_winner && pred.predicted_winner !== 'draw') ? (m.finished === 1 ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : (pickedUnderdog ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                                  background: pred.predicted_winner ? (m.finished === 1 ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : (pickedUnderdog ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)')) : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                                  border: pred.predicted_winner ? (m.finished === 1 ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : (pickedUnderdog ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                                 }}>
-                                  {(pred.predicted_winner && pred.predicted_winner !== 'draw') ? (pickedUnderdog ? 'Bonus' : 'fav') : '-'}
+                                  {pred.predicted_winner ? (pickedUnderdog ? 'Bonus' : 'fav') : '-'}
                                 </span>
 
                                 {/* Scored First */}

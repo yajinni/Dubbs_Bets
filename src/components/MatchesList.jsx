@@ -448,7 +448,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <div className="inline-prediction-grid">
                 {/* Winner Select */}
                 <div className="prediction-col">
-                  <label>Winner (1 pt)</label>
+                  <label>Winner (2 pts)</label>
                   <div className="inline-choice-group">
                     <button
                       type="button"
@@ -1035,11 +1035,11 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             <div className="glass-panel" style={{ borderLeft: '4px solid #a855f7', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '15px', fontWeight: '800' }}>🏆 Match Winner</span>
-                <span style={{ background: 'rgba(168,85,247,0.2)', color: '#c084fc', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>1 pt</span>
+                <span style={{ background: 'rgba(168,85,247,0.2)', color: '#c084fc', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>2 pts</span>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
                 Pick who wins — <strong style={{ color: 'var(--text-primary)' }}>Home</strong>, <strong style={{ color: 'var(--text-primary)' }}>Away</strong>, or <strong style={{ color: 'var(--text-primary)' }}>Draw</strong>.
-                1 point awarded if your pick matches the final result.
+                2 points awarded if your pick matches the final result.
               </p>
             </div>
 
@@ -1134,7 +1134,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🔢 Maximum Points Per Match</h4>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {[
-                { label: 'Winner', pts: 1, color: '#a855f7' },
+                { label: 'Winner', pts: 2, color: '#a855f7' },
                 { label: 'Goals O/U', pts: 1, color: '#22c55e' },
                 { label: 'Underdog Bonus', pts: 1, color: '#fbbf24' },
                 { label: 'Scored First', pts: 1, color: '#ec4899' },
@@ -1150,7 +1150,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
               ))}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(139,92,246,0.15)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)' }}>
                 <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Total Max</span>
-                <span style={{ fontSize: '16px', fontWeight: '900', color: '#c084fc' }}>11 pts</span>
+                <span style={{ fontSize: '16px', fontWeight: '900', color: '#c084fc' }}>12 pts</span>
               </div>
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>

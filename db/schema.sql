@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS predictions (
   predicted_over_under TEXT, -- 'over' or 'under'
   predicted_home_score INTEGER,
   predicted_away_score INTEGER,
-  points_winner INTEGER DEFAULT 0, -- 1 if correct
+  points_winner INTEGER DEFAULT 0, -- 2 if correct
   points_ou INTEGER DEFAULT 0,     -- 1 if correct
   points_score INTEGER DEFAULT 0,  -- 1 if correct
   total_points INTEGER DEFAULT 0,  -- sum of above (0-3)

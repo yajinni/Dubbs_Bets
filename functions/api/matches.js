@@ -120,7 +120,7 @@ export async function onRequest(context) {
 
       // If finished, we want to recalculate predictions/points for this match
       if (finishedVal === 1) {
-        await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards, actFirstScorer, hPct, aPct, hHtScore, aHtScore);
+        await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards, actFirstScorer, hPct, aPct, dPct, hHtScore, aHtScore);
       }
 
       const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
@@ -133,7 +133,7 @@ export async function onRequest(context) {
   }
 }
 
-async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct, homeHtScore, awayHtScore) {
+async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct, drawWinPct, homeHtScore, awayHtScore) {
   // Determine winner: 'home', 'away', or 'draw'
   let winner = 'draw';
   if (homeScore > awayScore) winner = 'home';
@@ -160,15 +160,17 @@ async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ou
   const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
 
   for (const pred of predictions) {
-    const pWinner = pred.predicted_winner === winner ? 1 : 0;
+    const pWinner = pred.predicted_winner === winner ? 2 : 0;
     const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
     const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
 
-    // Underdog Bonus: +1 if player picked the team with lower win% AND they actually won
+    // Underdog Bonus: +1 if player picked the option with lowest win/draw% AND that outcome occurred
     let pUnderdog = 0;
-    if (pWinner === 1 && winner !== 'draw' && homeWinPct != null && awayWinPct != null) {
-      if (winner === 'home' && homeWinPct < awayWinPct) pUnderdog = 1;
-      if (winner === 'away' && awayWinPct < homeWinPct) pUnderdog = 1;
+    if (pWinner > 0 && homeWinPct != null && awayWinPct != null && drawWinPct != null) {
+      const minPct = Math.min(homeWinPct, awayWinPct, drawWinPct);
+      if (winner === 'home' && homeWinPct === minPct) pUnderdog = 1;
+      else if (winner === 'away' && awayWinPct === minPct) pUnderdog = 1;
+      else if (winner === 'draw' && drawWinPct === minPct) pUnderdog = 1;
     }
 
     let pTotalCardsEarned = 0;
