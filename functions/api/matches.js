@@ -91,7 +91,12 @@ export async function onRequest(context) {
       const uOdds = underOdds !== undefined ? parseFloat(underOdds) : 1.9;
       const cLine = cardsLine !== undefined ? parseFloat(cardsLine) : 3.5;
       const actCards = (actualCards !== undefined && actualCards !== '') ? parseInt(actualCards) : null;
-      const actFirstScorer = actualFirstScorer || null;
+      let actFirstScorer = actualFirstScorer || null;
+      if (finishedVal === 1 && (actFirstScorer === null || actFirstScorer === 'none' || actFirstScorer === '')) {
+        if (hScore > 0 && aScore === 0) actFirstScorer = 'home';
+        else if (aScore > 0 && hScore === 0) actFirstScorer = 'away';
+        else if (hScore === 0 && aScore === 0) actFirstScorer = 'none';
+      }
 
       const updateQuery = `
         UPDATE matches 

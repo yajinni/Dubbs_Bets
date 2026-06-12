@@ -255,6 +255,13 @@ async function syncFromAPIFootball(db, apiKey) {
         actualCards = Math.floor(Math.random() * 5) + 1;
       }
 
+      let inferredFirstScorer = dbMatch.actual_first_scorer;
+      if (finished === 1 && (inferredFirstScorer === null || inferredFirstScorer === 'none' || inferredFirstScorer === '')) {
+        if (homeScore > 0 && awayScore === 0) inferredFirstScorer = 'home';
+        else if (awayScore > 0 && homeScore === 0) inferredFirstScorer = 'away';
+        else if (homeScore === 0 && awayScore === 0) inferredFirstScorer = 'none';
+      }
+
       const homeHtScore = apiFix.score?.halftime?.home !== null && apiFix.score?.halftime?.home !== undefined ? apiFix.score.halftime.home : null;
       const awayHtScore = apiFix.score?.halftime?.away !== null && apiFix.score?.halftime?.away !== undefined ? apiFix.score.halftime.away : null;
 
@@ -279,6 +286,7 @@ async function syncFromAPIFootball(db, apiKey) {
           over_odds = ?,
           under_odds = ?,
           actual_cards = ?,
+          actual_first_scorer = ?,
           local_date = ?
         WHERE id = ?
       `).bind(
@@ -299,13 +307,14 @@ async function syncFromAPIFootball(db, apiKey) {
         overOdds,
         underOdds,
         actualCards,
+        inferredFirstScorer,
         apiFix.fixture.date || dbMatch.local_date,
         dbMatch.id
       ).run();
 
       // Recalculate predictions if finished
       if (finished === 1) {
-        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards, null, homePct, awayPct, homeHtScore, awayHtScore);
+        await recalculateMatchPredictionsInSync(db, dbMatch.id, homeScore, awayScore, ouLine, dbMatch.cards_line || 3.5, actualCards, inferredFirstScorer, homePct, awayPct, homeHtScore, awayHtScore);
       }
 
       matchesUpdated++;
@@ -649,6 +658,13 @@ async function syncFromTheOddsAPI(db, apiKey) {
         finished = 0;
       }
       
+      let inferredFirstScorer = dbMatch.actual_first_scorer;
+      if (finished === 1 && (inferredFirstScorer === null || inferredFirstScorer === 'none' || inferredFirstScorer === '')) {
+        if (homeScore > 0 && awayScore === 0) inferredFirstScorer = 'home';
+        else if (awayScore > 0 && homeScore === 0) inferredFirstScorer = 'away';
+        else if (homeScore === 0 && awayScore === 0) inferredFirstScorer = 'none';
+      }
+
       // Update D1 database with the latest scores and match status
       await db.prepare(`
         UPDATE matches
@@ -656,13 +672,15 @@ async function syncFromTheOddsAPI(db, apiKey) {
           home_score = ?,
           away_score = ?,
           status = ?,
-          finished = ?
+          finished = ?,
+          actual_first_scorer = ?
         WHERE id = ?
       `).bind(
         homeScore,
         awayScore,
         status,
         finished,
+        inferredFirstScorer,
         dbMatch.id
       ).run();
       
@@ -676,7 +694,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
           dbMatch.over_under_line,
           dbMatch.cards_line || 3.5,
           dbMatch.actual_cards,
-          dbMatch.actual_first_scorer,
+          inferredFirstScorer,
           dbMatch.home_win_pct,
           dbMatch.away_win_pct,
           dbMatch.home_ht_score,
