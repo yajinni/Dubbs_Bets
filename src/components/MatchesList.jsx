@@ -146,44 +146,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       return;
     }
 
-    // Logical validations matching outcomes
-    if (winner === 'home' && hScore <= aScore) {
-      setError(`${homeName} must score more to win.`);
-      return;
-    }
-    if (winner === 'away' && aScore <= hScore) {
-      setError(`${awayName} must score more to win.`);
-      return;
-    }
-    if (winner === 'draw' && hScore !== aScore) {
-      setError('Scores must be equal for Draw.');
-      return;
-    }
 
-    // First scorer validation
-    if (firstScorer === 'none' && (hScore > 0 || aScore > 0)) {
-      setError('Cannot choose "No Goal" if predicted score is not 0-0.');
-      return;
-    }
-    if (firstScorer === 'home' && hScore === 0) {
-      setError(`${homeName} must score at least 1 goal.`);
-      return;
-    }
-    if (firstScorer === 'away' && aScore === 0) {
-      setError(`${awayName} must score at least 1 goal.`);
-      return;
-    }
-
-    // Clean sheet validation
-    const hasZeroPredicted = hScore === 0 || aScore === 0;
-    if (cleanSheet === 'yes' && !hasZeroPredicted) {
-      setError('Cannot choose Clean Sheet "Yes" if predicted scores are both greater than 0.');
-      return;
-    }
-    if (cleanSheet === 'no' && hasZeroPredicted) {
-      setError('Cannot choose Clean Sheet "No" if a team is predicted to score 0.');
-      return;
-    }
 
     setSaving(true);
     try {
