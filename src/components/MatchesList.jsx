@@ -664,6 +664,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                     <div key={op.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', padding: '8px 10px', borderRadius: '6px', border: isSelf ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid var(--glass-border)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                         <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>[{op.total_points} pts]</span>
                           {op.name}
                           {isSelf && <span style={{ fontSize: '9px', background: 'var(--primary)', color: '#fff', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>You</span>}
                         </span>

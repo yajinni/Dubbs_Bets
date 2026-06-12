@@ -165,237 +165,148 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                   </div>
                 </div>
 
-                {/* Table of predictions */}
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="leaderboard-table" style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Winner Pick</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>O/U</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Underdog</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Scored First</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Highest Half</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>CS</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Score</th>
-                        <th style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leaderboard.map(p => {
-                        const pred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === p.id);
-                        const isSelf = p.id === activeParticipantId;
-                        
-                        // Evaluate predictions correctness
-                        const hasWinnerPred = pred && pred.predicted_winner;
-                        const isWinnerCorrect = m.finished === 1 && hasWinnerPred && pred.predicted_winner === actualWinner;
+                {/* Players' Picks Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '8px' }}>
+                  {leaderboard.length === 0 ? (
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No players yet.</span>
+                  ) : (
+                    leaderboard.map(p => {
+                      const pred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === p.id);
+                      const isSelf = p.id === activeParticipantId;
+                      
+                      // Evaluate predictions correctness
+                      const hasWinnerPred = pred && pred.predicted_winner;
+                      const isWinnerCorrect = m.finished === 1 && hasWinnerPred && pred.predicted_winner === actualWinner;
 
-                        const hasOUPred = pred && pred.predicted_over_under;
-                        const isOUCorrect = m.finished === 1 && hasOUPred && pred.predicted_over_under === actualOU;
+                      const hasOUPred = pred && pred.predicted_over_under;
+                      const isOUCorrect = m.finished === 1 && hasOUPred && pred.predicted_over_under === actualOU;
 
-                        // Underdog bonus evaluation
-                        const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.home_win_pct < m.away_win_pct;
-                        const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.away_win_pct < m.home_win_pct;
-                        const pickedUnderdog = pred && (
-                          (pred.predicted_winner === 'home' && homeIsUnderdog) ||
-                          (pred.predicted_winner === 'away' && awayIsUnderdog)
-                        );
-                        const underdogBonusEarned = pred && pred.points_cards_ou > 0;
+                      // Underdog bonus evaluation
+                      const homeIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.home_win_pct < m.away_win_pct;
+                      const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.away_win_pct < m.home_win_pct;
+                      const pickedUnderdog = pred && (
+                        (pred.predicted_winner === 'home' && homeIsUnderdog) ||
+                        (pred.predicted_winner === 'away' && awayIsUnderdog)
+                      );
+                      const underdogBonusEarned = pred && pred.points_cards_ou > 0;
 
-                        const hasFirstScorerPred = pred && pred.predicted_first_scorer;
-                        const isFirstScorerCorrect = m.finished === 1 && hasFirstScorerPred && pred.predicted_first_scorer === m.actual_first_scorer;
+                      const hasFirstScorerPred = pred && pred.predicted_first_scorer;
+                      const isFirstScorerCorrect = m.finished === 1 && hasFirstScorerPred && pred.predicted_first_scorer === m.actual_first_scorer;
 
-                        const hasHalfPred = pred && pred.predicted_highest_scoring_half;
-                        const isHalfCorrect = m.finished === 1 && hasHalfPred && pred.predicted_highest_scoring_half === actualHighestHalf;
+                      const hasHalfPred = pred && pred.predicted_highest_scoring_half;
+                      const isHalfCorrect = m.finished === 1 && hasHalfPred && pred.predicted_highest_scoring_half === actualHighestHalf;
 
-                        const hasCleanPred = pred && pred.predicted_clean_sheet;
-                        const isCleanCorrect = m.finished === 1 && hasCleanPred && pred.predicted_clean_sheet === actualCleanSheet;
+                      const hasCleanPred = pred && pred.predicted_clean_sheet;
+                      const isCleanCorrect = m.finished === 1 && hasCleanPred && pred.predicted_clean_sheet === actualCleanSheet;
 
-                        const hasScorePred = pred && pred.predicted_home_score !== null && pred.predicted_away_score !== null;
-                        const isScoreCorrect = m.finished === 1 && hasScorePred && pred.predicted_home_score === m.home_score && pred.predicted_away_score === m.away_score;
+                      const hasScorePred = pred && pred.predicted_home_score !== null && pred.predicted_away_score !== null;
+                      const isScoreCorrect = m.finished === 1 && hasScorePred && pred.predicted_home_score === m.home_score && pred.predicted_away_score === m.away_score;
 
-                        const hasTotalCardsPred = pred && pred.predicted_total_cards !== null;
-                        const isTotalCardsCorrect = m.finished === 1 && hasTotalCardsPred && pred.predicted_total_cards === m.actual_cards;
+                      const hasTotalCardsPred = pred && pred.predicted_total_cards !== null;
+                      const isTotalCardsCorrect = m.finished === 1 && hasTotalCardsPred && pred.predicted_total_cards === m.actual_cards;
 
-                        return (
-                          <tr 
-                            key={p.id} 
-                            style={{ 
-                              borderBottom: '1px solid rgba(255,255,255,0.02)',
-                              background: isSelf ? 'rgba(139, 92, 246, 0.05)' : 'transparent',
-                              outline: isSelf ? '1.5px solid var(--primary)' : 'none',
-                              outlineOffset: '-1.5px'
-                            }}
-                          >
-                            {/* Player Name with points */}
-                            <td style={{ padding: '12px', fontSize: '13px', fontWeight: '700', verticalAlign: 'middle' }}>
-                              <span>{p.name} ({pred && m.finished === 1 ? pred.total_points : 0} pts)</span>
-                            </td>
+                      return (
+                        <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', padding: '8px 10px', borderRadius: '6px', border: isSelf ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid var(--glass-border)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>[{p.total_points} pts]</span>
+                              {p.name}
+                              {isSelf && <span style={{ fontSize: '9px', background: 'var(--primary)', color: '#fff', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>You</span>}
+                            </span>
+                            {m.finished === 1 && pred && (
+                              <span style={{ fontSize: '11px', color: pred.total_points > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: '700' }}>
+                                +{pred.total_points} pts
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ width: '100%' }}>
+                            {pred ? (
+                              <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500', display: 'block' }}>
+                                {/* Winner */}
+                                <span style={{ color: m.finished === 1 ? (isWinnerCorrect ? 'var(--success)' : 'var(--accent)') : 'var(--text-primary)', fontWeight: '600' }}>
+                                  {pred.predicted_winner === 'home' ? homeName : pred.predicted_winner === 'away' ? awayName : 'Draw'}
+                                  {m.finished === 1 && (isWinnerCorrect ? ' (✓)' : ' (✗)')}
+                                </span>
+                                {` | `}
+                                
+                                {/* O/U */}
+                                <span style={{ color: m.finished === 1 ? (isOUCorrect ? 'var(--success)' : 'var(--accent)') : 'var(--warning)', fontWeight: '600' }}>
+                                  {pred.predicted_over_under === 'over' ? 'O' : 'U'}
+                                  {m.finished === 1 && (isOUCorrect ? ' (✓)' : ' (✗)')}
+                                </span>
+                                {` | `}
 
-                            {/* Winner Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
-                              {hasWinnerPred ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '600' }}>
-                                    {pred.predicted_winner === 'home' ? homeName : pred.predicted_winner === 'away' ? awayName : 'Draw'}
-                                  </span>
-                                  {m.finished === 1 && (
-                                    isWinnerCorrect ? (
-                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
-                                    ) : (
-                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
-                              )}
-                            </td>
+                                {/* Score */}
+                                <span style={{ color: m.finished === 1 ? (isScoreCorrect ? 'var(--success)' : 'var(--accent)') : 'var(--text-primary)', fontWeight: '600' }}>
+                                  {pred.predicted_home_score}-{pred.predicted_away_score}
+                                  {m.finished === 1 && (isScoreCorrect ? ' (✓)' : ' (✗)')}
+                                </span>
 
-                            {/* O/U Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
-                              {hasOUPred ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '600', textTransform: 'uppercase', color: 'var(--warning)' }}>
-                                    {pred.predicted_over_under === 'over' ? 'O' : 'U'}
-                                  </span>
-                                  {m.finished === 1 && (
-                                    isOUCorrect ? (
-                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
-                                    ) : (
-                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
-                              )}
-                            </td>
+                                {/* Underdog Pick */}
+                                {pred.predicted_winner && pred.predicted_winner !== 'draw' && (
+                                  <>
+                                    {` | `}
+                                    <span style={{ color: pickedUnderdog ? '#fbbf24' : 'var(--text-muted)', fontWeight: pickedUnderdog ? '700' : '500' }}>
+                                      {pickedUnderdog ? 'Bonus' : 'fav'}
+                                      {m.finished === 1 && pickedUnderdog && (underdogBonusEarned ? ' (✓)' : ' (✗)')}
+                                    </span>
+                                  </>
+                                )}
 
-                            {/* Underdog Bonus Column */}
-                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
-                              {pred && pred.predicted_winner && pred.predicted_winner !== 'draw' ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  {pickedUnderdog ? (
-                                    <span style={{ color: '#fbbf24', fontWeight: '700' }}>Bonus</span>
-                                  ) : (
-                                    <span style={{ color: 'var(--text-muted)' }}>fav</span>
-                                  )}
-                                  {m.finished === 1 && pickedUnderdog && (
-                                    underdogBonusEarned
-                                      ? <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
-                                      : <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
-                                  )}
-                                </div>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{pred?.predicted_winner === 'draw' ? 'Draw' : 'None ⏳'}</span>
-                              )}
-                            </td>
+                                {/* Scored First */}
+                                {pred.predicted_first_scorer && (
+                                  <>
+                                    {` | `}
+                                    <span style={{ color: m.finished === 1 ? (isFirstScorerCorrect ? 'var(--success)' : 'var(--accent)') : 'var(--text-secondary)' }}>
+                                      SF:{pred.predicted_first_scorer === 'home' ? homeName : pred.predicted_first_scorer === 'away' ? awayName : 'None'}
+                                      {m.finished === 1 && (isFirstScorerCorrect ? ' (✓)' : ' (✗)')}
+                                    </span>
+                                  </>
+                                )}
 
-                            {/* First Scorer Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
-                              {hasFirstScorerPred ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '600', color: 'var(--primary-hover)' }}>
-                                    {pred.predicted_first_scorer === 'home' ? homeName : pred.predicted_first_scorer === 'away' ? awayName : 'No Goal'}
-                                  </span>
-                                  {m.finished === 1 && (
-                                    isFirstScorerCorrect ? (
-                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
-                                    ) : (
-                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
-                              )}
-                            </td>
+                                {/* Total Cards */}
+                                {pred.predicted_total_cards !== null && pred.predicted_total_cards !== undefined && (
+                                  <>
+                                    {` | `}
+                                    <span style={{ color: m.finished === 1 ? (isTotalCardsCorrect ? 'var(--success)' : 'var(--accent)') : 'var(--text-secondary)' }}>
+                                      TC:{pred.predicted_total_cards}
+                                      {m.finished === 1 && (isTotalCardsCorrect ? ' (✓)' : ' (✗)')}
+                                    </span>
+                                  </>
+                                )}
 
-                            {/* Highest Scoring Half Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
-                              {hasHalfPred ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '600', color: '#c084fc' }}>
-                                    {pred.predicted_highest_scoring_half === 'first' ? '1st Half' : pred.predicted_highest_scoring_half === 'second' ? '2nd Half' : 'Equal'}
-                                  </span>
-                                  {m.finished === 1 && (
-                                    isHalfCorrect ? (
-                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
-                                    ) : (
-                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
-                              )}
-                            </td>
+                                {/* Highest scoring half */}
+                                {pred.predicted_highest_scoring_half && (
+                                  <>
+                                    {` | `}
+                                    <span style={{ color: m.finished === 1 ? (isHalfCorrect ? 'var(--success)' : 'var(--accent)') : 'var(--text-secondary)' }}>
+                                      H:{pred.predicted_highest_scoring_half === 'first' ? '1st' : pred.predicted_highest_scoring_half === 'second' ? '2nd' : 'Equal'}
+                                      {m.finished === 1 && (isHalfCorrect ? ' (✓)' : ' (✗)')}
+                                    </span>
+                                  </>
+                                )}
 
-                            {/* Clean Sheet Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
-                              {hasCleanPred ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '600', color: '#38bdf8', textTransform: 'uppercase' }}>
-                                    {pred.predicted_clean_sheet}
-                                  </span>
-                                  {m.finished === 1 && (
-                                    isCleanCorrect ? (
-                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
-                                    ) : (
-                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
-                              )}
-                            </td>
-
-                            {/* Score Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
-                              {hasScorePred ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '600', fontFamily: 'monospace' }}>
-                                    {pred.predicted_home_score} - {pred.predicted_away_score}
-                                  </span>
-                                  {m.finished === 1 && (
-                                    isScoreCorrect ? (
-                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
-                                    ) : (
-                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
-                              )}
-                            </td>
-
-                            {/* Exact Cards Prediction */}
-                            <td style={{ padding: '12px', fontSize: '13px', verticalAlign: 'middle' }}>
-                              {hasTotalCardsPred ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontWeight: '600', color: 'var(--secondary-hover)' }}>
-                                    {pred.predicted_total_cards}
-                                  </span>
-                                  {m.finished === 1 && (
-                                    isTotalCardsCorrect ? (
-                                      <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
-                                    ) : (
-                                      <XCircle size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None ⏳</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                                {/* Clean sheet */}
+                                {pred.predicted_clean_sheet && (
+                                  <>
+                                    {` | `}
+                                    <span style={{ color: m.finished === 1 ? (isCleanCorrect ? 'var(--success)' : 'var(--accent)') : 'var(--text-secondary)' }}>
+                                      CS:{pred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}
+                                      {m.finished === 1 && (isCleanCorrect ? ' (✓)' : ' (✗)')}
+                                    </span>
+                                  </>
+                                )}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'block' }}>
+                                None ⏳
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             );
