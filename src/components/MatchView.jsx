@@ -205,13 +205,12 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                       const hasTotalCardsPred = pred && pred.predicted_total_cards !== null;
                       const isTotalCardsCorrect = m.finished === 1 && hasTotalCardsPred && pred.predicted_total_cards === m.actual_cards;
 
-                      return (
-                        <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', padding: '8px 10px', borderRadius: '6px', border: isSelf ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid var(--glass-border)' }}>
+                       return (
+                        <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', padding: '8px 10px', borderRadius: '6px', border: isSelf ? '2px solid var(--primary)' : '1px solid var(--glass-border)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                             <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                               <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>[{p.total_points} pts]</span>
                               {p.name}
-                              {isSelf && <span style={{ fontSize: '9px', background: 'var(--primary)', color: '#fff', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>You</span>}
                             </span>
                             {m.finished === 1 && pred && (
                               <span style={{ fontSize: '11px', color: pred.total_points > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: '700' }}>
