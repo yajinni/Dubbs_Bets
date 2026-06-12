@@ -209,7 +209,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                       const isTotalCardsCorrect = m.finished === 1 && hasTotalCardsPred && pred.predicted_total_cards === m.actual_cards;
 
                        return (
-                        <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', padding: '8px 10px', borderRadius: '6px', border: isSelf ? '2px solid var(--primary)' : '1px solid var(--glass-border)' }}>
+                        <div key={p.id} className="player-result-row" style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', borderRadius: '6px', border: isSelf ? '2px solid var(--primary)' : '1px solid var(--glass-border)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                             <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                               {p.name}
@@ -238,7 +238,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                                   background: m.finished === 1 ? (isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
                                   border: m.finished === 1 ? (isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                                 }}>
-                                  {pred.predicted_winner === 'home' ? homeName : pred.predicted_winner === 'away' ? awayName : pred.predicted_winner === 'draw' ? 'Draw' : '-'}
+                                  {pred.predicted_winner === 'home' ? homeCode : pred.predicted_winner === 'away' ? awayCode : pred.predicted_winner === 'draw' ? 'Draw' : '-'}
                                 </span>
 
                                 {/* O/U */}

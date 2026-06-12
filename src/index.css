@@ -1231,6 +1231,10 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+.player-result-row {
+  padding: 8px 10px;
+}
+
 @media (max-width: 600px) {
   #root {
     padding: 0 8px 24px !important;
@@ -1240,6 +1244,9 @@ h1, h2, h3, h4, h5, h6 {
   }
   .inline-prediction-box {
     padding: 12px 2px !important;
+  }
+  .player-result-row {
+    padding: 8px 2px !important;
   }
   .hide-mobile {
     display: none !important;
