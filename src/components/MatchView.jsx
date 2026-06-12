@@ -141,25 +141,23 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                     <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--primary-hover)', letterSpacing: '0.05em' }}>
                       {getRoundLabel(m)}
                     </span>
-                    <span style={{ fontSize: '16px', fontWeight: '800', fontFamily: 'var(--font-heading)' }}>
-                      {homeName} vs {awayName}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '16px', fontWeight: '800', fontFamily: 'var(--font-heading)' }}>
+                        {homeName} vs {awayName}
+                      </span>
+                      {m.status !== 'scheduled' && (
+                        <span style={{ fontSize: '16px', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'var(--primary-hover)' }}>
+                          {m.home_score}-{m.away_score} {m.status === 'live' ? 'LIVE' : 'FT'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
                       <Calendar size={14} />
                       {formatMatchDate(m.local_date)}
                     </span>
-                    {m.status !== 'scheduled' ? (
-                      <div className="score-display" style={{ fontSize: '16px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '6px', fontWeight: '800', display: 'flex', gap: '6px' }}>
-                        <span>{m.home_score}</span>
-                        <span>-</span>
-                        <span>{m.away_score}</span>
-                        <span className={`match-badge ${m.status}`} style={{ fontSize: '9px', padding: '2px 6px', marginLeft: '6px' }}>
-                          {m.status === 'live' ? 'Live' : 'FT'}
-                        </span>
-                      </div>
-                    ) : (
+                    {m.status === 'scheduled' && (
                       <span className="match-badge scheduled" style={{ fontSize: '10px', padding: '4px 8px' }}>Scheduled</span>
                     )}
                   </div>
@@ -209,14 +207,9 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                         <div key={p.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', padding: '8px 10px', borderRadius: '6px', border: isSelf ? '2px solid var(--primary)' : '1px solid var(--glass-border)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                             <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>[{p.total_points} pts]</span>
                               {p.name}
+                              <span style={{ color: 'var(--primary-hover)', fontWeight: '700' }}>[{p.total_points} pts]</span>
                             </span>
-                            {m.finished === 1 && pred && (
-                              <span style={{ fontSize: '11px', color: pred.total_points > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: '700' }}>
-                                +{pred.total_points} pts
-                              </span>
-                            )}
                           </div>
                           <div style={{ width: '100%' }}>
                             {pred ? (
