@@ -382,6 +382,60 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
             }
           </div>
         </div>
+
+        {/* Actual Match Results Box (Only when match is finished) */}
+        {m.finished === 1 && (
+          <div className="match-analytics-box" style={{ marginTop: '12px', borderLeft: '3px solid var(--success)' }}>
+            <div className="analytics-title" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--success)' }}>
+              <CheckCircle size={14} />
+              Confirmed Match Results
+            </div>
+            <div className="analytics-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Winner</span>
+                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                  {m.home_score > m.away_score ? homeName : m.away_score > m.home_score ? awayName : 'Draw'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>First Scorer</span>
+                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                  {m.actual_first_scorer === 'home' ? homeName : m.actual_first_scorer === 'away' ? awayName : 'No Goal'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Goals O/U</span>
+                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                  {(m.home_score + m.away_score) > m.over_under_line ? 'Over' : 'Under'} {m.over_under_line}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Highest Half</span>
+                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                  {(() => {
+                    const hHt = m.home_ht_score !== null && m.home_ht_score !== undefined ? m.home_ht_score : 0;
+                    const aHt = m.away_ht_score !== null && m.away_ht_score !== undefined ? m.away_ht_score : 0;
+                    const firstHalfGoals = hHt + aHt;
+                    const secondHalfGoals = (m.home_score + m.away_score) - firstHalfGoals;
+                    return firstHalfGoals > secondHalfGoals ? '1st Half' : secondHalfGoals > firstHalfGoals ? '2nd Half' : 'Equal';
+                  })()}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Clean Sheet</span>
+                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
+                  {m.home_score === 0 || m.away_score === 0 ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Total Cards</span>
+                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                  {m.actual_cards !== null ? `${m.actual_cards} cards` : 'N/A'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Predictions Section */}
