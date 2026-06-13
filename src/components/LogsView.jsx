@@ -192,30 +192,39 @@ export default function LogsView() {
                         </div>
                       </td>
                       <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                          <span style={{ 
-                            padding: '4px 8px', 
-                            background: 'rgba(255,255,255,0.04)', 
-                            borderRadius: '6px', 
-                            fontSize: '13px', 
-                            color: log.old_value !== null ? 'var(--text-secondary)' : 'var(--text-muted)',
-                            fontFamily: 'monospace'
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '280px', margin: '0 auto' }}>
+                          {/* Old Value */}
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            padding: '5px 10px', 
+                            background: 'rgba(244, 63, 94, 0.08)', 
+                            border: '1px solid rgba(244, 63, 94, 0.2)', 
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontFamily: 'monospace',
+                            color: '#fda4af'
                           }}>
-                            {log.old_value !== null ? String(log.old_value) : 'None'}
-                          </span>
-                          <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
-                          <span style={{ 
-                            padding: '4px 8px', 
-                            background: 'rgba(251, 191, 36, 0.1)', 
-                            border: '1px solid rgba(251, 191, 36, 0.2)',
-                            borderRadius: '6px', 
-                            fontSize: '13px', 
+                            <span style={{ fontWeight: '800', textTransform: 'uppercase', marginRight: '6px', fontSize: '9px', opacity: 0.7 }}>Old:</span>
+                            <span>{log.old_value !== null ? String(log.old_value) : 'None'}</span>
+                          </div>
+                          
+                          {/* New Value */}
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            padding: '5px 10px', 
+                            background: 'rgba(16, 185, 129, 0.08)', 
+                            border: '1px solid rgba(16, 185, 129, 0.2)', 
+                            borderRadius: '6px',
+                            fontSize: '12px',
                             fontWeight: '600',
-                            color: '#fbbf24',
-                            fontFamily: 'monospace'
+                            fontFamily: 'monospace',
+                            color: '#6ee7b7'
                           }}>
-                            {log.new_value !== null ? String(log.new_value) : 'None'}
-                          </span>
+                            <span style={{ fontWeight: '800', textTransform: 'uppercase', marginRight: '6px', fontSize: '9px', opacity: 0.7 }}>New:</span>
+                            <span>{log.new_value !== null ? String(log.new_value) : 'None'}</span>
+                          </div>
                         </div>
                       </td>
                     </tr>
