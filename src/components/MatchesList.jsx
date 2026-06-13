@@ -469,6 +469,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                 <div className="prediction-col">
                   <label>Exact Score (4 pts)</label>
                   <div className="inline-score-inputs">
+                    {m.home_flag && <img src={m.home_flag} alt={homeName} style={{ width: 20, height: 15, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />}
                     <input
                       type="number"
                       min="0"
@@ -490,6 +491,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                       aria-label="Away score prediction"
                       disabled={saving}
                     />
+                    {m.away_flag && <img src={m.away_flag} alt={awayName} style={{ width: 20, height: 15, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />}
                   </div>
                 </div>
 

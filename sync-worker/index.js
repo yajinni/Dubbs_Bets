@@ -4,8 +4,8 @@ export default {
     const pagesUrl = env.PAGES_URL || "https://dubbs-bets.pages.dev";
     const secret = env.SYNC_SECRET;
     
-    // Construct sync url with force=true and secret if available
-    const url = `${pagesUrl}/api/sync?force=true${secret ? `&secret=${secret}` : ''}`;
+    // Construct sync url with secret if available
+    const url = `${pagesUrl}/api/sync${secret ? `?secret=${secret}` : ''}`;
     
     console.log(`[Cron Trigger] Starting sync fetch to: ${pagesUrl}/api/sync...`);
     

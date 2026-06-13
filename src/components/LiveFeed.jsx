@@ -7,8 +7,8 @@ function classifyEvent(type) {
   const text = (type.text || '').toLowerCase();
   const id = String(type.id || '');
   if (text.includes('goal') || id === '59' || id === '70') return 'goal';
-  if (text.includes('red card') || text.includes('red') || id === '63') return 'red';
-  if (text.includes('yellow') || id === '60' || id === '62') return 'yellow';
+  if (id === '63') return 'red';
+  if (id === '60' || id === '62') return 'yellow';
   if (text.includes('substitut') || text.includes('sub') || id === '61') return 'sub';
   if (text.includes('half') || text.includes('kick off') || text.includes('full time') || text.includes('end') || text.includes('start') || id === '65' || id === '68' || id === '69') return 'milestone';
   if (text.includes('penalty') || id === '71') return 'penalty';

@@ -202,7 +202,7 @@ async function syncFromESPN(db) {
       const details = comp.details || [];
       for (const detail of details) {
         // Count cards
-        if (detail.yellowCard || detail.redCard || (detail.type && (detail.type.text.toLowerCase().includes('card') || detail.type.text.toLowerCase().includes('yellow') || detail.type.text.toLowerCase().includes('red')))) {
+        if (detail.yellowCard || detail.redCard) {
           actualCards++;
         }
         
@@ -415,13 +415,6 @@ async function syncFromTheOddsAPI(db, apiKey) {
     throw new Error(`The Odds API odds error: ${JSON.stringify(oddsData)}`);
   }
   
-  // 2. Fetch Scores
-  const scoresRes = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/scores/?apiKey=${apiKey}&daysFrom=3`);
-  const scoresData = await scoresRes.json();
-  
-  if (scoresRes.status !== 200) {
-    throw new Error(`The Odds API scores error: ${JSON.stringify(scoresData)}`);
-  }
   
   const { results: dbMatches } = await db.prepare('SELECT * FROM matches').all();
   let matchesUpdated = 0;
@@ -507,83 +500,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
     }
   }
   
-  // 2. Process Scores and completed statuses (loop over matches in scoresData)
-  for (const event of scoresData) {
-    const dbMatch = dbMatches.find(m => 
-      m.home_team_name.toLowerCase() === event.home_team.toLowerCase() && 
-      m.away_team_name.toLowerCase() === event.away_team.toLowerCase()
-    );
-    
-    if (dbMatch && dbMatch.finished === 0) {
-      let homeScore = dbMatch.home_score;
-      let awayScore = dbMatch.away_score;
-      let finished = dbMatch.finished;
-      let status = dbMatch.status;
-      
-      if (event.scores && event.scores.length > 0) {
-        const hScoreObj = event.scores.find(s => s.name === event.home_team);
-        const aScoreObj = event.scores.find(s => s.name === event.away_team);
-        if (hScoreObj && aScoreObj) {
-          homeScore = parseInt(hScoreObj.score) || 0;
-          awayScore = parseInt(aScoreObj.score) || 0;
-        }
-      }
-      
-      if (event.completed === true) {
-        status = 'finished';
-        finished = 1;
-      } else if (event.completed === false) {
-        // If commenced in the past but not completed, mark as live
-        const startTime = new Date(event.commence_time).getTime();
-        if (Date.now() >= startTime) {
-          status = 'live';
-        } else {
-          status = 'scheduled';
-        }
-        finished = 0;
-      }
-      
-      let inferredFirstScorer = dbMatch.actual_first_scorer;
 
-      // Update D1 database with the latest scores and match status
-      await db.prepare(`
-        UPDATE matches
-        SET
-          home_score = ?,
-          away_score = ?,
-          status = ?,
-          finished = ?,
-          actual_first_scorer = ?
-        WHERE id = ?
-      `).bind(
-        homeScore,
-        awayScore,
-        status,
-        finished,
-        inferredFirstScorer,
-        dbMatch.id
-      ).run();
-      
-      // Recalculate predictions if finished
-      if (finished === 1) {
-        await recalculateMatchPredictionsInSync(
-          db, 
-          dbMatch.id, 
-          homeScore, 
-          awayScore, 
-          dbMatch.over_under_line,
-          dbMatch.cards_line || 3.5,
-          dbMatch.actual_cards,
-          inferredFirstScorer,
-          dbMatch.home_win_pct,
-          dbMatch.away_win_pct,
-          dbMatch.draw_pct,
-          dbMatch.home_ht_score,
-          dbMatch.away_ht_score
-        );
-      }
-    }
-  }
   
   return { source: 'the-odds-api', matchesUpdated, oddsUpdated };
 }
