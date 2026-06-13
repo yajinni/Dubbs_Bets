@@ -1607,3 +1607,18 @@ h1, h2, h3, h4, h5, h6 {
   background-color: rgba(255, 255, 255, 0.02) !important;
 }
 
+.log-history-value {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .log-history-value {
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start;
+  }
+}
+

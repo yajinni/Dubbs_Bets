@@ -76,6 +76,22 @@ export default function LogsView() {
     return matchesCategory && matchesSearch;
   });
 
+  const renderValueParts = (val) => {
+    if (val === null || val === undefined) return 'None';
+    const str = String(val);
+    if (str.includes(',')) {
+      const parts = str.split(',').map(p => p.trim());
+      return (
+        <div className="log-history-value">
+          {parts.map((part, idx) => (
+            <span key={idx}>{part}</span>
+          ))}
+        </div>
+      );
+    }
+    return <span>{str}</span>;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px 0' }}>
       
@@ -196,7 +212,7 @@ export default function LogsView() {
                           {/* Old Value */}
                           <div style={{ 
                             display: 'flex', 
-                            alignItems: 'center', 
+                            alignItems: 'flex-start', 
                             padding: '5px 10px', 
                             background: 'rgba(244, 63, 94, 0.08)', 
                             border: '1px solid rgba(244, 63, 94, 0.2)', 
@@ -205,14 +221,14 @@ export default function LogsView() {
                             fontFamily: 'monospace',
                             color: '#fda4af'
                           }}>
-                            <span style={{ fontWeight: '800', textTransform: 'uppercase', marginRight: '6px', fontSize: '9px', opacity: 0.7 }}>Old:</span>
-                            <span>{log.old_value !== null ? String(log.old_value) : 'None'}</span>
+                            <span style={{ fontWeight: '800', textTransform: 'uppercase', marginRight: '6px', fontSize: '9px', opacity: 0.7, marginTop: '2px' }}>Old:</span>
+                            {renderValueParts(log.old_value)}
                           </div>
                           
                           {/* New Value */}
                           <div style={{ 
                             display: 'flex', 
-                            alignItems: 'center', 
+                            alignItems: 'flex-start', 
                             padding: '5px 10px', 
                             background: 'rgba(16, 185, 129, 0.08)', 
                             border: '1px solid rgba(16, 185, 129, 0.2)', 
@@ -222,8 +238,8 @@ export default function LogsView() {
                             fontFamily: 'monospace',
                             color: '#6ee7b7'
                           }}>
-                            <span style={{ fontWeight: '800', textTransform: 'uppercase', marginRight: '6px', fontSize: '9px', opacity: 0.7 }}>New:</span>
-                            <span>{log.new_value !== null ? String(log.new_value) : 'None'}</span>
+                            <span style={{ fontWeight: '800', textTransform: 'uppercase', marginRight: '6px', fontSize: '9px', opacity: 0.7, marginTop: '2px' }}>New:</span>
+                            {renderValueParts(log.new_value)}
                           </div>
                         </div>
                       </td>
