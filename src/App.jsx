@@ -69,6 +69,8 @@ export default function App() {
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
+      // Fetch last sync timestamp
+      await triggerBackgroundSync();
       // Fetch data
       await refreshAllData();
       setLoading(false);
@@ -95,9 +97,12 @@ export default function App() {
     try {
       const res = await fetch('/api/sync?force=true');
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setLastSync(data.sync_time);
         await refreshAllData();
+        alert('Sync completed successfully!');
+      } else {
+        alert(`Sync failed: ${data.error || 'Unknown error'}`);
       }
     } catch (err) {
       console.error('Manual sync failed:', err);
