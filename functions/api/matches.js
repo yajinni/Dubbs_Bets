@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve and update matches (GET, POST)
-import { checkAndInitDb, logChange } from './db_helper.js';
+import { checkAndInitDb, logChange, formatOuPct } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -115,8 +115,8 @@ export async function onRequest(context) {
 
         // Log O/U Goals (combined line and odds)
         if (oldMatch.over_under_line !== ouLine || oldMatch.over_odds !== oOdds || oldMatch.under_odds !== uOdds) {
-          const oldVal = `Line: ${oldMatch.over_under_line}, Over: ${oldMatch.over_odds}, Under: ${oldMatch.under_odds}`;
-          const newVal = `Line: ${ouLine}, Over: ${oOdds}, Under: ${uOdds}`;
+          const oldVal = `Line: ${oldMatch.over_under_line}, ${formatOuPct(oldMatch.over_odds, oldMatch.under_odds)}`;
+          const newVal = `Line: ${ouLine}, ${formatOuPct(oOdds, uOdds)}`;
           await logChange(env.db, 'odds', matchId, null, `${matchLabel} O/U Goals`, oldVal, newVal);
         }
 
@@ -124,8 +124,8 @@ export async function onRequest(context) {
         const oldCardsOverOdds = oldMatch.cards_over_odds !== undefined ? oldMatch.cards_over_odds : 1.9;
         const oldCardsUnderOdds = oldMatch.cards_under_odds !== undefined ? oldMatch.cards_under_odds : 1.9;
         if (oldMatch.cards_line !== cLine) {
-          const oldVal = `Line: ${oldMatch.cards_line}, Over: ${oldCardsOverOdds}, Under: ${oldCardsUnderOdds}`;
-          const newVal = `Line: ${cLine}, Over: 1.9, Under: 1.9`;
+          const oldVal = `Line: ${oldMatch.cards_line}, ${formatOuPct(oldCardsOverOdds, oldCardsUnderOdds)}`;
+          const newVal = `Line: ${cLine}, ${formatOuPct(1.9, 1.9)}`;
           await logChange(env.db, 'odds', matchId, null, `${matchLabel} O/U Score First`, oldVal, newVal);
         }
 

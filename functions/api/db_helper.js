@@ -103,3 +103,15 @@ export async function logChange(db, category, matchId, participantId, descriptio
     console.error('Failed to write log:', err);
   }
 }
+
+export function formatOuPct(overOdds, underOdds) {
+  const o = parseFloat(overOdds);
+  const u = parseFloat(underOdds);
+  if (isNaN(o) || isNaN(u) || o <= 0 || u <= 0) return 'Over: ?%, Under: ?%';
+  const pOver = 1.0 / o;
+  const pUnder = 1.0 / u;
+  const sum = pOver + pUnder;
+  const overPct = Math.round((pOver / sum) * 1000) / 10;
+  const underPct = Math.round((pUnder / sum) * 1000) / 10;
+  return `Over: ${overPct}%, Under: ${underPct}%`;
+}

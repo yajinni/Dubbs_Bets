@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to sync matches, scores, and odds from API-Football
-import { checkAndInitDb, logChange } from './db_helper.js';
+import { checkAndInitDb, logChange, formatOuPct } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -503,8 +503,8 @@ async function syncFromTheOddsAPI(db, apiKey) {
 
       // Log Goals O/U changes (combined line and odds)
       if (dbMatch.over_under_line !== ouLine || dbMatch.over_odds !== overOdds || dbMatch.under_odds !== underOdds) {
-        const oldVal = `Line: ${dbMatch.over_under_line}, Over: ${dbMatch.over_odds}, Under: ${dbMatch.under_odds}`;
-        const newVal = `Line: ${ouLine}, Over: ${overOdds}, Under: ${underOdds}`;
+        const oldVal = `Line: ${dbMatch.over_under_line}, ${formatOuPct(dbMatch.over_odds, dbMatch.under_odds)}`;
+        const newVal = `Line: ${ouLine}, ${formatOuPct(overOdds, underOdds)}`;
         await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} O/U Goals`, oldVal, newVal);
       }
 
