@@ -165,7 +165,7 @@ export default function LogsView() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
                   <th style={{ padding: '16px 20px', color: 'var(--text-muted)', fontWeight: '600' }}>Info</th>
-                  <th style={{ padding: '16px 20px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center' }}>Change History</th>
+                  <th style={{ padding: '16px 20px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center', width: '320px' }}>Change History</th>
                 </tr>
               </thead>
               <tbody>
@@ -207,7 +207,7 @@ export default function LogsView() {
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '16px 20px', verticalAlign: 'middle', width: '320px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '280px', margin: '0 auto' }}>
                           {/* Old Value */}
                           <div style={{ 
