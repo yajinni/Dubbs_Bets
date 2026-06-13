@@ -144,25 +144,6 @@ export async function onRequest(context) {
         console.error('Failed to schedule QStash jobs:', err.message);
       }
     }
-
-    // 2.7 Direct lock checks for matches within 2 hours of kickoff
-    try {
-      const { results: allDbMatches } = await env.db.prepare("SELECT * FROM matches WHERE odds_locked = 0 AND finished = 0").all();
-      for (const m of allDbMatches) {
-        const matchTime = new Date(m.local_date).getTime();
-        if ((matchTime - currentTime) <= 2 * 60 * 60 * 1000) {
-          console.log(`[Sync] Locking odds directly for match ${m.id} (${m.home_team_name} vs ${m.away_team_name}) since kickoff is near/past...`);
-          try {
-            await handleLockMatchTask(env.db, m.id, apiKeyOdds);
-          } catch (err) {
-            console.error(`[Sync] Direct lock failed for match ${m.id}:`, err.message);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Failed to run direct lock checks:', err.message);
-    }
-
     // 3. Update last sync time
     const isoString = new Date().toISOString();
     await env.db.prepare("UPDATE settings SET value = ? WHERE key = 'last_sync'").bind(isoString).run();

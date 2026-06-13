@@ -401,7 +401,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               justifyContent: 'flex-end',
               fontWeight: '500'
             }}>
-              {(m.odds_locked === 1 || (new Date(m.local_date).getTime() - Date.now()) <= 2 * 60 * 60 * 1000) ? (
+              {m.odds_locked === 1 ? (
                 <span>Locked: {new Date(m.odds_updated_at).toLocaleString()}</span>
               ) : (
                 <span>Synced: {new Date(m.odds_updated_at).toLocaleString()}</span>
