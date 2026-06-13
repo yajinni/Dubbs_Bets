@@ -145,6 +145,24 @@ export async function onRequest(context) {
       }
     }
 
+    // 2.7 Direct lock checks for matches within 2 hours of kickoff
+    try {
+      const { results: allDbMatches } = await env.db.prepare("SELECT * FROM matches WHERE odds_locked = 0 AND finished = 0").all();
+      for (const m of allDbMatches) {
+        const matchTime = new Date(m.local_date).getTime();
+        if ((matchTime - currentTime) <= 2 * 60 * 60 * 1000) {
+          console.log(`[Sync] Locking odds directly for match ${m.id} (${m.home_team_name} vs ${m.away_team_name}) since kickoff is near/past...`);
+          try {
+            await handleLockMatchTask(env.db, m.id, apiKeyOdds);
+          } catch (err) {
+            console.error(`[Sync] Direct lock failed for match ${m.id}:`, err.message);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to run direct lock checks:', err.message);
+    }
+
     // 3. Update last sync time
     const isoString = new Date().toISOString();
     await env.db.prepare("UPDATE settings SET value = ? WHERE key = 'last_sync'").bind(isoString).run();
@@ -596,63 +614,69 @@ async function handleLockMatchTask(db, matchId, apiKey) {
     return;
   }
   
-  // Fetch odds
-  const sportKey = 'soccer_fifa_world_cup';
-  const oddsRes = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${apiKey}&regions=us&markets=h2h,totals&oddsFormat=decimal`);
-  const oddsData = await oddsRes.json();
-  
-  if (oddsRes.status !== 200) {
-    throw new Error(`The Odds API odds error: ${JSON.stringify(oddsData)}`);
-  }
-  
-  const apiMatch = oddsData.find(m => 
-    m.home_team.toLowerCase() === match.home_team_name.toLowerCase() && 
-    m.away_team.toLowerCase() === match.away_team_name.toLowerCase()
-  );
-  
   let homePct = match.home_win_pct;
   let awayPct = match.away_win_pct;
   let drawPct = match.draw_pct;
   let ouLine = match.over_under_line;
   let overOdds = match.over_odds;
   let underOdds = match.under_odds;
-  
-  if (apiMatch && apiMatch.bookmakers && apiMatch.bookmakers.length > 0) {
-    const bookmaker = apiMatch.bookmakers.find(b => {
-      const markets = b.markets || [];
-      return markets.some(mk => mk.key === 'h2h') && markets.some(mk => mk.key === 'totals');
-    }) || apiMatch.bookmakers[0];
-    
-    if (bookmaker) {
-      const h2h = bookmaker.markets.find(mk => mk.key === 'h2h');
-      if (h2h) {
-        const homeOutcome = h2h.outcomes.find(o => o.name === apiMatch.home_team);
-        const awayOutcome = h2h.outcomes.find(o => o.name === apiMatch.away_team);
-        const drawOutcome = h2h.outcomes.find(o => o.name === 'Draw');
-        
-        if (homeOutcome && awayOutcome && drawOutcome) {
-          const pHome = 1.0 / homeOutcome.price;
-          const pAway = 1.0 / awayOutcome.price;
-          const pDraw = 1.0 / drawOutcome.price;
-          const sum = pHome + pAway + pDraw;
-          homePct = Math.round((pHome / sum) * 1000) / 10;
-          awayPct = Math.round((pAway / sum) * 1000) / 10;
-          drawPct = Math.round((pDraw / sum) * 1000) / 10;
-        }
-      }
+
+  if (apiKey && apiKey !== '') {
+    try {
+      // Fetch odds
+      const sportKey = 'soccer_fifa_world_cup';
+      const oddsRes = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${apiKey}&regions=us&markets=h2h,totals&oddsFormat=decimal`);
+      const oddsData = await oddsRes.json();
       
-      const totals = bookmaker.markets.find(mk => mk.key === 'totals');
-      if (totals) {
-        const overOutcome = totals.outcomes.find(o => o.name === 'Over');
-        const underOutcome = totals.outcomes.find(o => o.name === 'Under');
-        if (overOutcome) {
-          ouLine = overOutcome.point;
-          overOdds = overOutcome.price;
+      if (oddsRes.status === 200) {
+        const apiMatch = oddsData.find(m => 
+          m.home_team.toLowerCase() === match.home_team_name.toLowerCase() && 
+          m.away_team.toLowerCase() === match.away_team_name.toLowerCase()
+        );
+        
+        if (apiMatch && apiMatch.bookmakers && apiMatch.bookmakers.length > 0) {
+          const bookmaker = apiMatch.bookmakers.find(b => {
+            const markets = b.markets || [];
+            return markets.some(mk => mk.key === 'h2h') && markets.some(mk => mk.key === 'totals');
+          }) || apiMatch.bookmakers[0];
+          
+          if (bookmaker) {
+            const h2h = bookmaker.markets.find(mk => mk.key === 'h2h');
+            if (h2h) {
+              const homeOutcome = h2h.outcomes.find(o => o.name === apiMatch.home_team);
+              const awayOutcome = h2h.outcomes.find(o => o.name === apiMatch.away_team);
+              const drawOutcome = h2h.outcomes.find(o => o.name === 'Draw');
+              
+              if (homeOutcome && awayOutcome && drawOutcome) {
+                const pHome = 1.0 / homeOutcome.price;
+                const pAway = 1.0 / awayOutcome.price;
+                const pDraw = 1.0 / drawOutcome.price;
+                const sum = pHome + pAway + pDraw;
+                homePct = Math.round((pHome / sum) * 1000) / 10;
+                awayPct = Math.round((pAway / sum) * 1000) / 10;
+                drawPct = Math.round((pDraw / sum) * 1000) / 10;
+              }
+            }
+            
+            const totals = bookmaker.markets.find(mk => mk.key === 'totals');
+            if (totals) {
+              const overOutcome = totals.outcomes.find(o => o.name === 'Over');
+              const underOutcome = totals.outcomes.find(o => o.name === 'Under');
+              if (overOutcome) {
+                ouLine = overOutcome.point;
+                overOdds = overOutcome.price;
+              }
+              if (underOutcome) {
+                underOdds = underOutcome.price;
+              }
+            }
+          }
         }
-        if (underOutcome) {
-          underOdds = underOutcome.price;
-        }
+      } else {
+        console.warn(`The Odds API lock request returned status ${oddsRes.status}. Using existing odds.`);
       }
+    } catch (err) {
+      console.warn(`Failed to fetch latest odds for locking match ${matchId}: ${err.message}. Using existing odds.`);
     }
   }
   
