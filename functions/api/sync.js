@@ -871,6 +871,10 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret) {
             }
           });
           console.log(`[QStash Scheduler] Lock odds scheduled: status ${lockRes.status}`);
+          if (!lockRes.ok) {
+            const errText = await lockRes.text();
+            throw new Error(`QStash Lock publish failed with status ${lockRes.status}: ${errText}`);
+          }
         } else {
           console.log(`[QStash Scheduler] Lock time is in the past for match ${m.id}, skipping lock schedule.`);
         }
@@ -885,6 +889,10 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret) {
             }
           });
           console.log(`[QStash Scheduler] Score sync scheduled: status ${scoreRes.status}`);
+          if (!scoreRes.ok) {
+            const errText = await scoreRes.text();
+            throw new Error(`QStash Score publish failed with status ${scoreRes.status}: ${errText}`);
+          }
         }
         
         // Mark match as scheduled in database
