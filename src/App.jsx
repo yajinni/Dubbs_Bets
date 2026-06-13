@@ -81,7 +81,7 @@ export default function App() {
   const triggerBackgroundSync = async () => {
     try {
       // Calls sync without force. The server checks if 6 hours have passed.
-      const res = await fetch('/api/sync');
+      const res = await fetch('/api/sync?checkOnly=true');
       const data = await res.json();
       if (data.success && data.sync_time) {
         setLastSync(data.sync_time);

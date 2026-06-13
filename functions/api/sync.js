@@ -24,6 +24,15 @@ export async function onRequest(context) {
 
     await checkAndInitDb(env.db);
 
+    const checkOnly = url.searchParams.get('checkOnly') === 'true';
+    if (checkOnly) {
+      const lastSyncSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'last_sync'").first();
+      return new Response(JSON.stringify({ 
+        success: true, 
+        last_sync: lastSyncSetting ? lastSyncSetting.value : null
+      }), { status: 200, headers });
+    }
+
     // Verify secret key if configured in environment (allow same-origin browser requests to bypass)
     const clientSecret = url.searchParams.get('secret');
     const secFetchSite = request.headers.get('sec-fetch-site');
