@@ -93,8 +93,17 @@ export async function onRequest(context) {
       // Get participant name and match info
       const participant = await env.db.prepare('SELECT name FROM participants WHERE id = ?').bind(participantId).first();
       const participantName = participant ? participant.name : `Player ID ${participantId}`;
-      const matchDetails = await env.db.prepare('SELECT home_team_name, away_team_name FROM matches WHERE id = ?').bind(matchId).first();
-      const matchLabel = matchDetails ? `${matchDetails.home_team_name} vs ${matchDetails.away_team_name}` : `Match ${matchId}`;
+      const matchDetails = await env.db.prepare(`
+        SELECT m.home_team_name, m.away_team_name, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+        FROM matches m
+        LEFT JOIN teams t1 ON m.home_team_id = t1.id
+        LEFT JOIN teams t2 ON m.away_team_id = t2.id
+        WHERE m.id = ?
+      `).bind(matchId).first();
+      
+      const homeCode = matchDetails?.home_code || matchDetails?.home_team_name.substring(0, 3).toUpperCase() || 'HOM';
+      const awayCode = matchDetails?.away_code || matchDetails?.away_team_name.substring(0, 3).toUpperCase() || 'AWA';
+      const matchLabel = `${homeCode} vs ${awayCode}`;
 
       // 3. Upsert prediction
       const checkQuery = 'SELECT * FROM predictions WHERE participant_id = ? AND match_id = ?';

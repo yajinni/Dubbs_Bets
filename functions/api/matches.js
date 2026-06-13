@@ -93,42 +93,55 @@ export async function onRequest(context) {
       const actCards = (actualCards !== undefined && actualCards !== '') ? parseInt(actualCards) : null;
       let actFirstScorer = actualFirstScorer || null;
 
-      const oldMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
+      const oldMatch = await env.db.prepare(`
+        SELECT m.*, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+        FROM matches m
+        LEFT JOIN teams t1 ON m.home_team_id = t1.id
+        LEFT JOIN teams t2 ON m.away_team_id = t2.id
+        WHERE m.id = ?
+      `).bind(matchId).first();
+
       if (oldMatch) {
-        const matchLabel = `${oldMatch.home_team_name} vs ${oldMatch.away_team_name}`;
+        const homeCode = oldMatch.home_code || oldMatch.home_team_name.substring(0, 3).toUpperCase();
+        const awayCode = oldMatch.away_code || oldMatch.away_team_name.substring(0, 3).toUpperCase();
+        const matchLabel = `${homeCode} vs ${awayCode}`;
         
-        // Log Odds changes (grouped win probabilities)
+        // Log Odds changes (grouped Winner probabilities)
         if (oldMatch.home_win_pct !== hPct || oldMatch.away_win_pct !== aPct || oldMatch.draw_pct !== dPct) {
           const oldVal = `H: ${oldMatch.home_win_pct}%, D: ${oldMatch.draw_pct}%, A: ${oldMatch.away_win_pct}%`;
           const newVal = `H: ${hPct}%, D: ${dPct}%, A: ${aPct}%`;
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} win probabilities (admin)`, oldVal, newVal);
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} Winner`, oldVal, newVal);
         }
-        if (oldMatch.over_under_line !== ouLine) {
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} over/under line (admin)`, oldMatch.over_under_line, ouLine);
+
+        // Log O/U Goals (combined line and odds)
+        if (oldMatch.over_under_line !== ouLine || oldMatch.over_odds !== oOdds || oldMatch.under_odds !== uOdds) {
+          const oldVal = `Line: ${oldMatch.over_under_line}, Over: ${oldMatch.over_odds}, Under: ${oldMatch.under_odds}`;
+          const newVal = `Line: ${ouLine}, Over: ${oOdds}, Under: ${uOdds}`;
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} O/U Goals`, oldVal, newVal);
         }
-        if (oldMatch.over_odds !== oOdds) {
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} over odds (admin)`, oldMatch.over_odds, oOdds);
-        }
-        if (oldMatch.under_odds !== uOdds) {
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} under odds (admin)`, oldMatch.under_odds, uOdds);
-        }
+
+        // Log O/U Score First (Cards O/U line and odds combined)
+        const oldCardsOverOdds = oldMatch.cards_over_odds !== undefined ? oldMatch.cards_over_odds : 1.9;
+        const oldCardsUnderOdds = oldMatch.cards_under_odds !== undefined ? oldMatch.cards_under_odds : 1.9;
         if (oldMatch.cards_line !== cLine) {
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} cards line (admin)`, oldMatch.cards_line, cLine);
+          const oldVal = `Line: ${oldMatch.cards_line}, Over: ${oldCardsOverOdds}, Under: ${oldCardsUnderOdds}`;
+          const newVal = `Line: ${cLine}, Over: 1.9, Under: 1.9`;
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} O/U Score First`, oldVal, newVal);
         }
 
         // Log Score/Cards changes
         if (oldMatch.home_score !== hScore || oldMatch.away_score !== aScore) {
-          await logChange(env.db, 'score', matchId, null, `${matchLabel} score (admin)`, `${oldMatch.home_score}-${oldMatch.away_score}`, `${hScore}-${aScore}`);
+          await logChange(env.db, 'score', matchId, null, `${matchLabel} score`, `${oldMatch.home_score}-${oldMatch.away_score}`, `${hScore}-${aScore}`);
         }
         if (oldMatch.home_ht_score !== hHtScore || oldMatch.away_ht_score !== aHtScore) {
           const oldHt = (oldMatch.home_ht_score !== null && oldMatch.away_ht_score !== null) ? `${oldMatch.home_ht_score}-${oldMatch.away_ht_score}` : 'null';
           const newHt = (hHtScore !== null && aHtScore !== null) ? `${hHtScore}-${aHtScore}` : 'null';
           if (oldHt !== newHt) {
-            await logChange(env.db, 'score', matchId, null, `${matchLabel} halftime score (admin)`, oldHt, newHt);
+            await logChange(env.db, 'score', matchId, null, `${matchLabel} halftime score`, oldHt, newHt);
           }
         }
         if (oldMatch.actual_cards !== actCards) {
-          await logChange(env.db, 'cards', matchId, null, `${matchLabel} actual cards (admin)`, oldMatch.actual_cards, actCards);
+          await logChange(env.db, 'cards', matchId, null, `${matchLabel} actual cards`, oldMatch.actual_cards, actCards);
         }
       }
 

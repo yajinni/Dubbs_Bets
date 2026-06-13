@@ -426,7 +426,12 @@ async function syncFromTheOddsAPI(db, apiKey) {
   }
   
   
-  const { results: dbMatches } = await db.prepare('SELECT * FROM matches').all();
+  const { results: dbMatches } = await db.prepare(`
+    SELECT m.*, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+    FROM matches m
+    LEFT JOIN teams t1 ON m.home_team_id = t1.id
+    LEFT JOIN teams t2 ON m.away_team_id = t2.id
+  `).all();
   let matchesUpdated = 0;
   let oddsUpdated = 0;
   
@@ -485,20 +490,22 @@ async function syncFromTheOddsAPI(db, apiKey) {
         }
       }
       
-      const matchLabel = `${dbMatch.home_team_name} vs ${dbMatch.away_team_name}`;
+      const homeCode = dbMatch.home_code || dbMatch.home_team_name.substring(0, 3).toUpperCase();
+      const awayCode = dbMatch.away_code || dbMatch.away_team_name.substring(0, 3).toUpperCase();
+      const matchLabel = `${homeCode} vs ${awayCode}`;
+
+      // Log Winner probabilities change
       if (dbMatch.home_win_pct !== homePct || dbMatch.away_win_pct !== awayPct || dbMatch.draw_pct !== drawPct) {
         const oldVal = `H: ${dbMatch.home_win_pct}%, D: ${dbMatch.draw_pct}%, A: ${dbMatch.away_win_pct}%`;
         const newVal = `H: ${homePct}%, D: ${drawPct}%, A: ${awayPct}%`;
-        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} win probabilities (sync)`, oldVal, newVal);
+        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} Winner`, oldVal, newVal);
       }
-      if (dbMatch.over_under_line !== ouLine) {
-        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} over/under line (sync)`, dbMatch.over_under_line, ouLine);
-      }
-      if (dbMatch.over_odds !== overOdds) {
-        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} over odds (sync)`, dbMatch.over_odds, overOdds);
-      }
-      if (dbMatch.under_odds !== underOdds) {
-        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} under odds (sync)`, dbMatch.under_odds, underOdds);
+
+      // Log Goals O/U changes (combined line and odds)
+      if (dbMatch.over_under_line !== ouLine || dbMatch.over_odds !== overOdds || dbMatch.under_odds !== underOdds) {
+        const oldVal = `Line: ${dbMatch.over_under_line}, Over: ${dbMatch.over_odds}, Under: ${dbMatch.under_odds}`;
+        const newVal = `Line: ${ouLine}, Over: ${overOdds}, Under: ${underOdds}`;
+        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} O/U Goals`, oldVal, newVal);
       }
 
       // Update D1 database with the latest odds and schedule
