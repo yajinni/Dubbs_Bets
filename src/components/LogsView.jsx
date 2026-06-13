@@ -111,18 +111,21 @@ export default function LogsView() {
             />
           </div>
 
-          {/* Category Filter Pills */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {['all', 'prediction', 'odds', 'match_time', 'score', 'cards'].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setFilterCategory(cat)}
-                className={`choice-btn ${filterCategory === cat ? 'active' : ''}`}
-                style={{ width: 'auto', padding: '6px 12px', textTransform: 'capitalize', fontSize: '13px' }}
-              >
-                {cat.replace('_', ' ')}
-              </button>
-            ))}
+          {/* Category Filter Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Filter By:</span>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="admin-select"
+              style={{ width: '160px', textTransform: 'capitalize', cursor: 'pointer' }}
+            >
+              {['all', 'prediction', 'odds', 'match_time', 'score', 'cards'].map((cat) => (
+                <option key={cat} value={cat} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                  {cat.replace('_', ' ')}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
