@@ -864,7 +864,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
       try {
         // Schedule lock odds job if in the future
         if (lockEpoch * 1000 > currentTime) {
-          const lockRes = await fetch(`${qstashEndpoint}/v1/publish/${lockUrl}`, {
+          const lockRes = await fetch(`${qstashEndpoint}/v2/publish/${lockUrl}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
@@ -882,7 +882,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
         
         // Schedule score match job if in the future
         if (scoreEpoch * 1000 > currentTime) {
-          const scoreRes = await fetch(`${qstashEndpoint}/v1/publish/${scoreUrl}`, {
+          const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${scoreUrl}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
