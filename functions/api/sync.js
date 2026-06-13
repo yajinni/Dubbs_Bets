@@ -239,32 +239,12 @@ async function syncFromESPN(db) {
         actualCards = null;
       }
       
-      // Log match time changes
+      // Update kickoff time from ESPN sync if it changed
       const dbKickoff = new Date(dbMatch.local_date).getTime();
       const espnKickoff = new Date(event.date).getTime();
       let newLocalDate = dbMatch.local_date;
       if (dbKickoff !== espnKickoff) {
         newLocalDate = new Date(event.date).toISOString();
-        await logChange(db, 'match_time', dbMatch.id, null, `${dbMatch.home_team_name} vs ${dbMatch.away_team_name} match time (ESPN sync)`, dbMatch.local_date, newLocalDate);
-      }
-
-      // Log score changes
-      if (dbMatch.home_score !== homeScore || dbMatch.away_score !== awayScore) {
-        await logChange(db, 'score', dbMatch.id, null, `${dbMatch.home_team_name} vs ${dbMatch.away_team_name} score (ESPN sync)`, `${dbMatch.home_score}-${dbMatch.away_score}`, `${homeScore}-${awayScore}`);
-      }
-
-      // Log Halftime score changes
-      if (dbMatch.home_ht_score !== homeHtScore || dbMatch.away_ht_score !== awayHtScore) {
-        const oldHt = (dbMatch.home_ht_score !== null && dbMatch.away_ht_score !== null) ? `${dbMatch.home_ht_score}-${dbMatch.away_ht_score}` : 'null';
-        const newHt = (homeHtScore !== null && awayHtScore !== null) ? `${homeHtScore}-${awayHtScore}` : 'null';
-        if (oldHt !== newHt) {
-          await logChange(db, 'score', dbMatch.id, null, `${dbMatch.home_team_name} vs ${dbMatch.away_team_name} halftime score (ESPN sync)`, oldHt, newHt);
-        }
-      }
-
-      // Log actual cards changes
-      if (dbMatch.actual_cards !== actualCards) {
-        await logChange(db, 'cards', dbMatch.id, null, `${dbMatch.home_team_name} vs ${dbMatch.away_team_name} actual cards (ESPN sync)`, dbMatch.actual_cards, actualCards);
       }
 
       // Update D1 database
