@@ -446,6 +446,52 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                 {successMsg && <span style={{ color: 'var(--success)', fontWeight: '700', fontSize: '12px' }}>{successMsg}</span>}
               </div>
               <div className="inline-prediction-grid">
+                {/* Score inputs */}
+                <div className="prediction-col">
+                  <label>Exact Score (4 pts)</label>
+                  <div className="inline-score-inputs">
+                    <input
+                      type="number"
+                      min="0"
+                      max="15"
+                      value={homeScore}
+                      onChange={(e) => setHomeScore(e.target.value)}
+                      placeholder="H"
+                      aria-label="Home score prediction"
+                      disabled={saving}
+                    />
+                    <span>-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="15"
+                      value={awayScore}
+                      onChange={(e) => setAwayScore(e.target.value)}
+                      placeholder="A"
+                      aria-label="Away score prediction"
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+
+                {/* Total Cards exact input */}
+                <div className="prediction-col">
+                  <label>Total Cards (3 pts)</label>
+                  <div className="inline-score-inputs" style={{ justifyContent: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={totalCards}
+                      onChange={(e) => setTotalCards(e.target.value)}
+                      placeholder="Cards"
+                      aria-label="Exact cards prediction"
+                      disabled={saving}
+                      style={{ width: '70px', textAlign: 'center' }}
+                    />
+                  </div>
+                </div>
+
                 {/* Winner Select */}
                 <div className="prediction-col">
                   <label>Winner (3 pts)</label>
@@ -508,29 +554,6 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                   </div>
                 </div>
 
-                {/* Over/Under Select */}
-                <div className="prediction-col">
-                  <label>Score O/U (1 pt)</label>
-                  <div className="inline-choice-group">
-                    <button
-                      type="button"
-                      className={`choice-btn ${overUnder === 'over' ? 'active' : ''}`}
-                      onClick={() => setOverUnder('over')}
-                      disabled={saving}
-                    >
-                      Over {m.over_under_line}
-                    </button>
-                    <button
-                      type="button"
-                      className={`choice-btn ${overUnder === 'under' ? 'active' : ''}`}
-                      onClick={() => setOverUnder('under')}
-                      disabled={saving}
-                    >
-                      Under {m.over_under_line}
-                    </button>
-                  </div>
-                </div>
-
                 {/* Highest Scoring Half Select */}
                 <div className="prediction-col">
                   <label>Highest scoring Half (2 pts)</label>
@@ -562,6 +585,29 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                   </div>
                 </div>
 
+                {/* Over/Under Select */}
+                <div className="prediction-col">
+                  <label>Score O/U (1 pt)</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${overUnder === 'over' ? 'active' : ''}`}
+                      onClick={() => setOverUnder('over')}
+                      disabled={saving}
+                    >
+                      Over {m.over_under_line}
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${overUnder === 'under' ? 'active' : ''}`}
+                      onClick={() => setOverUnder('under')}
+                      disabled={saving}
+                    >
+                      Under {m.over_under_line}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Clean Sheet Select */}
                 <div className="prediction-col">
                   <label>Clean Sheet (1 pt)</label>
@@ -582,53 +628,6 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
                     >
                       No
                     </button>
-                  </div>
-                </div>
-
-
-                {/* Total Cards exact input */}
-                <div className="prediction-col">
-                  <label>Total Cards (3 pts)</label>
-                  <div className="inline-score-inputs" style={{ justifyContent: 'center' }}>
-                    <input
-                      type="number"
-                      min="0"
-                      max="20"
-                      value={totalCards}
-                      onChange={(e) => setTotalCards(e.target.value)}
-                      placeholder="Cards"
-                      aria-label="Exact cards prediction"
-                      disabled={saving}
-                      style={{ width: '70px', textAlign: 'center' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Score inputs */}
-                <div className="prediction-col">
-                  <label>Exact Score (4 pts)</label>
-                  <div className="inline-score-inputs">
-                    <input
-                      type="number"
-                      min="0"
-                      max="15"
-                      value={homeScore}
-                      onChange={(e) => setHomeScore(e.target.value)}
-                      placeholder="H"
-                      aria-label="Home score prediction"
-                      disabled={saving}
-                    />
-                    <span>-</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="15"
-                      value={awayScore}
-                      onChange={(e) => setAwayScore(e.target.value)}
-                      placeholder="A"
-                      aria-label="Away score prediction"
-                      disabled={saving}
-                    />
                   </div>
                 </div>
 
