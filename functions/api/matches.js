@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve and update matches (GET, POST)
-import { checkAndInitDb } from './db_helper.js';
+import { checkAndInitDb, logChange } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -92,6 +92,49 @@ export async function onRequest(context) {
       const cLine = cardsLine !== undefined ? parseFloat(cardsLine) : 3.5;
       const actCards = (actualCards !== undefined && actualCards !== '') ? parseInt(actualCards) : null;
       let actFirstScorer = actualFirstScorer || null;
+
+      const oldMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
+      if (oldMatch) {
+        const matchLabel = `${oldMatch.home_team_name} vs ${oldMatch.away_team_name}`;
+        
+        // Log Odds changes
+        if (oldMatch.home_win_pct !== hPct) {
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} home win pct (admin)`, oldMatch.home_win_pct, hPct);
+        }
+        if (oldMatch.away_win_pct !== aPct) {
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} away win pct (admin)`, oldMatch.away_win_pct, aPct);
+        }
+        if (oldMatch.draw_pct !== dPct) {
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} draw pct (admin)`, oldMatch.draw_pct, dPct);
+        }
+        if (oldMatch.over_under_line !== ouLine) {
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} over/under line (admin)`, oldMatch.over_under_line, ouLine);
+        }
+        if (oldMatch.over_odds !== oOdds) {
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} over odds (admin)`, oldMatch.over_odds, oOdds);
+        }
+        if (oldMatch.under_odds !== uOdds) {
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} under odds (admin)`, oldMatch.under_odds, uOdds);
+        }
+        if (oldMatch.cards_line !== cLine) {
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} cards line (admin)`, oldMatch.cards_line, cLine);
+        }
+
+        // Log Score/Cards changes
+        if (oldMatch.home_score !== hScore || oldMatch.away_score !== aScore) {
+          await logChange(env.db, 'score', matchId, null, `${matchLabel} score (admin)`, `${oldMatch.home_score}-${oldMatch.away_score}`, `${hScore}-${aScore}`);
+        }
+        if (oldMatch.home_ht_score !== hHtScore || oldMatch.away_ht_score !== aHtScore) {
+          const oldHt = (oldMatch.home_ht_score !== null && oldMatch.away_ht_score !== null) ? `${oldMatch.home_ht_score}-${oldMatch.away_ht_score}` : 'null';
+          const newHt = (hHtScore !== null && aHtScore !== null) ? `${hHtScore}-${aHtScore}` : 'null';
+          if (oldHt !== newHt) {
+            await logChange(env.db, 'score', matchId, null, `${matchLabel} halftime score (admin)`, oldHt, newHt);
+          }
+        }
+        if (oldMatch.actual_cards !== actCards) {
+          await logChange(env.db, 'cards', matchId, null, `${matchLabel} actual cards (admin)`, oldMatch.actual_cards, actCards);
+        }
+      }
 
       const updateQuery = `
         UPDATE matches 

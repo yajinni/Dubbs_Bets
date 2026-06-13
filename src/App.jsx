@@ -5,6 +5,7 @@ import MatchesList from './components/MatchesList';
 import AdminPanel from './components/AdminPanel';
 import MatchView from './components/MatchView';
 import StatsView from './components/StatsView';
+import LogsView from './components/LogsView';
 import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp } from 'lucide-react';
 import { shortenTeamName } from './utils/teamNames';
 
@@ -374,6 +375,10 @@ export default function App() {
               allPredictions={allPredictions}
               leaderboard={leaderboard}
             />
+          )}
+
+          {activeTab === 'logs' && (
+            <LogsView />
           )}
 
           {activeTab === 'admin' && (

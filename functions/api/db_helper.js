@@ -24,6 +24,22 @@ export async function checkAndInitDb(db) {
     // ESPN event ID for live feed
     try { await db.prepare("ALTER TABLE matches ADD COLUMN espn_event_id TEXT DEFAULT NULL").run(); } catch(e){}
 
+    // Logs table for changes
+    try {
+      await db.prepare(`
+        CREATE TABLE IF NOT EXISTS logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+          category TEXT NOT NULL,
+          match_id INTEGER,
+          participant_id INTEGER,
+          description TEXT NOT NULL,
+          old_value TEXT,
+          new_value TEXT
+        )
+      `).run();
+    } catch(e){}
+
 
     // 1. Check if matches table exists
     const checkTable = await db.prepare(
@@ -65,5 +81,25 @@ export async function checkAndInitDb(db) {
   } catch (error) {
     console.error('Error during D1 database self-initialization:', error.message);
     throw error;
+  }
+}
+
+export async function logChange(db, category, matchId, participantId, description, oldValue, newValue) {
+  try {
+    const isoString = new Date().toISOString();
+    await db.prepare(`
+      INSERT INTO logs (timestamp, category, match_id, participant_id, description, old_value, new_value)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      isoString,
+      category,
+      matchId || null,
+      participantId || null,
+      description,
+      oldValue !== undefined && oldValue !== null ? String(oldValue) : null,
+      newValue !== undefined && newValue !== null ? String(newValue) : null
+    ).run();
+  } catch (err) {
+    console.error('Failed to write log:', err);
   }
 }

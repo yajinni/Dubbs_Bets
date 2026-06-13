@@ -67,3 +67,17 @@ CREATE TABLE IF NOT EXISTS settings (
 -- Initialize settings
 INSERT OR IGNORE INTO settings (key, value) VALUES ('last_sync', '2026-06-10T00:00:00Z');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_password', 'admin123');
+
+-- 6. Logs Table
+CREATE TABLE IF NOT EXISTS logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+  category TEXT NOT NULL, -- 'odds', 'match_time', 'prediction'
+  match_id INTEGER,
+  participant_id INTEGER,
+  description TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE SET NULL,
+  FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE SET NULL
+);

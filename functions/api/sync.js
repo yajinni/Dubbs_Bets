@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to sync matches, scores, and odds from API-Football
-import { checkAndInitDb } from './db_helper.js';
+import { checkAndInitDb, logChange } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -239,6 +239,34 @@ async function syncFromESPN(db) {
         actualCards = null;
       }
       
+      // Log match time changes
+      const dbKickoff = new Date(dbMatch.local_date).getTime();
+      const espnKickoff = new Date(event.date).getTime();
+      let newLocalDate = dbMatch.local_date;
+      if (dbKickoff !== espnKickoff) {
+        newLocalDate = new Date(event.date).toISOString();
+        await logChange(db, 'match_time', dbMatch.id, null, `${dbMatch.home_team_name} vs ${dbMatch.away_team_name} match time (ESPN sync)`, dbMatch.local_date, newLocalDate);
+      }
+
+      // Log score changes
+      if (dbMatch.home_score !== homeScore || dbMatch.away_score !== awayScore) {
+        await logChange(db, 'score', dbMatch.id, null, `${dbMatch.home_team_name} vs ${dbMatch.away_team_name} score (ESPN sync)`, `${dbMatch.home_score}-${dbMatch.away_score}`, `${homeScore}-${awayScore}`);
+      }
+
+      // Log Halftime score changes
+      if (dbMatch.home_ht_score !== homeHtScore || dbMatch.away_ht_score !== awayHtScore) {
+        const oldHt = (dbMatch.home_ht_score !== null && dbMatch.away_ht_score !== null) ? `${dbMatch.home_ht_score}-${dbMatch.away_ht_score}` : 'null';
+        const newHt = (homeHtScore !== null && awayHtScore !== null) ? `${homeHtScore}-${awayHtScore}` : 'null';
+        if (oldHt !== newHt) {
+          await logChange(db, 'score', dbMatch.id, null, `${dbMatch.home_team_name} vs ${dbMatch.away_team_name} halftime score (ESPN sync)`, oldHt, newHt);
+        }
+      }
+
+      // Log actual cards changes
+      if (dbMatch.actual_cards !== actualCards) {
+        await logChange(db, 'cards', dbMatch.id, null, `${dbMatch.home_team_name} vs ${dbMatch.away_team_name} actual cards (ESPN sync)`, dbMatch.actual_cards, actualCards);
+      }
+
       // Update D1 database
       await db.prepare(`
         UPDATE matches
@@ -251,7 +279,8 @@ async function syncFromESPN(db) {
           finished = ?,
           actual_cards = ?,
           actual_first_scorer = ?,
-          espn_event_id = ?
+          espn_event_id = ?,
+          local_date = ?
         WHERE id = ?
       `).bind(
         homeScore,
@@ -263,6 +292,7 @@ async function syncFromESPN(db) {
         actualCards,
         actualFirstScorer,
         event.id,
+        newLocalDate,
         dbMatch.id
       ).run();
       
@@ -475,6 +505,26 @@ async function syncFromTheOddsAPI(db, apiKey) {
         }
       }
       
+      const matchLabel = `${dbMatch.home_team_name} vs ${dbMatch.away_team_name}`;
+      if (dbMatch.home_win_pct !== homePct) {
+        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} home win pct (sync)`, dbMatch.home_win_pct, homePct);
+      }
+      if (dbMatch.away_win_pct !== awayPct) {
+        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} away win pct (sync)`, dbMatch.away_win_pct, awayPct);
+      }
+      if (dbMatch.draw_pct !== drawPct) {
+        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} draw pct (sync)`, dbMatch.draw_pct, drawPct);
+      }
+      if (dbMatch.over_under_line !== ouLine) {
+        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} over/under line (sync)`, dbMatch.over_under_line, ouLine);
+      }
+      if (dbMatch.over_odds !== overOdds) {
+        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} over odds (sync)`, dbMatch.over_odds, overOdds);
+      }
+      if (dbMatch.under_odds !== underOdds) {
+        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} under odds (sync)`, dbMatch.under_odds, underOdds);
+      }
+
       // Update D1 database with the latest odds and schedule
       await db.prepare(`
         UPDATE matches
