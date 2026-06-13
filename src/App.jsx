@@ -69,9 +69,7 @@ export default function App() {
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
-      // 1. Trigger automatic background sync check
-      await triggerBackgroundSync();
-      // 2. Fetch data
+      // Fetch data
       await refreshAllData();
       setLoading(false);
     };
