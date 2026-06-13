@@ -144,7 +144,7 @@ export async function onRequest(context) {
         const totalGoals = homeScore + awayScore;
         const ouResult = totalGoals > ouLine ? 'over' : 'under';
         
-        const pWinner = predictedWinner === winnerResult ? 2 : 0;
+        const pWinner = predictedWinner === winnerResult ? 3 : 0;
         const pOu = predictedOverUnder === ouResult ? 1 : 0;
         const pScore = (pHomeScore === homeScore && pAwayScore === awayScore) ? 1 : 0;
 
@@ -159,12 +159,12 @@ export async function onRequest(context) {
 
         let pTotalCardsEarned = 0;
         if (match.actual_cards !== null && pTotalCards !== null) {
-          pTotalCardsEarned = pTotalCards === match.actual_cards ? 2 : 0;
+          pTotalCardsEarned = pTotalCards === match.actual_cards ? 3 : 0;
         }
 
         let pFirstScorerEarned = 0;
         if (match.actual_first_scorer !== null && pFirstScorer !== null) {
-          pFirstScorerEarned = pFirstScorer === match.actual_first_scorer ? 1 : 0;
+          pFirstScorerEarned = pFirstScorer === match.actual_first_scorer ? 2 : 0;
         }
 
         // Halftime scorer calculations
@@ -179,7 +179,7 @@ export async function onRequest(context) {
 
         let pHalf = 0;
         if (pHalfPick !== null) {
-          pHalf = pHalfPick === winnerHalf ? 1 : 0;
+          pHalf = pHalfPick === winnerHalf ? 2 : 0;
         }
 
         // Clean sheet calculations
@@ -189,7 +189,7 @@ export async function onRequest(context) {
           pCleanSheet = pCleanPick === cleanSheetHappened ? 1 : 0;
         }
 
-        const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3) + pHalf + pCleanSheet;
+        const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 4) + pHalf + pCleanSheet;
         
         await env.db.prepare(`
           UPDATE predictions 

@@ -43,7 +43,7 @@ export async function onRequest(context) {
       const { results: predictions } = await env.db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(m.id).all();
 
       for (const pred of predictions) {
-        const pWinner = pred.predicted_winner === winner ? 2 : 0;
+        const pWinner = pred.predicted_winner === winner ? 3 : 0;
         const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
         const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
 
@@ -57,17 +57,17 @@ export async function onRequest(context) {
 
         let pTotalCardsEarned = 0;
         if (actualCards !== null && pred.predicted_total_cards !== null) {
-          pTotalCardsEarned = pred.predicted_total_cards === actualCards ? 2 : 0;
+          pTotalCardsEarned = pred.predicted_total_cards === actualCards ? 3 : 0;
         }
 
         let pFirstScorerEarned = 0;
         if (actualFirstScorer !== null && pred.predicted_first_scorer !== null) {
-          pFirstScorerEarned = pred.predicted_first_scorer === actualFirstScorer ? 1 : 0;
+          pFirstScorerEarned = pred.predicted_first_scorer === actualFirstScorer ? 2 : 0;
         }
 
         let pHalf = 0;
         if (pred.predicted_highest_scoring_half !== null) {
-          pHalf = pred.predicted_highest_scoring_half === winnerHalf ? 1 : 0;
+          pHalf = pred.predicted_highest_scoring_half === winnerHalf ? 2 : 0;
         }
 
         let pCleanSheet = 0;
@@ -75,7 +75,7 @@ export async function onRequest(context) {
           pCleanSheet = pred.predicted_clean_sheet === cleanSheetHappened ? 1 : 0;
         }
 
-        const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 3) + pHalf + pCleanSheet;
+        const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 4) + pHalf + pCleanSheet;
 
         await env.db.prepare(`
           UPDATE predictions 

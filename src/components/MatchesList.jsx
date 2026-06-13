@@ -448,7 +448,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
               <div className="inline-prediction-grid">
                 {/* Winner Select */}
                 <div className="prediction-col">
-                  <label>Winner (2 pts)</label>
+                  <label>Winner (3 pts)</label>
                   <div className="inline-choice-group">
                     <button
                       type="button"
@@ -479,7 +479,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
                 {/* First Team to Score Select */}
                 <div className="prediction-col">
-                  <label>Scored First (1 pt)</label>
+                  <label>Scored First (2 pts)</label>
                   <div className="inline-choice-group">
                     <button
                       type="button"
@@ -533,7 +533,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
                 {/* Highest Scoring Half Select */}
                 <div className="prediction-col">
-                  <label>Highest scoring Half (1 pt)</label>
+                  <label>Highest scoring Half (2 pts)</label>
                   <div className="inline-choice-group">
                     <button
                       type="button"
@@ -588,7 +588,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
                 {/* Total Cards exact input */}
                 <div className="prediction-col">
-                  <label>Total Cards (2 pts)</label>
+                  <label>Total Cards (3 pts)</label>
                   <div className="inline-score-inputs" style={{ justifyContent: 'center' }}>
                     <input
                       type="number"
@@ -606,7 +606,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
 
                 {/* Score inputs */}
                 <div className="prediction-col">
-                  <label>Exact Score (3 pts)</label>
+                  <label>Exact Score (4 pts)</label>
                   <div className="inline-score-inputs">
                     <input
                       type="number"
@@ -1037,11 +1037,11 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             <div className="glass-panel" style={{ borderLeft: '4px solid #a855f7', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '15px', fontWeight: '800' }}>🏆 Match Winner</span>
-                <span style={{ background: 'rgba(168,85,247,0.2)', color: '#c084fc', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>2 pts</span>
+                <span style={{ background: 'rgba(168,85,247,0.2)', color: '#c084fc', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>3 pts</span>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
                 Pick who wins — <strong style={{ color: 'var(--text-primary)' }}>Home</strong>, <strong style={{ color: 'var(--text-primary)' }}>Away</strong>, or <strong style={{ color: 'var(--text-primary)' }}>Draw</strong>.
-                2 points awarded if your pick matches the final result.
+                3 points awarded if your pick matches the final result.
               </p>
             </div>
 
@@ -1072,11 +1072,11 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             <div className="glass-panel" style={{ borderLeft: '4px solid #ec4899', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '15px', fontWeight: '800' }}>🎯 Scored First</span>
-                <span style={{ background: 'rgba(236,72,153,0.2)', color: '#f472b6', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>1 pt</span>
+                <span style={{ background: 'rgba(236,72,153,0.2)', color: '#f472b6', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>2 pts</span>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
                 Pick which team scores first — <strong style={{ color: 'var(--text-primary)' }}>Home</strong>, <strong style={{ color: 'var(--text-primary)' }}>Away</strong>, or <strong style={{ color: 'var(--text-primary)' }}>No Goal</strong> (0-0).
-                1 point if correct.
+                2 points if correct.
               </p>
             </div>
 
@@ -1084,11 +1084,11 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             <div className="glass-panel" style={{ borderLeft: '4px solid #eab308', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '15px', fontWeight: '800' }}>📊 Exact Scoreline</span>
-                <span style={{ background: 'rgba(234,179,8,0.2)', color: '#fde047', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>3 pts</span>
+                <span style={{ background: 'rgba(234,179,8,0.2)', color: '#fde047', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>4 pts</span>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
                 Predict the exact final score (e.g. <strong style={{ color: 'var(--text-primary)' }}>2 – 1</strong>).
-                Worth <strong style={{ color: '#fde047' }}>3 points</strong> — the biggest single reward!
+                Worth <strong style={{ color: '#fde047' }}>4 points</strong> — the biggest single reward!
               </p>
             </div>
 
@@ -1096,11 +1096,11 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             <div className="glass-panel" style={{ borderLeft: '4px solid #06b6d4', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '15px', fontWeight: '800' }}>🟨 Exact Total Cards</span>
-                <span style={{ background: 'rgba(6,182,212,0.2)', color: '#67e8f9', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>2 pts</span>
+                <span style={{ background: 'rgba(6,182,212,0.2)', color: '#67e8f9', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>3 pts</span>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
                 Guess the <strong style={{ color: 'var(--text-primary)' }}>exact number of yellow + red cards</strong> shown in the match.
-                2 points if you nail it exactly.
+                3 points if you nail it exactly.
               </p>
             </div>
 
@@ -1108,11 +1108,11 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             <div className="glass-panel" style={{ borderLeft: '4px solid #c084fc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '15px', fontWeight: '800' }}>⏰ Highest Scoring Half</span>
-                <span style={{ background: 'rgba(192,132,252,0.2)', color: '#c084fc', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>1 pt</span>
+                <span style={{ background: 'rgba(192,132,252,0.2)', color: '#c084fc', fontSize: '12px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>2 pts</span>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
                 Predict which half will have more total goals scored — <strong style={{ color: 'var(--text-primary)' }}>1st Half</strong>, <strong style={{ color: 'var(--text-primary)' }}>2nd Half</strong>, or <strong style={{ color: 'var(--text-primary)' }}>Equal</strong>.
-                1 point if correct.
+                2 points if correct.
               </p>
             </div>
 
@@ -1136,13 +1136,13 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🔢 Maximum Points Per Match</h4>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {[
-                { label: 'Winner', pts: 2, color: '#a855f7' },
+                { label: 'Winner', pts: 3, color: '#a855f7' },
                 { label: 'Goals O/U', pts: 1, color: '#22c55e' },
                 { label: 'Underdog Bonus', pts: 1, color: '#fbbf24' },
-                { label: 'Scored First', pts: 1, color: '#ec4899' },
-                { label: 'Exact Score', pts: 3, color: '#eab308' },
-                { label: 'Exact Cards', pts: 2, color: '#06b6d4' },
-                { label: 'Highest scoring Half', pts: 1, color: '#c084fc' },
+                { label: 'Scored First', pts: 2, color: '#ec4899' },
+                { label: 'Exact Score', pts: 4, color: '#eab308' },
+                { label: 'Exact Cards', pts: 3, color: '#06b6d4' },
+                { label: 'Highest scoring Half', pts: 2, color: '#c084fc' },
                 { label: 'Clean Sheet', pts: 1, color: '#38bdf8' },
               ].map(item => (
                 <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -1152,7 +1152,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
               ))}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(139,92,246,0.15)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)' }}>
                 <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Total Max</span>
-                <span style={{ fontSize: '16px', fontWeight: '900', color: '#c084fc' }}>12 pts</span>
+                <span style={{ fontSize: '16px', fontWeight: '900', color: '#c084fc' }}>18 pts</span>
               </div>
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
