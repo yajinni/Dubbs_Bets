@@ -486,14 +486,10 @@ async function syncFromTheOddsAPI(db, apiKey) {
       }
       
       const matchLabel = `${dbMatch.home_team_name} vs ${dbMatch.away_team_name}`;
-      if (dbMatch.home_win_pct !== homePct) {
-        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} home win pct (sync)`, dbMatch.home_win_pct, homePct);
-      }
-      if (dbMatch.away_win_pct !== awayPct) {
-        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} away win pct (sync)`, dbMatch.away_win_pct, awayPct);
-      }
-      if (dbMatch.draw_pct !== drawPct) {
-        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} draw pct (sync)`, dbMatch.draw_pct, drawPct);
+      if (dbMatch.home_win_pct !== homePct || dbMatch.away_win_pct !== awayPct || dbMatch.draw_pct !== drawPct) {
+        const oldVal = `H: ${dbMatch.home_win_pct}%, D: ${dbMatch.draw_pct}%, A: ${dbMatch.away_win_pct}%`;
+        const newVal = `H: ${homePct}%, D: ${drawPct}%, A: ${awayPct}%`;
+        await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} win probabilities (sync)`, oldVal, newVal);
       }
       if (dbMatch.over_under_line !== ouLine) {
         await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} over/under line (sync)`, dbMatch.over_under_line, ouLine);

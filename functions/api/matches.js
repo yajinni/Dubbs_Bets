@@ -97,15 +97,11 @@ export async function onRequest(context) {
       if (oldMatch) {
         const matchLabel = `${oldMatch.home_team_name} vs ${oldMatch.away_team_name}`;
         
-        // Log Odds changes
-        if (oldMatch.home_win_pct !== hPct) {
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} home win pct (admin)`, oldMatch.home_win_pct, hPct);
-        }
-        if (oldMatch.away_win_pct !== aPct) {
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} away win pct (admin)`, oldMatch.away_win_pct, aPct);
-        }
-        if (oldMatch.draw_pct !== dPct) {
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} draw pct (admin)`, oldMatch.draw_pct, dPct);
+        // Log Odds changes (grouped win probabilities)
+        if (oldMatch.home_win_pct !== hPct || oldMatch.away_win_pct !== aPct || oldMatch.draw_pct !== dPct) {
+          const oldVal = `H: ${oldMatch.home_win_pct}%, D: ${oldMatch.draw_pct}%, A: ${oldMatch.away_win_pct}%`;
+          const newVal = `H: ${hPct}%, D: ${dPct}%, A: ${aPct}%`;
+          await logChange(env.db, 'odds', matchId, null, `${matchLabel} win probabilities (admin)`, oldVal, newVal);
         }
         if (oldMatch.over_under_line !== ouLine) {
           await logChange(env.db, 'odds', matchId, null, `${matchLabel} over/under line (admin)`, oldMatch.over_under_line, ouLine);
