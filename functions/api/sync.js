@@ -547,7 +547,8 @@ async function syncFromTheOddsAPI(db, apiKey) {
           draw_pct = ?,
           over_under_line = ?,
           over_odds = ?,
-          under_odds = ?
+          under_odds = ?,
+          odds_updated_at = ?
         WHERE id = ?
       `).bind(
         homePct,
@@ -556,6 +557,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
         ouLine,
         overOdds,
         underOdds,
+        new Date().toISOString(),
         dbMatch.id
       ).run();
       
@@ -667,7 +669,8 @@ async function handleLockMatchTask(db, matchId, apiKey) {
       over_under_line = ?,
       over_odds = ?,
       under_odds = ?,
-      odds_locked = 1
+      odds_locked = 1,
+      odds_updated_at = ?
     WHERE id = ?
   `).bind(
     homePct,
@@ -676,6 +679,7 @@ async function handleLockMatchTask(db, matchId, apiKey) {
     ouLine,
     overOdds,
     underOdds,
+    new Date().toISOString(),
     matchId
   ).run();
   

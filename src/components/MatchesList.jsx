@@ -388,6 +388,26 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
             })()
             }
           </div>
+
+          {/* Synced/Locked Timestamp Status */}
+          {m.odds_updated_at && (
+            <div style={{ 
+              fontSize: '11px', 
+              color: '#10b981', 
+              marginTop: '12px',
+              paddingTop: '8px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              fontWeight: '500'
+            }}>
+              {m.odds_locked === 1 ? (
+                <span>Locked: {new Date(m.odds_updated_at).toLocaleString()}</span>
+              ) : (
+                <span>Synced: {new Date(m.odds_updated_at).toLocaleString()}</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Actual Match Results Box (Only when match is finished) */}

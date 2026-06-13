@@ -25,6 +25,7 @@ export async function checkAndInitDb(db) {
     try { await db.prepare("ALTER TABLE matches ADD COLUMN espn_event_id TEXT DEFAULT NULL").run(); } catch(e){}
     try { await db.prepare("ALTER TABLE matches ADD COLUMN odds_locked INTEGER DEFAULT 0").run(); } catch(e){}
     try { await db.prepare("ALTER TABLE matches ADD COLUMN qstash_scheduled INTEGER DEFAULT 0").run(); } catch(e){}
+    try { await db.prepare("ALTER TABLE matches ADD COLUMN odds_updated_at TEXT DEFAULT NULL").run(); } catch(e){}
 
     // Logs table for changes
     try {

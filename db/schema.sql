@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS matches (
   over_odds REAL DEFAULT 1.9,
   under_odds REAL DEFAULT 1.9,
   odds_locked INTEGER DEFAULT 0,
-  qstash_scheduled INTEGER DEFAULT 0
+  qstash_scheduled INTEGER DEFAULT 0,
+  odds_updated_at TEXT DEFAULT NULL
 );
 
 -- 3. Participants Table
