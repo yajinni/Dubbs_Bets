@@ -34,6 +34,23 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid sync secret' }), { status: 401, headers });
     }
 
+    // Handle QStash task webhooks
+    const lockMatchId = url.searchParams.get('lockMatchId');
+    if (lockMatchId) {
+      const apiKeyOdds = env.THE_ODDS_API_KEY;
+      if (!apiKeyOdds) {
+        return new Response(JSON.stringify({ error: 'THE_ODDS_API_KEY is missing' }), { status: 400, headers });
+      }
+      await handleLockMatchTask(env.db, parseInt(lockMatchId), apiKeyOdds);
+      return new Response(JSON.stringify({ success: true, message: `Match ${lockMatchId} odds locked.` }), { status: 200, headers });
+    }
+
+    const scoreMatchId = url.searchParams.get('scoreMatchId');
+    if (scoreMatchId) {
+      await handleScoreMatchTask(env.db, parseInt(scoreMatchId));
+      return new Response(JSON.stringify({ success: true, message: `Match ${scoreMatchId} scores synced and predictions scored.` }), { status: 200, headers });
+    }
+
     // Diagnostic Helpers
     const apiKeyFootball = env.API_FOOTBALL_KEY;
     const checkBets = url.searchParams.get('checkBets') === 'true';
@@ -105,6 +122,16 @@ export async function onRequest(context) {
         syncResults.source += ' + the-odds-api';
       } catch (err) {
         console.error('The Odds API sync failed:', err.message);
+      }
+    }
+
+    // 2.5 Schedule QStash jobs for future unscheduled matches if QStash token is configured
+    if (env.QSTASH_TOKEN) {
+      const pagesUrl = env.PAGES_URL || "https://dubbs-bets.pages.dev";
+      try {
+        await checkAndScheduleQStashJobs(env.db, env.QSTASH_TOKEN, pagesUrl, env.SYNC_SECRET);
+      } catch (err) {
+        console.error('Failed to schedule QStash jobs:', err.message);
       }
     }
 
@@ -443,6 +470,9 @@ async function syncFromTheOddsAPI(db, apiKey) {
     );
     
     if (dbMatch) {
+      if (dbMatch.odds_locked === 1) {
+        continue;
+      }
       let homePct = dbMatch.home_win_pct;
       let awayPct = dbMatch.away_win_pct;
       let drawPct = dbMatch.draw_pct;
@@ -536,4 +566,316 @@ async function syncFromTheOddsAPI(db, apiKey) {
 
   
   return { source: 'the-odds-api', matchesUpdated, oddsUpdated };
+}
+
+// --------------------------------------------------------
+// QStash Webhook and Scheduling Helpers
+// --------------------------------------------------------
+
+async function handleLockMatchTask(db, matchId, apiKey) {
+  console.log(`[QStash Webhook] Locking odds for match ${matchId}...`);
+  const match = await db.prepare("SELECT * FROM matches WHERE id = ?").bind(matchId).first();
+  if (!match) {
+    throw new Error(`Match ${matchId} not found in database.`);
+  }
+  
+  if (match.odds_locked === 1) {
+    console.log(`Match ${matchId} is already locked.`);
+    return;
+  }
+  
+  // Fetch odds
+  const sportKey = 'soccer_fifa_world_cup';
+  const oddsRes = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${apiKey}&regions=us&markets=h2h,totals&oddsFormat=decimal`);
+  const oddsData = await oddsRes.json();
+  
+  if (oddsRes.status !== 200) {
+    throw new Error(`The Odds API odds error: ${JSON.stringify(oddsData)}`);
+  }
+  
+  const apiMatch = oddsData.find(m => 
+    m.home_team.toLowerCase() === match.home_team_name.toLowerCase() && 
+    m.away_team.toLowerCase() === match.away_team_name.toLowerCase()
+  );
+  
+  let homePct = match.home_win_pct;
+  let awayPct = match.away_win_pct;
+  let drawPct = match.draw_pct;
+  let ouLine = match.over_under_line;
+  let overOdds = match.over_odds;
+  let underOdds = match.under_odds;
+  
+  if (apiMatch && apiMatch.bookmakers && apiMatch.bookmakers.length > 0) {
+    const bookmaker = apiMatch.bookmakers.find(b => {
+      const markets = b.markets || [];
+      return markets.some(mk => mk.key === 'h2h') && markets.some(mk => mk.key === 'totals');
+    }) || apiMatch.bookmakers[0];
+    
+    if (bookmaker) {
+      const h2h = bookmaker.markets.find(mk => mk.key === 'h2h');
+      if (h2h) {
+        const homeOutcome = h2h.outcomes.find(o => o.name === apiMatch.home_team);
+        const awayOutcome = h2h.outcomes.find(o => o.name === apiMatch.away_team);
+        const drawOutcome = h2h.outcomes.find(o => o.name === 'Draw');
+        
+        if (homeOutcome && awayOutcome && drawOutcome) {
+          const pHome = 1.0 / homeOutcome.price;
+          const pAway = 1.0 / awayOutcome.price;
+          const pDraw = 1.0 / drawOutcome.price;
+          const sum = pHome + pAway + pDraw;
+          homePct = Math.round((pHome / sum) * 1000) / 10;
+          awayPct = Math.round((pAway / sum) * 1000) / 10;
+          drawPct = Math.round((pDraw / sum) * 1000) / 10;
+        }
+      }
+      
+      const totals = bookmaker.markets.find(mk => mk.key === 'totals');
+      if (totals) {
+        const overOutcome = totals.outcomes.find(o => o.name === 'Over');
+        const underOutcome = totals.outcomes.find(o => o.name === 'Under');
+        if (overOutcome) {
+          ouLine = overOutcome.point;
+          overOdds = overOutcome.price;
+        }
+        if (underOutcome) {
+          underOdds = underOutcome.price;
+        }
+      }
+    }
+  }
+  
+  // Log changes if any
+  const matchLabel = `${match.home_team_name} vs ${match.away_team_name}`;
+  if (match.home_win_pct !== homePct || match.away_win_pct !== awayPct || match.draw_pct !== drawPct) {
+    const oldVal = `H: ${match.home_win_pct}%, D: ${match.draw_pct}%, A: ${match.away_win_pct}%`;
+    const newVal = `H: ${homePct}%, D: ${drawPct}%, A: ${awayPct}%`;
+    await logChange(db, 'odds', match.id, null, `${matchLabel} Win Probabilities (LOCK)`, oldVal, newVal);
+  }
+  if (match.over_under_line !== ouLine || match.over_odds !== overOdds || match.under_odds !== underOdds) {
+    const oldVal = `Line: ${match.over_under_line}, ${formatOuPct(match.over_odds, match.under_odds)}`;
+    const newVal = `Line: ${ouLine}, ${formatOuPct(overOdds, underOdds)}`;
+    await logChange(db, 'odds', match.id, null, `${matchLabel} O/U Goals (LOCK)`, oldVal, newVal);
+  }
+
+  // Update D1 database and set odds_locked = 1
+  await db.prepare(`
+    UPDATE matches
+    SET
+      home_win_pct = ?,
+      away_win_pct = ?,
+      draw_pct = ?,
+      over_under_line = ?,
+      over_odds = ?,
+      under_odds = ?,
+      odds_locked = 1
+    WHERE id = ?
+  `).bind(
+    homePct,
+    awayPct,
+    drawPct,
+    ouLine,
+    overOdds,
+    underOdds,
+    matchId
+  ).run();
+  
+  console.log(`[QStash Webhook] Successfully updated and locked odds for match ${matchId}.`);
+}
+
+async function handleScoreMatchTask(db, matchId) {
+  console.log(`[QStash Webhook] Syncing score and completing predictions for match ${matchId}...`);
+  const match = await db.prepare("SELECT * FROM matches WHERE id = ?").bind(matchId).first();
+  if (!match) {
+    throw new Error(`Match ${matchId} not found in database.`);
+  }
+  
+  // Format localDate as YYYYMMDD
+  const dateObj = new Date(match.local_date);
+  const year = dateObj.getUTCFullYear();
+  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getUTCDate()).padStart(2, '0');
+  const yyyymmdd = `${year}${month}${day}`;
+  
+  console.log(`[QStash Webhook] Fetching ESPN scoreboard for date: ${yyyymmdd}`);
+  const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${yyyymmdd}`);
+  const data = await res.json();
+  const events = data.events || [];
+  
+  let matchFound = false;
+  for (const event of events) {
+    const comp = event.competitions[0];
+    if (!comp) continue;
+    
+    const homeCompetitor = comp.competitors.find(c => c.homeAway === 'home');
+    const awayCompetitor = comp.competitors.find(c => c.homeAway === 'away');
+    if (!homeCompetitor || !awayCompetitor) continue;
+    
+    const homeName = homeCompetitor.team.name;
+    const awayName = awayCompetitor.team.name;
+    
+    const dbHome = normalizeTeamName(match.home_team_name);
+    const dbAway = normalizeTeamName(match.away_team_name);
+    const espnHome = normalizeTeamName(homeName);
+    const espnAway = normalizeTeamName(awayName);
+    
+    if (dbHome === espnHome && dbAway === espnAway) {
+      matchFound = true;
+      const homeScore = parseInt(homeCompetitor.score) || 0;
+      const awayScore = parseInt(awayCompetitor.score) || 0;
+      
+      const state = comp.status?.type?.state;
+      const completed = comp.status?.type?.completed;
+      
+      let status = 'scheduled';
+      if (state === 'in') status = 'live';
+      else if (state === 'post') status = 'finished';
+      
+      const finished = completed ? 1 : 0;
+      
+      let homeHtScore = 0;
+      let awayHtScore = 0;
+      let actualFirstScorer = 'none';
+      let firstGoalTime = Infinity;
+      let actualCards = 0;
+      
+      const details = comp.details || [];
+      for (const detail of details) {
+        if (detail.yellowCard || detail.redCard) {
+          actualCards++;
+        }
+        
+        const isGoal = detail.scoringPlay || (detail.type && detail.type.text.toLowerCase().includes('goal'));
+        if (isGoal) {
+          const isHome = detail.team?.id === homeCompetitor.team?.id;
+          const clockVal = detail.clock?.value || 0;
+          if (clockVal <= 2700) {
+            if (isHome) homeHtScore++;
+            else awayHtScore++;
+          }
+          if (clockVal < firstGoalTime) {
+            firstGoalTime = clockVal;
+            actualFirstScorer = isHome ? 'home' : 'away';
+          }
+        }
+      }
+      
+      if (!finished && actualFirstScorer === 'none') {
+        actualFirstScorer = null;
+      }
+      
+      if (status === 'scheduled') {
+        homeHtScore = null;
+        awayHtScore = null;
+        actualFirstScorer = null;
+        actualCards = null;
+      }
+      
+      // Update DB
+      await db.prepare(`
+        UPDATE matches
+        SET
+          home_score = ?,
+          away_score = ?,
+          home_ht_score = ?,
+          away_ht_score = ?,
+          status = ?,
+          finished = ?,
+          actual_cards = ?,
+          actual_first_scorer = ?,
+          espn_event_id = ?
+        WHERE id = ?
+      `).bind(
+        homeScore,
+        awayScore,
+        homeHtScore,
+        awayHtScore,
+        status,
+        finished,
+        actualCards,
+        actualFirstScorer,
+        event.id,
+        matchId
+      ).run();
+      
+      if (finished === 1) {
+        await recalculateMatchPredictionsInSync(
+          db, 
+          matchId, 
+          homeScore, 
+          awayScore, 
+          match.over_under_line,
+          match.cards_line || 3.5,
+          actualCards,
+          actualFirstScorer,
+          match.home_win_pct,
+          match.away_win_pct,
+          match.draw_pct,
+          homeHtScore,
+          awayHtScore
+        );
+      }
+      break;
+    }
+  }
+  
+  if (!matchFound) {
+    console.log(`[QStash Webhook] Match ${matchId} not found in ESPN scoreboard events.`);
+  }
+}
+
+async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret) {
+  const currentTime = Date.now();
+  const { results: unscheduledMatches } = await db.prepare("SELECT * FROM matches WHERE qstash_scheduled = 0 AND finished = 0").all();
+  
+  for (const m of unscheduledMatches) {
+    const matchTime = new Date(m.local_date).getTime();
+    
+    if (matchTime > currentTime) {
+      console.log(`[QStash Scheduler] Scheduling QStash jobs for match ${m.id} (${m.home_team_name} vs ${m.away_team_name})...`);
+      
+      // 1. Lock odds job (kickoff - 2 hours)
+      const lockEpoch = Math.floor((matchTime - 2 * 60 * 60 * 1000) / 1000);
+      const lockUrl = `${pagesUrl}/api/sync?lockMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`;
+      
+      // 2. Score match job (kickoff + 105 minutes)
+      const scoreEpoch = Math.floor((matchTime + 105 * 60 * 1000) / 1000);
+      const scoreUrl = `${pagesUrl}/api/sync?scoreMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`;
+      
+      try {
+        // Schedule lock odds job if in the future
+        if (lockEpoch * 1000 > currentTime) {
+          const lockRes = await fetch(`https://qstash.upstash.io/v1/publish/${lockUrl}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${qstashToken}`,
+              'Upstash-Not-Before': String(lockEpoch)
+            }
+          });
+          console.log(`[QStash Scheduler] Lock odds scheduled: status ${lockRes.status}`);
+        } else {
+          console.log(`[QStash Scheduler] Lock time is in the past for match ${m.id}, skipping lock schedule.`);
+        }
+        
+        // Schedule score match job if in the future
+        if (scoreEpoch * 1000 > currentTime) {
+          const scoreRes = await fetch(`https://qstash.upstash.io/v1/publish/${scoreUrl}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${qstashToken}`,
+              'Upstash-Not-Before': String(scoreEpoch)
+            }
+          });
+          console.log(`[QStash Scheduler] Score sync scheduled: status ${scoreRes.status}`);
+        }
+        
+        // Mark match as scheduled in database
+        await db.prepare("UPDATE matches SET qstash_scheduled = 1 WHERE id = ?").bind(m.id).run();
+      } catch (err) {
+        console.error(`[QStash Scheduler] Failed to schedule QStash jobs for match ${m.id}:`, err.message);
+      }
+    } else {
+      // Kickoff is already in the past, just mark as scheduled
+      await db.prepare("UPDATE matches SET qstash_scheduled = 1 WHERE id = ?").bind(m.id).run();
+    }
+  }
 }

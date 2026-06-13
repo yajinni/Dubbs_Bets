@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio } from 'lucide-react';
+import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio, ChevronDown, ChevronUp } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 import LiveFeed from './LiveFeed';
 
-function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {} }) {
+function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {}, selectedMatchId }) {
   const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
   const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
   const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
@@ -36,6 +36,14 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const isLive = m.status === 'live';
   // Auto-open feed for live matches
   const [showFeed, setShowFeed] = useState(isLive);
+  const [isCollapsed, setIsCollapsed] = useState(m.finished === 1);
+
+  // Auto-expand if this match is selected from another view (e.g. Dashboard)
+  useEffect(() => {
+    if (selectedMatchId === m.id) {
+      setIsCollapsed(false);
+    }
+  }, [selectedMatchId, m.id]);
 
   const handleScroll = (e, matchId) => {
     const scrollLeft = e.target.scrollLeft;
@@ -297,8 +305,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
         </div>
       </div>
 
-      {/* Analytics Box */}
-      <div className="match-analytics-box">
+      {!isCollapsed && (
+        <>
+          {/* Analytics Box */}
+          <div className="match-analytics-box">
         <div className="analytics-title">
           <TrendingUp size={14} />
           3rd Party Match Analysis
@@ -710,6 +720,38 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           />
         )}
       </div>
+      </>
+      )}
+
+      {m.finished === 1 && (
+        <button 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="btn-secondary"
+          style={{ 
+            alignSelf: 'center', 
+            marginTop: isCollapsed ? '0px' : '10px', 
+            fontSize: '12px', 
+            padding: '6px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            width: '100%',
+            justifyContent: 'center',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '8px'
+          }}
+        >
+          {isCollapsed ? (
+            <>
+              Show Details & Picks <ChevronDown size={14} />
+            </>
+          ) : (
+            <>
+              Hide Details & Picks <ChevronUp size={14} />
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }
@@ -973,6 +1015,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
                 allPredictions={allPredictions}
                 leaderboard={leaderboard}
                 runningPointsMap={runningPointsMap}
+                selectedMatchId={selectedMatchId}
               />
             ))
           )}
