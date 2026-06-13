@@ -184,7 +184,7 @@ export default function App() {
   };
 
   const getMatchesForWeek = (weekNum) => {
-    return matches.filter(m => getWeekNumber(m.local_date) === weekNum);
+    return matches.filter(m => getWeekNumber(m.local_date) === weekNum && m.finished !== 1);
   };
 
   const handleTabChange = (tab) => {

@@ -60,16 +60,33 @@ export async function onRequest(context) {
       return new Response(JSON.stringify(oddsData), { status: 200, headers });
     }
 
-    // 1. Check time since last sync
+    // 1. Check if we should sync
     const lastSyncSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'last_sync'").first();
     const lastSyncTime = lastSyncSetting ? new Date(lastSyncSetting.value).getTime() : 0;
     const currentTime = Date.now();
     const sixHoursInMs = 6 * 60 * 60 * 1000; // 6 hours
 
-    if (!force && (currentTime - lastSyncTime < sixHoursInMs)) {
+    let shouldSync = force || (currentTime - lastSyncTime >= sixHoursInMs);
+    let reason = 'Sync skipped. Updated within the last 6 hours.';
+
+    if (!shouldSync) {
+      const { results: dbMatches } = await env.db.prepare('SELECT local_date, finished FROM matches WHERE finished = 0').all();
+      const activeMatchInWindow = dbMatches.some(m => {
+        const matchTime = new Date(m.local_date).getTime();
+        const elapsedMinutes = (currentTime - matchTime) / (60 * 1000);
+        return elapsedMinutes >= 105 && elapsedMinutes < 300;
+      });
+
+      if (activeMatchInWindow) {
+        shouldSync = true;
+        reason = 'Sync triggered: Active match in the 105-minute post-start window.';
+      }
+    }
+
+    if (!shouldSync) {
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'Sync skipped. Updated within the last 6 hours.',
+        message: reason,
         last_sync: lastSyncSetting ? lastSyncSetting.value : null
       }), { status: 200, headers });
     }
@@ -78,24 +95,8 @@ export async function onRequest(context) {
     const apiKeyOdds = env.THE_ODDS_API_KEY;
     let syncResults = { source: 'espn', matchesUpdated: 0, oddsUpdated: 0 };
 
-    try {
-      syncResults = await syncFromESPN(env.db);
-    } catch (err) {
-      console.error('ESPN sync failed:', err.message);
-      syncResults = { source: 'fallback', matchesUpdated: 0, oddsUpdated: 0, warning: `ESPN sync failed: ${err.message}` };
-    }
-
-    // Always run mock sync as a post-processing step to finish simulated/mock matches in the past
-    try {
-      const mockResults = await runMockSync(env.db);
-      syncResults.matchesUpdated += mockResults.matchesUpdated;
-      syncResults.oddsUpdated += mockResults.oddsUpdated;
-      if (mockResults.matchesUpdated > 0) {
-        syncResults.source += ' + mock_simulation';
-      }
-    } catch (err) {
-      console.error('Mock sync post-processing failed:', err.message);
-    }
+    // Run actual sync. If it fails, let the error propagate.
+    syncResults = await syncFromESPN(env.db);
 
     if (apiKeyOdds && apiKeyOdds !== '') {
       try {
@@ -280,6 +281,22 @@ async function syncFromESPN(db) {
           homeHtScore,
           awayHtScore
         );
+      } else {
+        // Reset prediction points to 0 since match is not finished
+        await db.prepare(`
+          UPDATE predictions
+          SET
+            points_winner = 0,
+            points_ou = 0,
+            points_score = 0,
+            points_cards_ou = 0,
+            points_total_cards = 0,
+            points_first_scorer = 0,
+            points_highest_scoring_half = 0,
+            points_clean_sheet = 0,
+            total_points = 0
+          WHERE match_id = ?
+        `).bind(dbMatch.id).run();
       }
       
       matchesUpdated++;
@@ -289,95 +306,6 @@ async function syncFromESPN(db) {
   return { source: 'espn', matchesUpdated, oddsUpdated: 0 };
 }
 
-// --------------------------------------------------------
-// FALLBACK/MOCK SYNC: Simulates tournament matches & odds
-// --------------------------------------------------------
-async function runMockSync(db) {
-  console.log('Running Fallback/Mock Sync...');
-  const { results: dbMatches } = await db.prepare('SELECT * FROM matches').all();
-  
-  let matchesUpdated = 0;
-  let oddsUpdated = 0;
-  
-  const currentTime = Date.now();
-
-  for (const m of dbMatches) {
-    const matchTime = new Date(m.local_date).getTime();
-    
-    // 1. Check if the match is in the past (date/time has passed)
-    if (currentTime > matchTime && (m.status === 'scheduled' || m.status === 'live')) {
-      // Generate simulated scores weighted by home win percentage
-      // home_win_pct is stored between 0-100
-      let homeScore = 0;
-      let awayScore = 0;
-
-      const rand = Math.random() * 100;
-      if (rand < m.home_win_pct) {
-        // Home team wins
-        homeScore = Math.floor(Math.random() * 3) + 1; // 1-3
-        awayScore = Math.floor(Math.random() * homeScore);
-      } else if (rand < (m.home_win_pct + m.draw_pct)) {
-        // Draw
-        homeScore = Math.floor(Math.random() * 3); // 0-2
-        awayScore = homeScore;
-      } else {
-        // Away team wins
-        awayScore = Math.floor(Math.random() * 3) + 1;
-        homeScore = Math.floor(Math.random() * awayScore);
-      }
-
-      let actualFirstScorer = 'none';
-      if (homeScore > 0 && awayScore > 0) {
-        actualFirstScorer = Math.random() < 0.5 ? 'home' : 'away';
-      } else if (homeScore > 0) {
-        actualFirstScorer = 'home';
-      } else if (awayScore > 0) {
-        actualFirstScorer = 'away';
-      }
-
-      const homeHtScore = Math.floor(Math.random() * (homeScore + 1));
-      const awayHtScore = Math.floor(Math.random() * (awayScore + 1));
-
-      const actualCards = Math.floor(Math.random() * 5) + 1; // 1-5 cards
-      await db.prepare(`
-        UPDATE matches 
-        SET 
-          home_score = ?,
-          away_score = ?,
-          home_ht_score = ?,
-          away_ht_score = ?,
-          status = 'finished',
-          finished = 1,
-          actual_cards = ?,
-          actual_first_scorer = ?
-        WHERE id = ?
-      `).bind(homeScore, awayScore, homeHtScore, awayHtScore, actualCards, actualFirstScorer, m.id).run();
-
-      await recalculateMatchPredictionsInSync(db, m.id, homeScore, awayScore, m.over_under_line, m.cards_line || 3.5, actualCards, actualFirstScorer, m.home_win_pct, m.away_win_pct, m.draw_pct, homeHtScore, awayHtScore);
-      matchesUpdated++;
-    }
-
-    // 2. Adjust odds dynamically for upcoming matches (add subtle micro-variations to simulate money movements)
-    if (currentTime <= matchTime && m.status === 'scheduled') {
-      const variation = (Math.random() - 0.5) * 4; // -2% to +2% variation
-      let homePct = Math.max(5, Math.min(90, Math.round((m.home_win_pct + variation) * 10) / 10));
-      let awayPct = Math.max(5, Math.min(90, Math.round((m.away_win_pct - variation) * 10) / 10));
-      let drawPct = Math.round((100 - homePct - awayPct) * 10) / 10;
-
-      await db.prepare(`
-        UPDATE matches 
-        SET 
-          home_win_pct = ?,
-          away_win_pct = ?,
-          draw_pct = ?
-        WHERE id = ?
-      `).bind(homePct, awayPct, drawPct, m.id).run();
-      oddsUpdated++;
-    }
-  }
-
-  return { source: 'mock', matchesUpdated, oddsUpdated };
-}
 
 // --------------------------------------------------------
 // Prediction Point Distribution
