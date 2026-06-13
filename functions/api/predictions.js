@@ -211,6 +211,65 @@ export async function onRequest(context) {
         .bind(participantId, matchId)
         .first();
 
+      // ── Signal Group Notification (fire-and-forget) ──
+      // Never blocks or fails the save — if Signal is down, we just log and move on
+      if (env.SIGNAL_API_URL && env.SIGNAL_SENDER && env.SIGNAL_GROUP_ID) {
+        try {
+          // Look up participant name and match details
+          const participant = await env.db.prepare('SELECT name FROM participants WHERE id = ?').bind(participantId).first();
+          const matchInfo = await env.db.prepare('SELECT home_team_name, away_team_name, local_date, over_under_line FROM matches WHERE id = ?').bind(matchId).first();
+
+          if (participant && matchInfo) {
+            const pName = participant.name;
+            const home = matchInfo.home_team_name || 'Home';
+            const away = matchInfo.away_team_name || 'Away';
+
+            // Format the winner display
+            const winnerDisplay = predictedWinner === 'home' ? home
+              : predictedWinner === 'away' ? away
+              : 'Draw';
+
+            // Format first scorer display
+            const firstDisplay = pFirstScorer === 'home' ? home
+              : pFirstScorer === 'away' ? away
+              : 'No Goal';
+
+            // Format half display
+            const halfDisplay = pHalfPick === 'first' ? '1st Half'
+              : pHalfPick === 'second' ? '2nd Half'
+              : 'Equal';
+
+            // Format O/U display
+            const ouDisplay = `${(predictedOverUnder || '').charAt(0).toUpperCase()}${(predictedOverUnder || '').slice(1)} ${matchInfo.over_under_line || '2.5'}`;
+
+            const msg = [
+              `🎯 ${pName} placed a pick!`,
+              `🏟️ ${home} vs ${away}`,
+              `━━━━━━━━━━━━━━━━━━`,
+              `Winner: ${winnerDisplay}`,
+              `Score: ${pHomeScore ?? '?'}-${pAwayScore ?? '?'} | O/U: ${ouDisplay}`,
+              `Cards: ${pTotalCards ?? '?'} | First: ${firstDisplay}`,
+              `Half: ${halfDisplay} | Clean Sheet: ${(pCleanPick || '?').toUpperCase()}`,
+            ].join('\n');
+
+            // Fire-and-forget — don't await in the critical path
+            fetch(`${env.SIGNAL_API_URL}/v2/send`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                message: msg,
+                number: env.SIGNAL_SENDER,
+                recipients: [env.SIGNAL_GROUP_ID]
+              })
+            }).catch(err => {
+              console.error('Signal notification failed (non-blocking):', err.message);
+            });
+          }
+        } catch (signalErr) {
+          console.error('Signal notification error (non-blocking):', signalErr.message);
+        }
+      }
+
       return new Response(JSON.stringify({ success: true, prediction: savedPrediction }), { status: 200, headers });
     }
 
