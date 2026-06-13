@@ -148,9 +148,7 @@ export default function LogsView() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
-                  <th style={{ padding: '16px 20px', color: 'var(--text-muted)', fontWeight: '600' }}>Time</th>
-                  <th style={{ padding: '16px 20px', color: 'var(--text-muted)', fontWeight: '600' }}>Category</th>
-                  <th style={{ padding: '16px 20px', color: 'var(--text-muted)', fontWeight: '600' }}>Description</th>
+                  <th style={{ padding: '16px 20px', color: 'var(--text-muted)', fontWeight: '600' }}>Info</th>
                   <th style={{ padding: '16px 20px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center' }}>Change History</th>
                 </tr>
               </thead>
@@ -166,29 +164,34 @@ export default function LogsView() {
                       }}
                       className="log-row-hover"
                     >
-                      <td style={{ padding: '16px 20px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                        {formatLogDate(log.timestamp)}
-                      </td>
                       <td style={{ padding: '16px 20px' }}>
-                        <span style={{ 
-                          display: 'inline-block',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          backgroundColor: badge.bg,
-                          color: badge.text,
-                          border: `1px solid ${badge.border}`
-                        }}>
-                          {log.category.replace('_', ' ')}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Clock size={12} style={{ opacity: 0.6 }} />
+                            {formatLogDate(log.timestamp)}
+                          </span>
+                          <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '14px' }}>
+                            {log.description}
+                          </span>
+                          <div>
+                            <span style={{ 
+                              display: 'inline-block',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              backgroundColor: badge.bg,
+                              color: badge.text,
+                              border: `1px solid ${badge.border}`
+                            }}>
+                              {log.category.replace('_', ' ')}
+                            </span>
+                          </div>
+                        </div>
                       </td>
-                      <td style={{ padding: '16px 20px', fontWeight: '500', color: 'var(--text-primary)' }}>
-                        {log.description}
-                      </td>
-                      <td style={{ padding: '16px 20px' }}>
+                      <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                           <span style={{ 
                             padding: '4px 8px', 
