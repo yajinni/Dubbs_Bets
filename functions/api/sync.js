@@ -139,7 +139,7 @@ export async function onRequest(context) {
     if (env.QSTASH_TOKEN) {
       const pagesUrl = env.PAGES_URL || "https://dubbs-bets.pages.dev";
       try {
-        await checkAndScheduleQStashJobs(env.db, env.QSTASH_TOKEN, pagesUrl, env.SYNC_SECRET);
+        await checkAndScheduleQStashJobs(env.db, env.QSTASH_TOKEN, pagesUrl, env.SYNC_SECRET, env.QSTASH_URL);
       } catch (err) {
         console.error('Failed to schedule QStash jobs:', err.message);
       }
@@ -842,8 +842,9 @@ async function handleScoreMatchTask(db, matchId) {
   }
 }
 
-async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret) {
+async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qstashUrl) {
   const currentTime = Date.now();
+  const qstashEndpoint = qstashUrl || "https://qstash-us-east-1.upstash.io";
   const { results: unscheduledMatches } = await db.prepare("SELECT * FROM matches WHERE qstash_scheduled = 0 AND finished = 0").all();
   
   for (const m of unscheduledMatches) {
@@ -863,7 +864,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret) {
       try {
         // Schedule lock odds job if in the future
         if (lockEpoch * 1000 > currentTime) {
-          const lockRes = await fetch(`https://qstash.upstash.io/v1/publish/${lockUrl}`, {
+          const lockRes = await fetch(`${qstashEndpoint}/v1/publish/${lockUrl}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
@@ -881,7 +882,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret) {
         
         // Schedule score match job if in the future
         if (scoreEpoch * 1000 > currentTime) {
-          const scoreRes = await fetch(`https://qstash.upstash.io/v1/publish/${scoreUrl}`, {
+          const scoreRes = await fetch(`${qstashEndpoint}/v1/publish/${scoreUrl}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
