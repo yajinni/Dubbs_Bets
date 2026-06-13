@@ -122,6 +122,7 @@ export async function onRequest(context) {
         syncResults.source += ' + the-odds-api';
       } catch (err) {
         console.error('The Odds API sync failed:', err.message);
+        syncResults.oddsError = err.message;
       }
     }
 

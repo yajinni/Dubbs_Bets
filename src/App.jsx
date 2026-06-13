@@ -100,7 +100,11 @@ export default function App() {
       if (res.ok && data.success) {
         setLastSync(data.sync_time);
         await refreshAllData();
-        alert('Sync completed successfully!');
+        if (data.results && data.results.oddsError) {
+          alert(`Score sync succeeded, but Odds API failed: ${data.results.oddsError}`);
+        } else {
+          alert('Sync completed successfully!');
+        }
       } else {
         alert(`Sync failed: ${data.error || 'Unknown error'}`);
       }
