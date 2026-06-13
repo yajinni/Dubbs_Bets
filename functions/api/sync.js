@@ -250,7 +250,8 @@ async function syncFromESPN(db) {
           status = ?,
           finished = ?,
           actual_cards = ?,
-          actual_first_scorer = ?
+          actual_first_scorer = ?,
+          espn_event_id = ?
         WHERE id = ?
       `).bind(
         homeScore,
@@ -261,6 +262,7 @@ async function syncFromESPN(db) {
         finished,
         actualCards,
         actualFirstScorer,
+        event.id,
         dbMatch.id
       ).run();
       

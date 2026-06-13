@@ -21,6 +21,9 @@ export async function checkAndInitDb(db) {
     try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_clean_sheet TEXT DEFAULT NULL").run(); } catch(e){}
     try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_highest_scoring_half INTEGER DEFAULT 0").run(); } catch(e){}
     try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_clean_sheet INTEGER DEFAULT 0").run(); } catch(e){}
+    // ESPN event ID for live feed
+    try { await db.prepare("ALTER TABLE matches ADD COLUMN espn_event_id TEXT DEFAULT NULL").run(); } catch(e){}
+
 
     // 1. Check if matches table exists
     const checkTable = await db.prepare(

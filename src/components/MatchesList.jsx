@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle } from 'lucide-react';
+import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
+import LiveFeed from './LiveFeed';
 
 function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {} }) {
   const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
@@ -31,6 +32,10 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
   const homeFirstPct = Math.round(homeFirstProb);
   const noGoalPct = Math.round(noGoalProb);
   const awayFirstPct = 100 - homeFirstPct - noGoalPct;
+
+  const isLive = m.status === 'live';
+  // Auto-open feed for live matches
+  const [showFeed, setShowFeed] = useState(isLive);
 
   const handleScroll = (e, matchId) => {
     const scrollLeft = e.target.scrollLeft;
@@ -241,14 +246,27 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
     <div id={`match-card-${m.id}`} className="glass-panel match-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
       {/* Header: Stage and Date */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
         <span style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--primary-hover)', letterSpacing: '0.05em' }}>
           {getRoundLabel(m)}
         </span>
-        <span style={{ fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
-          <Calendar size={14} />
-          {formatMatchDate(m.local_date)}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Live Feed Toggle */}
+          {m.status !== 'scheduled' || m.espn_event_id ? (
+            <button
+              className={`live-feed-toggle-btn${isLive ? ' live-active' : ''}${showFeed ? ' open' : ''}`}
+              onClick={() => setShowFeed(v => !v)}
+              aria-label="Toggle live feed"
+            >
+              <Radio size={11} />
+              {isLive ? 'Live Feed' : 'Commentary'}
+            </button>
+          ) : null}
+          <span style={{ fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+            <Calendar size={14} />
+            {formatMatchDate(m.local_date)}
+          </span>
+        </div>
       </div>
 
       {/* Match Score & Teams */}
@@ -679,6 +697,16 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
             cleanSheet
           }}
         />
+
+        {/* Live Feed Panel */}
+        {showFeed && (
+          <LiveFeed
+            espnEventId={m.espn_event_id}
+            matchStatus={m.status}
+            homeName={homeName}
+            awayName={awayName}
+          />
+        )}
       </div>
     </div>
   );

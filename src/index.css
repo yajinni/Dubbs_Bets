@@ -1352,3 +1352,253 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateY(0) scale(1);
   }
 }
+
+/* ============================================================
+   LIVE FEED PANEL
+   ============================================================ */
+
+/* Toggle button inside match card */
+.live-feed-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  background: rgba(139, 92, 246, 0.08);
+  color: var(--primary-hover);
+  transition: all 0.2s ease;
+  font-family: var(--font-heading);
+}
+.live-feed-toggle-btn:hover {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: var(--primary-hover);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
+}
+.live-feed-toggle-btn.live-active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: var(--success);
+}
+.live-feed-toggle-btn.open {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: var(--primary);
+}
+
+/* Main panel container */
+.live-feed-panel {
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+  animation: feedSlideIn 0.25s ease-out;
+}
+
+@keyframes feedSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Empty / loading state */
+.live-feed-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Panel header bar */
+.live-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.live-feed-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-heading);
+}
+
+.live-feed-timestamp {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  font-family: var(--font-body);
+}
+
+.live-feed-refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+.live-feed-refresh-btn:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: var(--primary);
+  color: var(--primary-hover);
+}
+.live-feed-refresh-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Scrollable event list */
+.live-feed-list {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+/* Individual event row */
+.feed-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  transition: background 0.15s ease;
+  line-height: 1.45;
+}
+.feed-event:last-child { border-bottom: none; }
+.feed-event:hover { background: rgba(255,255,255,0.03); }
+
+.feed-event-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  min-width: 58px;
+}
+
+.feed-event-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.feed-event-time {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.55);
+  white-space: nowrap;
+  font-family: var(--font-heading);
+}
+
+.feed-event-text {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.65);
+  font-family: var(--font-body);
+  flex: 1;
+}
+
+/* Category colour overrides */
+.feed-event-goal {
+  background: rgba(16, 185, 129, 0.05);
+  border-left: 2px solid rgba(16, 185, 129, 0.5);
+}
+.feed-event-goal .feed-event-text { color: #d1fae5; font-weight: 600; }
+.feed-event-goal .feed-event-time { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+
+.feed-event-red {
+  background: rgba(244, 63, 94, 0.05);
+  border-left: 2px solid rgba(244, 63, 94, 0.4);
+}
+.feed-event-red .feed-event-text { color: #fda4af; }
+.feed-event-red .feed-event-time { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
+
+.feed-event-yellow {
+  background: rgba(245, 158, 11, 0.04);
+  border-left: 2px solid rgba(245, 158, 11, 0.35);
+}
+.feed-event-yellow .feed-event-text { color: #fde68a; }
+.feed-event-yellow .feed-event-time { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+.feed-event-milestone {
+  background: rgba(139, 92, 246, 0.05);
+  border-left: 2px solid rgba(139, 92, 246, 0.4);
+}
+.feed-event-milestone .feed-event-text { color: #c4b5fd; font-weight: 600; font-style: italic; }
+.feed-event-milestone .feed-event-time { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+
+.feed-event-penalty {
+  background: rgba(14, 165, 233, 0.05);
+  border-left: 2px solid rgba(14, 165, 233, 0.4);
+}
+.feed-event-penalty .feed-event-text { color: #bae6fd; font-weight: 600; }
+.feed-event-penalty .feed-event-time { background: rgba(14, 165, 233, 0.15); color: #38bdf8; }
+
+.feed-event-sub .feed-event-text { color: rgba(255,255,255,0.45); font-style: italic; }
+
+.feed-event-var .feed-event-text { color: rgba(255,255,255,0.45); font-style: italic; }
+
+/* Footer bar */
+.live-feed-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+  font-family: var(--font-body);
+  background: rgba(255,255,255,0.02);
+}
+
+/* Pulsing live indicator dot */
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+  animation: livePulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+
+/* Spinning icon for loading/refresh */
+.spin-icon {
+  animation: spinAnim 0.9s linear infinite;
+}
+
+@keyframes spinAnim {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
