@@ -373,16 +373,18 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                   stroke="rgba(255, 255, 255, 0.08)"
                   strokeDasharray="4 4"
                 />
-                <text
-                  x={paddingLeft - 8}
-                  y={getY(tick) + 4}
-                  className="chart-axis-label"
-                  textAnchor="end"
-                  fill="var(--text-muted)"
-                  fontWeight="500"
-                >
-                  {Math.round(tick)}
-                </text>
+                {Math.round(tick) !== 0 && (
+                  <text
+                    x={paddingLeft - 8}
+                    y={getY(tick) + 4}
+                    className="chart-axis-label"
+                    textAnchor="end"
+                    fill="var(--text-muted)"
+                    fontWeight="500"
+                  >
+                    {Math.round(tick)}
+                  </text>
+                )}
               </g>
             ))}
 
