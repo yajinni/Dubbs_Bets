@@ -1757,6 +1757,10 @@ h1, h2, h3, h4, h5, h6 {
   transform: scale(1.05);
 }
 
+.chart-axis-label {
+  font-size: 10pt;
+}
+
 @media (max-width: 640px) {
   .chart-tooltip-mobile {
     position: absolute !important;
@@ -1767,6 +1771,9 @@ h1, h2, h3, h4, h5, h6 {
     width: 80% !important;
     max-width: 260px !important;
     pointer-events: none;
+  }
+  .chart-axis-label {
+    font-size: 20pt !important;
   }
 }
 

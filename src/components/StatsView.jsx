@@ -376,9 +376,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                 <text
                   x={paddingLeft - 8}
                   y={getY(tick) + 4}
+                  className="chart-axis-label"
                   textAnchor="end"
                   fill="var(--text-muted)"
-                  fontSize="10pt"
                   fontWeight="500"
                 >
                   {Math.round(tick)}
@@ -392,9 +392,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                 key={i}
                 x={getX(i)}
                 y={paddingTop + chartHeight + 20}
+                className="chart-axis-label"
                 textAnchor="middle"
                 fill="var(--text-muted)"
-                fontSize="10pt"
                 fontWeight="500"
               >
                 {formatLabelDate(date)}
