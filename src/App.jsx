@@ -226,7 +226,7 @@ export default function App() {
 
     const performSync = async () => {
       try {
-        const syncRes = await fetch('/api/sync');
+        const syncRes = await fetch('/api/sync?skipOdds=true');
         const syncData = await syncRes.json();
         if (syncRes.ok && syncData.success && syncData.sync_time) {
           setLastSync(syncData.sync_time);
