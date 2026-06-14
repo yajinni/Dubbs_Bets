@@ -267,7 +267,7 @@ export default function PlayerPicksList({
   const awayIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.away_win_pct < Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
   const drawIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.draw_pct < Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
 
-  const showsLiveTitle = liveStats !== null;
+  const showsLiveTitle = showLiveResults;
 
   return (
     <div style={{ marginTop: '16px', borderTop: '1px dashed var(--glass-border)', paddingTop: '12px' }}>
