@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RefreshCw, Wifi, WifiOff, Clock, Radio, Zap } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, Clock, Radio, Zap, Users } from 'lucide-react';
 
 // Map ESPN event type IDs / text to a category
 function classifyEvent(type) {
@@ -30,7 +30,7 @@ function eventIcon(category) {
 }
 
 // Compute hypothetical points for a single prediction against a current (live) score
-function calcLivePoints(pred, match, liveHomeScore, liveAwayScore) {
+function calcLivePoints(pred, match, liveHomeScore, liveAwayScore, liveTotalCards, liveFirstScorer, liveHighestHalf, liveCleanSheet) {
   if (!pred) return { total: 0, breakdown: {} };
 
   const homeScore = liveHomeScore;
@@ -39,6 +39,7 @@ function calcLivePoints(pred, match, liveHomeScore, liveAwayScore) {
   let winnerResult = 'draw';
   if (homeScore > awayScore) winnerResult = 'home';
   else if (awayScore > homeScore) winnerResult = 'away';
+  else winnerResult = 'draw';
 
   const ouLine = match.over_under_line || 2.5;
   const totalGoals = homeScore + awayScore;
@@ -67,20 +68,23 @@ function calcLivePoints(pred, match, liveHomeScore, liveAwayScore) {
     else if (winnerResult === 'draw' && match.draw_pct < maxPct) pUnderdog = 1;
   }
 
-  // Clean sheet: 1 pt (live approximation — available if score is known)
-  const cleanSheetHappened = (homeScore === 0 || awayScore === 0) ? 'yes' : 'no';
-  const pCleanSheet = pred.predicted_clean_sheet ? (pred.predicted_clean_sheet === cleanSheetHappened ? 1 : 0) : 0;
+  // Clean sheet: 1 pt
+  const pCleanSheet = pred.predicted_clean_sheet === liveCleanSheet ? 1 : 0;
 
-  // Cards, First Scorer, Half — can't know live, count as 0 potential for now
-  const pTotalCards = 0;
-  const pFirstScorer = 0;
-  const pHalf = 0;
+  // Total Cards: 3 pts
+  const pTotalCards = (pred.predicted_total_cards !== null && pred.predicted_total_cards === liveTotalCards) ? 3 : 0;
+
+  // First Scorer: 2 pts
+  const pFirstScorer = (pred.predicted_first_scorer && liveFirstScorer && pred.predicted_first_scorer === liveFirstScorer) ? 2 : 0;
+
+  // Highest Scoring Half: 2 pts
+  const pHalf = (pred.predicted_highest_scoring_half && liveHighestHalf && pred.predicted_highest_scoring_half === liveHighestHalf) ? 2 : 0;
 
   const total = pWinner + pOu + pScore + pUnderdog + pCleanSheet + pTotalCards + pFirstScorer + pHalf;
 
   return {
     total,
-    breakdown: { pWinner, pOu, pScore, pUnderdog, pCleanSheet },
+    breakdown: { pWinner, pOu, pScore, pUnderdog, pCleanSheet, pTotalCards, pFirstScorer, pHalf },
   };
 }
 
@@ -90,6 +94,12 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
   const [commentary, setCommentary] = useState([]);
   const [stats, setStats] = useState([]);
   const [liveScore, setLiveScore] = useState({ home: null, away: null });
+  const [liveStats, setLiveStats] = useState({
+    totalCards: 0,
+    firstScorer: 'none',
+    highestScoringHalf: 'equal',
+    cleanSheet: 'yes',
+  });
   const [subTab, setSubTab] = useState('commentary'); // 'commentary' | 'stats' | 'points'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -144,7 +154,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
       // Reverse so latest commentary is at the top (newest first)
       items.reverse();
 
-      // Pull live score from competition status
+      // Pull live score and stats from competition status
       try {
         const competitions = data.header?.competitions || [];
         if (competitions.length > 0) {
@@ -152,9 +162,96 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
           const homeTeam = comp.competitors?.find(c => c.homeAway === 'home');
           const awayTeam = comp.competitors?.find(c => c.homeAway === 'away');
           if (homeTeam && awayTeam) {
+            const hScore = parseInt(homeTeam.score) || 0;
+            const aScore = parseInt(awayTeam.score) || 0;
             setLiveScore({
-              home: parseInt(homeTeam.score) || 0,
-              away: parseInt(awayTeam.score) || 0,
+              home: hScore,
+              away: aScore,
+            });
+
+            // Clean Sheet
+            const cleanSheet = (hScore === 0 || aScore === 0) ? 'yes' : 'no';
+
+            // Get team IDs for first scorer verification
+            const homeTeamId = homeTeam.id || homeTeam.team?.id;
+            const awayTeamId = awayTeam.id || awayTeam.team?.id;
+
+            // Total Cards from boxscore
+            let homeYellow = 0, awayYellow = 0, homeRed = 0, awayRed = 0;
+            if (data.boxscore && data.boxscore.teams) {
+              const bHome = data.boxscore.teams.find(t => t.homeAway === 'home');
+              const bAway = data.boxscore.teams.find(t => t.homeAway === 'away');
+              if (bHome && bHome.statistics) {
+                const yStat = bHome.statistics.find(st => st.name === 'yellowCards');
+                const rStat = bHome.statistics.find(st => st.name === 'redCards');
+                if (yStat) homeYellow = parseInt(yStat.displayValue) || 0;
+                if (rStat) homeRed = parseInt(rStat.displayValue) || 0;
+              }
+              if (bAway && bAway.statistics) {
+                const yStat = bAway.statistics.find(st => st.name === 'yellowCards');
+                const rStat = bAway.statistics.find(st => st.name === 'redCards');
+                if (yStat) awayYellow = parseInt(yStat.displayValue) || 0;
+                if (rStat) awayRed = parseInt(rStat.displayValue) || 0;
+              }
+            }
+            const totalCards = homeYellow + awayYellow + homeRed + awayRed;
+
+            // First Scorer & Highest Scoring Half
+            let firstGoalTime = Infinity;
+            let firstScorer = 'none';
+            let firstHalfGoals = 0;
+
+            const currentPeriod = comp.status?.period || 1;
+
+            const rawPlays = data.plays || [];
+            for (const p of rawPlays) {
+              const isGoal = p.scoringPlay || (p.type && p.type.text?.toLowerCase().includes('goal'));
+              if (isGoal) {
+                const pTeamId = p.team?.id;
+                const isHome = pTeamId && homeTeamId && String(pTeamId) === String(homeTeamId);
+                const isAway = pTeamId && awayTeamId && String(pTeamId) === String(awayTeamId);
+
+                const clockVal = p.clock?.value || 0;
+
+                // First Scorer
+                if (clockVal < firstGoalTime && (isHome || isAway)) {
+                  firstGoalTime = clockVal;
+                  firstScorer = isHome ? 'home' : 'away';
+                }
+
+                // Halftime goals
+                const periodNum = p.period?.number || (clockVal <= 2700 ? 1 : 2);
+                if (periodNum === 1) {
+                  firstHalfGoals++;
+                }
+              }
+            }
+
+            // Fallback for First Scorer if plays are missing but goals exist
+            if (firstScorer === 'none') {
+              if (hScore > 0 && aScore === 0) {
+                firstScorer = 'home';
+              } else if (aScore > 0 && hScore === 0) {
+                firstScorer = 'away';
+              }
+            }
+
+            // Halftime score fallback/logic
+            if (currentPeriod === 1) {
+              firstHalfGoals = hScore + aScore;
+            }
+            const secondHalfGoals = Math.max(0, (hScore + aScore) - firstHalfGoals);
+
+            let highestScoringHalf = 'equal';
+            if (firstHalfGoals > secondHalfGoals) highestScoringHalf = 'first';
+            else if (secondHalfGoals > firstHalfGoals) highestScoringHalf = 'second';
+            else highestScoringHalf = 'equal';
+
+            setLiveStats({
+              totalCards,
+              firstScorer,
+              highestScoringHalf,
+              cleanSheet,
             });
           }
         }
@@ -266,12 +363,35 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
   // Compute points for each player
   const playerPoints = match ? leaderboard.map(player => {
     const pred = allPredictions.find(ap => ap.match_id === match.id && ap.participant_id === player.id);
-    const result = calcLivePoints(pred, match, effectiveHomeScore, effectiveAwayScore);
+    const result = calcLivePoints(
+      pred,
+      match,
+      effectiveHomeScore,
+      effectiveAwayScore,
+      liveStats.totalCards,
+      liveStats.firstScorer,
+      liveStats.highestScoringHalf,
+      liveStats.cleanSheet
+    );
     return { player, pred, ...result };
   }).sort((a, b) => b.total - a.total) : [];
 
   const hasPointsData = match && leaderboard.length > 0;
   const showPointsTab = hasPointsData;
+
+  const homeIsUnderdog = match?.home_win_pct != null && match?.away_win_pct != null && match?.draw_pct != null && match.home_win_pct < Math.max(match.home_win_pct, match.away_win_pct, match.draw_pct);
+  const awayIsUnderdog = match?.home_win_pct != null && match?.away_win_pct != null && match?.draw_pct != null && match.away_win_pct < Math.max(match.home_win_pct, match.away_win_pct, match.draw_pct);
+  const drawIsUnderdog = match?.home_win_pct != null && match?.away_win_pct != null && match?.draw_pct != null && match.draw_pct < Math.max(match.home_win_pct, match.away_win_pct, match.draw_pct);
+
+  const handleScroll = (e, matchId) => {
+    const scrollLeft = e.target.scrollLeft;
+    const elements = document.querySelectorAll(`.live-bets-scroll-${matchId}`);
+    elements.forEach(el => {
+      if (el !== e.target && el.scrollLeft !== scrollLeft) {
+        el.scrollLeft = scrollLeft;
+      }
+    });
+  };
 
   return (
     <div className="live-feed-panel">
@@ -417,111 +537,220 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             })}
           </>
         ) : (
-          /* ⚡ Live Points Calculator */
+          /* ⚡ Results Based on Current Time */
           <>
-            {/* Current Score Banner */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '16px',
-              background: 'rgba(245, 158, 11, 0.08)',
-              border: '1px solid rgba(245, 158, 11, 0.2)',
-              borderRadius: '10px',
-              padding: '12px 16px',
-              marginBottom: '16px'
-            }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>{homeCode}</div>
-                <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--primary)', fontFamily: 'var(--font-heading)' }}>{effectiveHomeScore}</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                <Zap size={14} color="#f59e0b" />
-                <span style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live</span>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>{awayCode}</div>
-                <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--accent)', fontFamily: 'var(--font-heading)' }}>{effectiveAwayScore}</div>
-              </div>
+            {/* Header matching Players' Picks style */}
+            <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Users size={12} strokeWidth={2.5} />
+              Results Based on Current Time
             </div>
 
-            {/* Disclaimer */}
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '14px', fontStyle: 'italic' }}>
-              Points if match ended now · Cards, 1st scorer &amp; half not counted yet
-            </div>
-
-            {/* Player Rankings */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {playerPoints.map(({ player, pred, total, breakdown }, idx) => {
-                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
-                const hasPred = !!pred;
-                return (
-                  <div
-                    key={player.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      background: idx === 0 ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.02)',
-                      border: idx === 0 ? '1px solid rgba(245,158,11,0.2)' : '1px solid rgba(255,255,255,0.04)',
-                      borderRadius: '8px',
-                      padding: '10px 12px',
-                    }}
-                  >
-                    {/* Rank */}
-                    <div style={{ width: '24px', textAlign: 'center', flexShrink: 0 }}>
-                      {medal ? (
-                        <span style={{ fontSize: '16px' }}>{medal}</span>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700' }}>#{idx + 1}</span>
-                      )}
-                    </div>
+              {playerPoints.length === 0 ? (
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px' }}>No players yet.</span>
+              ) : (
+                playerPoints.map(({ player, pred, total, breakdown }) => {
+                  const opPred = pred;
+                  const displayPred = pred;
+                  if (!displayPred) return null;
 
-                    {/* Name */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {player.name}
+                  // Determine live outcomes as final values
+                  let actualWinner = 'draw';
+                  if (effectiveHomeScore > effectiveAwayScore) actualWinner = 'home';
+                  else if (effectiveAwayScore > effectiveHomeScore) actualWinner = 'away';
+
+                  const actualOU = (effectiveHomeScore + effectiveAwayScore) > (match?.over_under_line || 2.5) ? 'over' : 'under';
+
+                  const isWinnerCorrect = displayPred.predicted_winner === actualWinner;
+                  const isOUCorrect = displayPred.predicted_over_under === actualOU;
+
+                  const pickedUnderdog = (
+                    (displayPred.predicted_winner === 'home' && homeIsUnderdog) ||
+                    (displayPred.predicted_winner === 'away' && awayIsUnderdog) ||
+                    (displayPred.predicted_winner === 'draw' && drawIsUnderdog)
+                  );
+                  const underdogBonusEarned = isWinnerCorrect && pickedUnderdog;
+
+                  const hasFirstScorerPred = displayPred.predicted_first_scorer;
+                  const isFirstScorerCorrect = hasFirstScorerPred && displayPred.predicted_first_scorer === liveStats.firstScorer;
+
+                  const hasHalfPred = displayPred.predicted_highest_scoring_half;
+                  const isHalfCorrect = hasHalfPred && displayPred.predicted_highest_scoring_half === liveStats.highestScoringHalf;
+
+                  const hasCleanPred = displayPred.predicted_clean_sheet;
+                  const isCleanCorrect = hasCleanPred && displayPred.predicted_clean_sheet === liveStats.cleanSheet;
+
+                  const hasScorePred = displayPred.predicted_home_score !== null && displayPred.predicted_away_score !== null;
+                  const isScoreCorrect = hasScorePred && displayPred.predicted_home_score === effectiveHomeScore && displayPred.predicted_away_score === effectiveAwayScore;
+
+                  const hasTotalCardsPred = displayPred.predicted_total_cards !== null;
+                  const isTotalCardsCorrect = hasTotalCardsPred && displayPred.predicted_total_cards === liveStats.totalCards;
+
+                  return (
+                    <div key={player.id} className="player-result-row" style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '6px', 
+                      background: 'rgba(255, 255, 255, 0.01)', 
+                      borderRadius: '6px', 
+                      border: '1px solid var(--glass-border)',
+                      padding: '8px 12px'
+                    }}>
+                      {/* Name & Live Points */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
+                          {player.name}
+                        </span>
+                        <span style={{ color: 'var(--success)', fontWeight: '700', fontSize: '11px' }}>
+                          [Current  Points: {total}]
+                        </span>
                       </div>
-                      {hasPred ? (
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          Picked: <span style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>
-                            {pred.predicted_winner === 'home' ? homeCode : pred.predicted_winner === 'away' ? awayCode : 'Draw'}
-                            {pred.predicted_home_score !== null && pred.predicted_away_score !== null
-                              ? ` · ${pred.predicted_home_score}–${pred.predicted_away_score}`
-                              : ''}
+
+                      {/* Synced horizontal scrolling badges */}
+                      <div 
+                        className={`live-bets-scroll-${match?.id}`}
+                        onScroll={(e) => handleScroll(e, match?.id)}
+                        style={{ width: '100%', overflowX: 'auto', paddingBottom: '4px' }}
+                      >
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '3px',
+                          minWidth: 'max-content',
+                          padding: '2px 0'
+                        }}>
+                          {/* Winner */}
+                          <span style={{ 
+                            padding: '2px 4px', 
+                            borderRadius: '4px', 
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            background: isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)',
+                            border: isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)'
+                          }}>
+                            {displayPred.predicted_winner === 'home' ? homeCode : displayPred.predicted_winner === 'away' ? awayCode : displayPred.predicted_winner === 'draw' ? 'Draw' : '-'}
+                          </span>
+
+                          {/* O/U */}
+                          <span style={{ 
+                            padding: '2px 4px', 
+                            borderRadius: '4px', 
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            background: displayPred.predicted_over_under ? (isOUCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'transparent',
+                            border: displayPred.predicted_over_under ? (isOUCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                          }}>
+                            {displayPred.predicted_over_under === 'over' ? 'O' : displayPred.predicted_over_under === 'under' ? 'U' : '-'}
+                          </span>
+
+                          {/* Score */}
+                          <span style={{ 
+                            padding: '2px 4px', 
+                            borderRadius: '4px', 
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            background: hasScorePred ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'transparent',
+                            border: hasScorePred ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                          }}>
+                            {hasScorePred ? `${displayPred.predicted_home_score}-${displayPred.predicted_away_score}` : '-'}
+                          </span>
+
+                          {/* Underdog Pick */}
+                          <span style={{ 
+                            padding: '2px 4px', 
+                            borderRadius: '4px', 
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            background: displayPred.predicted_winner ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : (pickedUnderdog ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.05)')) : 'transparent',
+                            border: displayPred.predicted_winner ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : (pickedUnderdog ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px dashed rgba(255, 255, 255, 0.05)'
+                          }}>
+                            {displayPred.predicted_winner ? (pickedUnderdog ? 'B' : 'F') : '-'}
+                          </span>
+
+                          {/* Scored First */}
+                          <span style={{ 
+                            padding: '2px 4px', 
+                            borderRadius: '4px', 
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            background: hasFirstScorerPred ? (isFirstScorerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'transparent',
+                            border: hasFirstScorerPred ? (isFirstScorerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                          }}>
+                            {hasFirstScorerPred ? `SF:${displayPred.predicted_first_scorer === 'home' ? homeCode : displayPred.predicted_first_scorer === 'away' ? awayCode : 'None'}` : '-'}
+                          </span>
+
+                          {/* Total Cards */}
+                          <span style={{ 
+                            padding: '2px 4px', 
+                            borderRadius: '4px', 
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            background: hasTotalCardsPred ? (isTotalCardsCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'transparent',
+                            border: hasTotalCardsPred ? (isTotalCardsCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                          }}>
+                            {displayPred.predicted_total_cards !== null && displayPred.predicted_total_cards !== undefined ? `TC:${displayPred.predicted_total_cards}` : '-'}
+                          </span>
+
+                          {/* Highest scoring half */}
+                          <span style={{ 
+                            padding: '2px 4px', 
+                            borderRadius: '4px', 
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            background: hasHalfPred ? (isHalfCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'transparent',
+                            border: hasHalfPred ? (isHalfCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                          }}>
+                            {hasHalfPred ? `HH:${displayPred.predicted_highest_scoring_half === 'first' ? '1st' : displayPred.predicted_highest_scoring_half === 'second' ? '2nd' : 'Equal'}` : '-'}
+                          </span>
+
+                          {/* Clean Sheet */}
+                          <span style={{ 
+                            padding: '2px 4px', 
+                            borderRadius: '4px', 
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            background: hasCleanPred ? (isCleanCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'transparent',
+                            border: hasCleanPred ? (isCleanCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                          }}>
+                            {hasCleanPred ? `CS:${displayPred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}` : '-'}
                           </span>
                         </div>
-                      ) : (
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', fontStyle: 'italic' }}>No prediction</div>
-                      )}
-                    </div>
-
-                    {/* Points */}
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{
-                        fontSize: '20px',
-                        fontWeight: '900',
-                        color: hasPred && total > 0 ? '#f59e0b' : 'var(--text-muted)',
-                        fontFamily: 'var(--font-heading)',
-                        lineHeight: 1
-                      }}>
-                        {hasPred ? total : '—'}
                       </div>
-                      {hasPred && total > 0 && (
-                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          {[
-                            breakdown.pWinner > 0 && `W+${breakdown.pWinner}`,
-                            breakdown.pOu > 0 && `O/U+${breakdown.pOu}`,
-                            breakdown.pScore > 0 && `Sc+${breakdown.pScore}`,
-                            breakdown.pUnderdog > 0 && `🐶+${breakdown.pUnderdog}`,
-                            breakdown.pCleanSheet > 0 && `CS+${breakdown.pCleanSheet}`,
-                          ].filter(Boolean).join(' ')}
-                        </div>
-                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </>
         )}
