@@ -660,15 +660,14 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
           <thead>
             <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center' }}>Bets</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Win</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>O/U</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Dog</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>SF</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Half</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>HH</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>CS</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⚽</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>TC</th>
             </tr>
           </thead>
           <tbody>
@@ -676,9 +675,6 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               <tr key={row.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <td style={{ padding: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                   {row.name}
-                </td>
-                <td style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                  {row.totalFinishedPreds}
                 </td>
                 
                 {/* Winner Stat */}
@@ -797,15 +793,14 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
         </h3>
         <div className="mobile-tab-bar">
           {[
-            { key: 'bets', label: 'Bets' },
             { key: 'win', label: 'Win' },
             { key: 'ou', label: 'O/U' },
             { key: 'dog', label: 'Dog' },
             { key: 'sf', label: 'SF' },
-            { key: 'half', label: 'Half' },
+            { key: 'half', label: 'HH' },
             { key: 'cs', label: 'CS' },
             { key: 'score', label: '⚽' },
-            { key: 'cards', label: 'Cards' },
+            { key: 'cards', label: 'TC' },
           ].map(tab => (
             <button
               key={tab.key}
@@ -820,15 +815,14 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
         <div className="mobile-tab-content">
           {(() => {
             const tabConfig = {
-              bets:  { pct: r => r.totalFinishedPreds * 100 / (r.totalFinishedPreds || 1), val: r => r.totalFinishedPreds, num: r => r.totalFinishedPreds, denom: r => r.totalFinishedPreds, label: 'Bets', color: 'var(--primary)' },
               win:   { pct: r => r.winnerPct, val: r => `${r.winnerPct}%`, num: r => r.correctWinners, denom: r => r.totalFinishedPreds, label: 'Win', color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
               ou:    { pct: r => r.ouPct, val: r => `${r.ouPct}%`, num: r => r.correctOu, denom: r => r.totalFinishedPreds, label: 'O/U', color: 'linear-gradient(90deg, #22c55e, #4ade80)' },
               dog:   { pct: r => r.underdogPct, val: r => `${r.underdogPct}%`, num: r => r.underdogCorrect, denom: r => r.underdogAttempts, label: 'Dog', color: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
               sf:    { pct: r => r.firstScorerPct, val: r => `${r.firstScorerPct}%`, num: r => r.correctFirstScorers, denom: r => r.totalFinishedPreds, label: 'SF', color: 'linear-gradient(90deg, #ec4899, #f472b6)' },
-              half:  { pct: r => r.halfPct, val: r => `${r.halfPct}%`, num: r => r.correctHalf, denom: r => r.totalFinishedPreds, label: 'Half', color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
+              half:  { pct: r => r.halfPct, val: r => `${r.halfPct}%`, num: r => r.correctHalf, denom: r => r.totalFinishedPreds, label: 'HH', color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
               cs:    { pct: r => r.cleanPct, val: r => `${r.cleanPct}%`, num: r => r.correctClean, denom: r => r.totalFinishedPreds, label: 'CS', color: 'linear-gradient(90deg, #38bdf8, #7dd3fc)' },
               score: { pct: r => r.scorePct, val: r => `${r.scorePct}%`, num: r => r.correctScores, denom: r => r.totalFinishedPreds, label: '⚽', color: 'linear-gradient(90deg, #eab308, #fde047)' },
-              cards: { pct: r => r.exactCardsPct, val: r => `${r.exactCardsPct}%`, num: r => r.correctExactCards, denom: r => r.totalFinishedPreds, label: 'Cards', color: 'linear-gradient(90deg, #06b6d4, #67e8f9)' },
+              cards: { pct: r => r.exactCardsPct, val: r => `${r.exactCardsPct}%`, num: r => r.correctExactCards, denom: r => r.totalFinishedPreds, label: 'TC', color: 'linear-gradient(90deg, #06b6d4, #67e8f9)' },
             };
             const cfg = tabConfig[mobileStatTab];
             if (!cfg) return null;

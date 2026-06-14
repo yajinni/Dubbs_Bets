@@ -50,7 +50,10 @@ function saveNavLayout(playerName, layout) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'matches', 'admin'
+  const [activeTab, setActiveTab] = useState(() => {
+    const hash = window.location.hash.slice(1).split(':')[0];
+    return hash || 'dashboard';
+  });
   const [matches, setMatches] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [predictions, setPredictions] = useState([]);
@@ -75,6 +78,7 @@ export default function App() {
   
   const [loading, setLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const hashRestoredRef = useRef(false);
 
   // ── Nav Customizer ────────────────────────────────────────────────────────
   const [navCustomizerOpen, setNavCustomizerOpen] = useState(false);
@@ -353,6 +357,48 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Restore scroll/match state from URL hash after data loads
+  useEffect(() => {
+    if (loading || hashRestoredRef.current) return;
+    hashRestoredRef.current = true;
+
+    const hash = window.location.hash.slice(1).split(':')[0];
+    if (!hash || hash === 'dashboard') return;
+
+    // Run match-selection logic for tabs that need it
+    if (hash === 'matches' && activeParticipantId) {
+      const unpredictedMatches = matches.filter(m =>
+        m.status === 'scheduled' && m.finished === 0 && !predictions.some(p => p.match_id === m.id)
+      );
+      if (unpredictedMatches.length > 0) {
+        unpredictedMatches.sort((a, b) => new Date(a.local_date) - new Date(b.local_date));
+        setSelectedMatchId(unpredictedMatches[0].id);
+      } else {
+        const userPredictedMatches = matches.filter(m => predictions.some(p => p.match_id === m.id));
+        if (userPredictedMatches.length > 0) {
+          userPredictedMatches.sort((a, b) => new Date(b.local_date) - new Date(a.local_date));
+          setSelectedMatchId(userPredictedMatches[0].id);
+        }
+      }
+    } else if (hash === 'match-view') {
+      const completedMatches = matches.filter(m => m.finished === 1);
+      if (completedMatches.length > 0) {
+        completedMatches.sort((a, b) => new Date(b.local_date) - new Date(a.local_date));
+        setSelectedMatchId(completedMatches[0].id);
+      }
+    }
+  }, [loading, matches, predictions, activeParticipantId]);
+
+  // Listen for browser back/forward hash changes
+  useEffect(() => {
+    const handler = () => {
+      const hash = window.location.hash.slice(1).split(':')[0];
+      if (hash) setActiveTab(hash);
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+
   // Live polling effect: every 60 seconds if there are live matches
   useEffect(() => {
     if (!hasLiveMatches) return;
@@ -490,6 +536,7 @@ export default function App() {
       }
     }
     setActiveTab(tab);
+    window.location.hash = tab;
   };
 
   return (
