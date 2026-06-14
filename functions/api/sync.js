@@ -62,6 +62,50 @@ export async function onRequest(context) {
       await handleScoreMatchTask(env.db, parseInt(scoreMatchId), env.QSTASH_TOKEN, pagesUrl, env.SYNC_SECRET, env.QSTASH_URL);
       return new Response(JSON.stringify({ success: true, message: `Match ${scoreMatchId} scores synced and predictions scored.` }), { status: 200, headers });
     }
+    
+    const rescheduleQStash = url.searchParams.get('rescheduleQStash') === 'true';
+    if (rescheduleQStash) {
+      const qstashToken = env.QSTASH_TOKEN;
+      if (!qstashToken) {
+        return new Response(JSON.stringify({ error: 'QSTASH_TOKEN is missing' }), { status: 400, headers });
+      }
+      const pagesUrl = env.PAGES_URL || "https://dubbs-bets.pages.dev";
+      
+      // Get all active matches that have been scheduled
+      const { results: activeScheduledMatches } = await env.db.prepare(
+        "SELECT * FROM matches WHERE finished = 0 AND (qstash_scheduled = 1 OR qstash_lock_msg_id IS NOT NULL OR qstash_score_msg_id IS NOT NULL)"
+      ).all();
+      
+      let cancelledLocks = 0;
+      let cancelledScores = 0;
+      
+      for (const m of activeScheduledMatches) {
+        if (m.qstash_lock_msg_id) {
+          await cancelQStashMessage(env.db, m.qstash_lock_msg_id, qstashToken, env.QSTASH_URL);
+          cancelledLocks++;
+        }
+        if (m.qstash_score_msg_id) {
+          await cancelQStashMessage(env.db, m.qstash_score_msg_id, qstashToken, env.QSTASH_URL);
+          cancelledScores++;
+        }
+      }
+      
+      // Reset scheduling state in DB
+      await env.db.prepare(
+        "UPDATE matches SET qstash_scheduled = 0, qstash_lock_msg_id = NULL, qstash_score_msg_id = NULL WHERE finished = 0"
+      ).run();
+      
+      // Reschedule jobs
+      await checkAndScheduleQStashJobs(env.db, qstashToken, pagesUrl, env.SYNC_SECRET, env.QSTASH_URL);
+      
+      await logChange(env.db, 'system', null, null, 'QStash Jobs Rescheduled', null, `Cancelled: ${cancelledLocks} locks, ${cancelledScores} scores. Rescheduled future matches.`);
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: `Cancelled ${cancelledLocks} locks, ${cancelledScores} scores. Reset scheduling state and rescheduled future matches.`
+      }), { status: 200, headers });
+    }
+
 
     // Diagnostic Helpers
     const apiKeyFootball = env.API_FOOTBALL_KEY;
@@ -735,7 +779,13 @@ async function handleLockMatchTask(db, matchId, apiKey) {
 
 async function handleScoreMatchTask(db, matchId, qstashToken, pagesUrl, secret, qstashUrl) {
   console.log(`[QStash Webhook] Syncing score and completing predictions for match ${matchId}...`);
-  const match = await db.prepare("SELECT * FROM matches WHERE id = ?").bind(matchId).first();
+  const match = await db.prepare(`
+    SELECT m.*, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+    FROM matches m
+    LEFT JOIN teams t1 ON m.home_team_id = t1.id
+    LEFT JOIN teams t2 ON m.away_team_id = t2.id
+    WHERE m.id = ?
+  `).bind(matchId).first();
   if (!match) {
     throw new Error(`Match ${matchId} not found in database.`);
   }
@@ -884,10 +934,12 @@ async function handleScoreMatchTask(db, matchId, qstashToken, pagesUrl, secret, 
       const qstashEndpoint = qstashUrl || "https://qstash-us-east-1.upstash.io";
       const retryEpoch = Math.floor((Date.now() + 60 * 1000) / 1000);
       const scoreUrl = `${pagesUrl}/api/sync?scoreMatchId=${matchId}${secret ? `&secret=${secret}` : ''}`;
-      const retryLabel = `Score Sync Retry: ${match.home_team_name} vs ${match.away_team_name}`;
+      const homeCode = match.home_code || match.home_team_label || match.home_team_name || 'TBD';
+      const awayCode = match.away_code || match.away_team_label || match.away_team_name || 'TBD';
+      const retryLabel = `SS: ${homeCode} vs ${awayCode}`;
       
       try {
-        const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${scoreUrl}`, {
+        const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${encodeURIComponent(scoreUrl)}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${qstashToken}`,
@@ -914,7 +966,13 @@ async function handleScoreMatchTask(db, matchId, qstashToken, pagesUrl, secret, 
 async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qstashUrl) {
   const currentTime = Date.now();
   const qstashEndpoint = qstashUrl || "https://qstash-us-east-1.upstash.io";
-  const { results: allDbMatches } = await db.prepare("SELECT * FROM matches WHERE qstash_scheduled = 0 AND finished = 0").all();
+  const { results: allDbMatches } = await db.prepare(`
+    SELECT m.*, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+    FROM matches m
+    LEFT JOIN teams t1 ON m.home_team_id = t1.id
+    LEFT JOIN teams t2 ON m.away_team_id = t2.id
+    WHERE m.qstash_scheduled = 0 AND m.finished = 0
+  `).all();
   
   // Only schedule matches starting within the next 3 days to stay well within QStash Free Tier limits
   const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
@@ -929,7 +987,9 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
     if (matchTime > currentTime) {
       console.log(`[QStash Scheduler] Scheduling QStash jobs for match ${m.id} (${m.home_team_name} vs ${m.away_team_name})...`);
       
-      const matchLabel = `${m.home_team_name} vs ${m.away_team_name}`;
+      const homeCode = m.home_code || m.home_team_label || m.home_team_name || 'TBD';
+      const awayCode = m.away_code || m.away_team_label || m.away_team_name || 'TBD';
+      const matchLabel = `${homeCode} vs ${awayCode}`;
 
       // 1. Lock odds job (kickoff - 2 hours)
       const lockEpoch = Math.floor((matchTime - 2 * 60 * 60 * 1000) / 1000);
@@ -945,12 +1005,12 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
       try {
         // Schedule lock odds job if in the future
         if (lockEpoch * 1000 > currentTime) {
-          const lockRes = await fetch(`${qstashEndpoint}/v2/publish/${lockUrl}`, {
+          const lockRes = await fetch(`${qstashEndpoint}/v2/publish/${encodeURIComponent(lockUrl)}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
               'Upstash-Not-Before': String(lockEpoch),
-              'Upstash-Label': `Odds Lock: ${matchLabel}`
+              'Upstash-Label': `Odds: ${matchLabel}`
             }
           });
           console.log(`[QStash Scheduler] Lock odds scheduled: status ${lockRes.status}`);
@@ -971,12 +1031,12 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
         
         // Schedule score match job if in the future
         if (scoreEpoch * 1000 > currentTime) {
-          const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${scoreUrl}`, {
+          const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${encodeURIComponent(scoreUrl)}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
               'Upstash-Not-Before': String(scoreEpoch),
-              'Upstash-Label': `Score Sync: ${matchLabel}`
+              'Upstash-Label': `Score: ${matchLabel}`
             }
           });
           console.log(`[QStash Scheduler] Score sync scheduled: status ${scoreRes.status}`);
