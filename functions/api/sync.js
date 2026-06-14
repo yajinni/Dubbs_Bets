@@ -845,7 +845,14 @@ async function handleScoreMatchTask(db, matchId) {
 async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qstashUrl) {
   const currentTime = Date.now();
   const qstashEndpoint = qstashUrl || "https://qstash-us-east-1.upstash.io";
-  const { results: unscheduledMatches } = await db.prepare("SELECT * FROM matches WHERE qstash_scheduled = 0 AND finished = 0").all();
+  const { results: allDbMatches } = await db.prepare("SELECT * FROM matches WHERE qstash_scheduled = 0 AND finished = 0").all();
+  
+  // Only schedule matches starting within the next 7 days to stay well within QStash Free Tier limits
+  const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+  const unscheduledMatches = allDbMatches.filter(m => {
+    const matchTime = new Date(m.local_date).getTime();
+    return matchTime > currentTime && (matchTime - currentTime) <= sevenDaysInMs;
+  });
   
   for (const m of unscheduledMatches) {
     const matchTime = new Date(m.local_date).getTime();
