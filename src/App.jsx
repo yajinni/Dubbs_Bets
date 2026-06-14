@@ -38,11 +38,10 @@ export default function App() {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   const hasLiveMatches = matches.some(m => {
-    if (m.status === 'live') return true;
     if (m.finished === 1 || m.status === 'finished') return false;
     const kickOffMs = new Date((m.local_date || '').replace(' ', 'T')).getTime();
     // eslint-disable-next-line react-hooks/purity
-    return kickOffMs <= Date.now();
+    return kickOffMs + 60000 <= Date.now();
   });
 
   const runningPointsMap = useMemo(() => {

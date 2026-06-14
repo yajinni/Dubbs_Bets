@@ -994,14 +994,10 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
 
       // 1. Lock odds job (kickoff - 2 hours)
       const lockEpoch = Math.floor((matchTime - 2 * 60 * 60 * 1000) / 1000);
-      
-      // 2. Score match job (kickoff + 105 minutes)
-      const scoreEpoch = Math.floor((matchTime + 105 * 60 * 1000) / 1000);
       const lockPublishUrl = `${pagesUrl}/api/sync${encodeURIComponent(`?lockMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`)}`;
-      let scorePublishUrl = '';
       
       let lockMsgId = null;
-      let scoreMsgId = null;
+      const scoreMsgId = null;
       
       try {
         // Schedule lock odds job if in the future
@@ -1028,31 +1024,6 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
           }
         } else {
           console.log(`[QStash Scheduler] Lock time is in the past for match ${m.id}, skipping lock schedule.`);
-        }
-        
-        // Schedule score match job if in the future
-        if (scoreEpoch * 1000 > currentTime) {
-          scorePublishUrl = `${pagesUrl}/api/sync${encodeURIComponent(`?scoreMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`)}`;
-          const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${scorePublishUrl}`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${qstashToken}`,
-              'Upstash-Not-Before': String(scoreEpoch),
-              'Upstash-Label': `Score_${matchLabel}`
-            }
-          });
-          console.log(`[QStash Scheduler] Score sync scheduled: status ${scoreRes.status}`);
-          if (!scoreRes.ok) {
-            const errText = await scoreRes.text();
-            throw new Error(`QStash Score publish failed with status ${scoreRes.status}: ${errText}`);
-          }
-          try {
-            const resJson = await scoreRes.json();
-            scoreMsgId = resJson.messageId || null;
-            await logChange(db, 'system', m.id, null, 'QStash Message Sent: Scheduled Score Sync', null, `Msg ID: ${scoreMsgId}, Scheduled Time: ${new Date(scoreEpoch * 1000).toISOString()}`);
-          } catch (e) {
-            console.error('[QStash Scheduler] Failed to parse score response JSON:', e.message);
-          }
         }
         
         // Mark match as scheduled in database and store the message IDs
