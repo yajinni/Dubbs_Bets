@@ -365,14 +365,28 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
             {(() => {
               const hw = m.home_win_pct;
               const aw = m.away_win_pct;
-              if (!hw || !aw || hw === aw) return (
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Even match — no underdog</div>
-              );
-              const underdogName = hw < aw ? homeName : awayName;
-              const underdogPct = hw < aw ? hw : aw;
+              const dp = m.draw_pct;
+              if (hw == null || aw == null || dp == null) return null;
+              
+              const maxPct = Math.max(hw, aw, dp);
+              const underdogs = [];
+              if (hw < maxPct) underdogs.push({ name: homeName, pct: hw });
+              if (dp < maxPct) underdogs.push({ name: 'Draw', pct: dp });
+              if (aw < maxPct) underdogs.push({ name: awayName, pct: aw });
+              
+              if (underdogs.length === 0) {
+                return (
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Even match — no underdog</div>
+                );
+              }
+              
+              // Sort lowest percentage first
+              underdogs.sort((a, b) => a.pct - b.pct);
+              const underdogText = underdogs.map(u => `${u.name} (${u.pct}%)`).join(' or ');
+              
               return (
                 <div style={{ fontSize: '13px', color: '#fbbf24', fontWeight: '700' }}>
-                  ⭐ {underdogName} ({underdogPct}%) — Pick them to win for +1 bonus point!
+                  ⭐ {underdogText} — Pick to win for +1 bonus point!
                 </div>
               );
             })()
