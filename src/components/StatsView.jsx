@@ -403,6 +403,22 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               </g>
             ))}
 
+            {/* Selected Date Box Highlight */}
+            {hoveredIndex !== null && (
+              <rect
+                x={getX(hoveredIndex) - 27}
+                y={paddingTop + chartHeight + 4}
+                width={54}
+                height={24}
+                rx={6}
+                fill="rgba(34, 197, 94, 0.15)"
+                stroke="#22c55e"
+                strokeWidth="1.5"
+                pointerEvents="none"
+                className="selected-date-box"
+              />
+            )}
+
             {/* X Labels */}
             {dates.map((date, i) => (
               <text

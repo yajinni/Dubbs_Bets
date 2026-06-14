@@ -1761,6 +1761,10 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 10pt;
 }
 
+.selected-date-box {
+  transition: all 0.2s ease;
+}
+
 @media (max-width: 640px) {
   .chart-tooltip-mobile {
     position: absolute !important;
@@ -1774,6 +1778,11 @@ h1, h2, h3, h4, h5, h6 {
   }
   .chart-axis-label {
     font-size: 20pt !important;
+  }
+  .selected-date-box {
+    width: 90px !important;
+    height: 36px !important;
+    transform: translate(-18px, -6px);
   }
 }
 
