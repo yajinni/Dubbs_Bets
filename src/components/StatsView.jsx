@@ -146,15 +146,333 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   // Toggle player line visibility
   const togglePlayer = (playerId) => {
     setHiddenPlayers(prev => {
-      const next = new Set(prev);
-      if (next.has(playerId)) {
-        next.delete(playerId);
+      const newSet = new Set(prev);
+      if (newSet.has(playerId)) {
+        newSet.delete(playerId);
       } else {
-        next.add(playerId);
+        newSet.add(playerId);
       }
-      return next;
+      return newSet;
     });
   };
+
+  // 5. SVG Line Chart Rendering Logic
+  const chartHeight = 220;
+  const chartWidth = 650;
+  const paddingLeft = 40;
+  const paddingRight = 40;
+  const paddingTop = 30;
+  const paddingBottom = 40;
+  const svgWidth = chartWidth + paddingLeft + paddingRight;
+  const svgHeight = chartHeight + paddingTop + paddingBottom;
+
+  let chartContent = null;
+
+  if (!chartData || chartData.dates.length === 0) {
+    chartContent = (
+      <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+        No matches completed yet to plot performance history.
+      </div>
+    );
+  } else {
+    const { dates, playerProgress } = chartData;
+    
+    // Determine the max Y value based on active player scores
+    let maxY = 10;
+    playerProgress.forEach(pp => {
+      if (hiddenPlayers.has(pp.id)) return;
+      dates.forEach(date => {
+        const val = chartType === 'cumulative' ? pp.cumulative[date] : pp.daily[date];
+        if (val > maxY) maxY = val;
+      });
+    });
+    
+    // Round maxY up to a nice number
+    maxY = Math.ceil(maxY / 5) * 5;
+    if (maxY === 0) maxY = 5;
+
+    // Helper to get X position for a date index
+    const getX = (index) => {
+      if (dates.length <= 1) return paddingLeft + chartWidth / 2;
+      return paddingLeft + (index / (dates.length - 1)) * chartWidth;
+    };
+
+    // Helper to get Y position for a value
+    const getY = (value) => {
+      return paddingTop + chartHeight - (value / maxY) * chartHeight;
+    };
+
+    // Date formatting helper for labels
+    const formatLabelDate = (dateStr) => {
+      try {
+        const [, m, d] = dateStr.split('-');
+        return `${m}/${d}`;
+      } catch (e) {
+        return dateStr;
+      }
+    };
+
+    // Handle mouse move to find closest point index
+    const handleMouseMove = (e) => {
+      const svgRect = e.currentTarget.getBoundingClientRect();
+      const mouseX = e.clientX - svgRect.left;
+      const chartMouseX = mouseX - paddingLeft;
+      const pct = chartMouseX / chartWidth;
+      const index = Math.max(0, Math.min(dates.length - 1, Math.round(pct * (dates.length - 1))));
+      setHoveredIndex(index);
+    };
+
+    const handleMouseLeave = () => {
+      setHoveredIndex(null);
+    };
+
+    // Draw grid lines
+    const yTicks = [0, maxY * 0.25, maxY * 0.5, maxY * 0.75, maxY];
+    const isTooltipOnLeft = hoveredIndex !== null && getX(hoveredIndex) > (svgWidth / 2);
+
+    chartContent = (
+      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Player Performance Timeline</h3>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+              Track players' points progression over match days
+            </p>
+          </div>
+
+          {/* Chart Type Toggle */}
+          <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+            <button
+              onClick={() => setChartType('cumulative')}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: '600',
+                border: 'none',
+                background: chartType === 'cumulative' ? 'var(--primary-color, #a855f7)' : 'transparent',
+                color: chartType === 'cumulative' ? '#fff' : 'var(--text-secondary)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Cumulative
+            </button>
+            <button
+              onClick={() => setChartType('daily')}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: '600',
+                border: 'none',
+                background: chartType === 'daily' ? 'var(--primary-color, #a855f7)' : 'transparent',
+                color: chartType === 'daily' ? '#fff' : 'var(--text-secondary)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Daily
+            </button>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--glass-border)' }}>
+          {playerProgress.map((pp) => {
+            const isHidden = hiddenPlayers.has(pp.id);
+            return (
+              <button
+                key={pp.id}
+                onClick={() => togglePlayer(pp.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: isHidden ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid',
+                  borderColor: isHidden ? 'transparent' : 'var(--glass-border)',
+                  padding: '6px 12px',
+                  borderRadius: '16px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: isHidden ? 'var(--text-muted)' : 'var(--text-primary)',
+                  fontWeight: isHidden ? '400' : '600',
+                  textDecoration: isHidden ? 'line-through' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: isHidden ? '#6b7280' : pp.color }}></span>
+                {pp.name}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* SVG Chart */}
+        <div style={{ position: 'relative', width: '100%', overflowX: 'auto' }}>
+          <svg
+            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+            width="100%"
+            height="100%"
+            style={{ minWidth: '680px', display: 'block', overflow: 'visible' }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
+            {/* Grid Lines & Y Labels */}
+            {yTicks.map((tick, i) => (
+              <g key={i}>
+                <line
+                  x1={paddingLeft}
+                  y1={getY(tick)}
+                  x2={paddingLeft + chartWidth}
+                  y2={getY(tick)}
+                  stroke="rgba(255, 255, 255, 0.08)"
+                  strokeDasharray="4 4"
+                />
+                <text
+                  x={paddingLeft - 8}
+                  y={getY(tick) + 4}
+                  textAnchor="end"
+                  fill="var(--text-muted)"
+                  fontSize="11px"
+                  fontWeight="500"
+                >
+                  {Math.round(tick)}
+                </text>
+              </g>
+            ))}
+
+            {/* X Labels */}
+            {dates.map((date, i) => (
+              <text
+                key={i}
+                x={getX(i)}
+                y={paddingTop + chartHeight + 20}
+                textAnchor="middle"
+                fill="var(--text-muted)"
+                fontSize="11px"
+                fontWeight="500"
+              >
+                {formatLabelDate(date)}
+              </text>
+            ))}
+
+            {/* Hover Line */}
+            {hoveredIndex !== null && (
+              <line
+                x1={getX(hoveredIndex)}
+                y1={paddingTop}
+                x2={getX(hoveredIndex)}
+                y2={paddingTop + chartHeight}
+                stroke="rgba(255, 255, 255, 0.2)"
+                strokeWidth="1.5"
+                strokeDasharray="3 3"
+              />
+            )}
+
+            {/* Player Lines and Points */}
+            {playerProgress.map((pp) => {
+              if (hiddenPlayers.has(pp.id)) return null;
+
+              // Generate path definition
+              const points = dates.map((date, i) => {
+                const val = chartType === 'cumulative' ? pp.cumulative[date] : pp.daily[date];
+                return { x: getX(i), y: getY(val), val };
+              });
+
+              const d = points.reduce((acc, p, i) => {
+                return i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`;
+              }, '');
+
+              return (
+                <g key={pp.id}>
+                  {/* The line */}
+                  <path
+                    d={d}
+                    fill="none"
+                    stroke={pp.color}
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ transition: 'all 0.3s ease' }}
+                  />
+                  {/* Point circles */}
+                  {points.map((p, i) => {
+                    const isHovered = hoveredIndex === i;
+                    return (
+                      <circle
+                        key={i}
+                        cx={p.x}
+                        cy={p.y}
+                        r={isHovered ? 6 : 4}
+                        fill={pp.color}
+                        stroke="#111"
+                        strokeWidth="1.5"
+                        style={{ transition: 'all 0.15s ease' }}
+                      />
+                    );
+                  })}
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Interactive Tooltip Card */}
+          {hoveredIndex !== null && (
+            <div
+              style={{
+                position: 'absolute',
+                top: `${paddingTop + 10}px`,
+                left: isTooltipOnLeft ? 'auto' : `${getX(hoveredIndex) + 20}px`,
+                right: isTooltipOnLeft ? `${svgWidth - getX(hoveredIndex) + 20}px` : 'auto',
+                background: 'rgba(17, 17, 17, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                pointerEvents: 'none',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                zIndex: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                minWidth: '150px'
+              }}
+            >
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {dates[hoveredIndex]}
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {playerProgress
+                  .filter(pp => !hiddenPlayers.has(pp.id))
+                  .map(pp => {
+                    const val = chartType === 'cumulative' ? pp.cumulative[dates[hoveredIndex]] : pp.daily[dates[hoveredIndex]];
+                    return {
+                      id: pp.id,
+                      name: pp.name,
+                      color: pp.color,
+                      val
+                    };
+                  })
+                  .sort((a, b) => b.val - a.val) // sort descending by points
+                  .map(item => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: item.color }}></span>
+                        <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
+                      </div>
+                      <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{item.val} pts</span>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="stats-view-container" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '20px 0' }}>
