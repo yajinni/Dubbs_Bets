@@ -736,6 +736,9 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
           matchStatus={isLive ? 'live' : m.status}
           homeCode={m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase()}
           awayCode={m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase()}
+          match={m}
+          allPredictions={allPredictions}
+          leaderboard={leaderboard}
         />
       )}
 

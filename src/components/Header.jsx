@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Trophy } from 'lucide-react';
 
-export default function Header({ activeTab, setActiveTab, hasLiveMatches }) {
+export default function Header({ activeTab, setActiveTab, hasLiveMatches, navLayout = [] }) {
   const [trophyClicks, setTrophyClicks] = useState(0);
   const [lastTrophyClickTime, setLastTrophyClickTime] = useState(0);
 
@@ -21,13 +21,16 @@ export default function Header({ activeTab, setActiveTab, hasLiveMatches }) {
     setLastTrophyClickTime(now);
   };
 
+  // Only show tabs that are marked inHeader, in their custom order
+  const headerTabs = navLayout.filter(item => item.inHeader);
+
   return (
     <header className="app-header" style={{ paddingRight: '80px' }}>
       <div className="logo-container" style={{ userSelect: 'none' }}>
-        <Trophy 
-          className="logo-icon" 
-          size={32} 
-          color="#fbbf24" 
+        <Trophy
+          className="logo-icon"
+          size={32}
+          color="#fbbf24"
           style={{ filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.4))', cursor: 'pointer' }}
           onClick={handleTrophyClick}
         />
@@ -35,34 +38,26 @@ export default function Header({ activeTab, setActiveTab, hasLiveMatches }) {
       </div>
 
       <nav className="nav-links">
-        <button 
-          id="nav-dashboard"
-          className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          Dashboard
-        </button>
-        <button 
-          id="nav-matches"
-          className={`nav-btn ${activeTab === 'matches' ? 'active' : ''}`}
-          onClick={() => setActiveTab('matches')}
-        >
-          Bets
-        </button>
-        <button 
-          id="nav-live"
-          className={`nav-btn ${activeTab === 'live' ? 'active' : ''}`}
-          onClick={() => setActiveTab('live')}
-          style={{ 
-            color: '#ffffff', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '6px', 
-            fontWeight: '700' 
-          }}
-        >
-          {hasLiveMatches && <span className="live-dot" style={{ margin: 0 }} />} Live
-        </button>
+        {headerTabs.map(item => (
+          <button
+            key={item.id}
+            id={`nav-${item.id}`}
+            className={`nav-btn ${activeTab === item.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(item.id)}
+            style={item.id === 'live' ? {
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: '700'
+            } : undefined}
+          >
+            {item.id === 'live' && hasLiveMatches && (
+              <span className="live-dot" style={{ margin: 0 }} />
+            )}
+            {item.label}
+          </button>
+        ))}
       </nav>
     </header>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
 import MatchesList, { MatchCard } from './components/MatchesList';
@@ -7,8 +7,47 @@ import MatchView from './components/MatchView';
 import StatsView from './components/StatsView';
 import LogsView from './components/LogsView';
 import InfoView from './components/InfoView';
+import NavCustomizerModal from './components/NavCustomizerModal';
 import { Calendar, Award, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp, Menu, X, Info, BarChart2, List, RefreshCw, Clock } from 'lucide-react';
 import { shortenTeamName } from './utils/teamNames';
+
+// ─── Nav Layout Helpers ───────────────────────────────────────────────────────
+const DEFAULT_NAV_LAYOUT = [
+  { id: 'dashboard',  label: 'Dashboard', inHeader: true  },
+  { id: 'matches',    label: 'Bets',       inHeader: true  },
+  { id: 'live',       label: 'Live',        inHeader: true  },
+  { id: 'match-view', label: 'Results',    inHeader: false },
+  { id: 'stats',      label: 'Stats',       inHeader: false },
+  { id: 'logs',       label: 'Logs',        inHeader: false },
+  { id: 'info',       label: 'Info',        inHeader: false },
+];
+
+function getNavLayoutKey(playerName) {
+  return `nav_layout_${playerName || 'default'}`;
+}
+
+function loadNavLayout(playerName) {
+  try {
+    const saved = localStorage.getItem(getNavLayoutKey(playerName));
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge: add any new tabs not in saved layout (future-proofing)
+      const existingIds = new Set(parsed.map(i => i.id));
+      const merged = [
+        ...parsed,
+        ...DEFAULT_NAV_LAYOUT.filter(d => !existingIds.has(d.id)),
+      ];
+      return merged;
+    }
+  } catch (_) { /* ignore */ }
+  return [...DEFAULT_NAV_LAYOUT];
+}
+
+function saveNavLayout(playerName, layout) {
+  try {
+    localStorage.setItem(getNavLayoutKey(playerName), JSON.stringify(layout));
+  } catch (_) { /* ignore */ }
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'matches', 'admin'
@@ -36,6 +75,100 @@ export default function App() {
   
   const [loading, setLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // ── Nav Customizer ────────────────────────────────────────────────────────
+  const [navCustomizerOpen, setNavCustomizerOpen] = useState(false);
+  const [holdProgress, setHoldProgress] = useState(0); // 0–100
+  const holdTimerRef = useRef(null);
+  const holdAnimRef = useRef(null);
+  const holdStartRef = useRef(null);
+  const HOLD_DURATION = 3000; // ms
+
+  // Load navLayout keyed by active player name
+  const activePlayerName = useMemo(() => {
+    if (!activeParticipantId) return null;
+    const p = leaderboard.find(p => p.id === activeParticipantId);
+    return p ? p.name : null;
+  }, [activeParticipantId, leaderboard]);
+
+  const [navLayout, setNavLayout] = useState(() => loadNavLayout(null));
+  const [navLayoutSyncing, setNavLayoutSyncing] = useState(false);
+
+  // Load layout from server when player changes; fall back to localStorage instantly
+  useEffect(() => {
+    // Instant load from localStorage (feels snappy)
+    setNavLayout(loadNavLayout(activePlayerName));
+
+    if (!activeParticipantId) return;
+
+    // Then fetch from server and override if available
+    (async () => {
+      try {
+        const res = await fetch(`/api/preferences?participantId=${activeParticipantId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.nav_layout) {
+          const parsed = JSON.parse(data.nav_layout);
+          // Merge with defaults to cover any new tabs added since they last saved
+          const existingIds = new Set(parsed.map(i => i.id));
+          const merged = [
+            ...parsed,
+            ...DEFAULT_NAV_LAYOUT.filter(d => !existingIds.has(d.id)),
+          ];
+          setNavLayout(merged);
+          // Also update localStorage cache
+          saveNavLayout(activePlayerName, merged);
+        }
+      } catch (_) { /* server unreachable — localStorage fallback stays */ }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeParticipantId, activePlayerName]);
+
+  const handleSaveNavLayout = useCallback(async (newLayout) => {
+    // Optimistic UI update + localStorage cache
+    setNavLayout(newLayout);
+    saveNavLayout(activePlayerName, newLayout);
+
+    // Persist to server if a player is selected
+    if (activeParticipantId) {
+      setNavLayoutSyncing(true);
+      try {
+        await fetch('/api/preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ participantId: activeParticipantId, navLayout: newLayout }),
+        });
+      } catch (_) { /* server unreachable — localStorage fallback is enough */ }
+      setNavLayoutSyncing(false);
+    }
+  }, [activeParticipantId, activePlayerName]);
+
+  // Long-press handlers for the hamburger button
+  const startHold = useCallback((e) => {
+    e.preventDefault();
+    holdStartRef.current = Date.now();
+    setHoldProgress(0);
+
+    const animate = () => {
+      const elapsed = Date.now() - holdStartRef.current;
+      const progress = Math.min(100, (elapsed / HOLD_DURATION) * 100);
+      setHoldProgress(progress);
+      if (progress < 100) {
+        holdAnimRef.current = requestAnimationFrame(animate);
+      } else {
+        // Trigger customizer
+        setNavCustomizerOpen(true);
+        setHoldProgress(0);
+      }
+    };
+    holdAnimRef.current = requestAnimationFrame(animate);
+  }, []);
+
+  const cancelHold = useCallback(() => {
+    if (holdAnimRef.current) cancelAnimationFrame(holdAnimRef.current);
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    setHoldProgress(0);
+  }, []);
 
   const hasLiveMatches = matches.some(m => {
     if (m.finished === 1 || m.status === 'finished') return false;
@@ -365,6 +498,7 @@ export default function App() {
         activeTab={activeTab} 
         setActiveTab={handleTabChange} 
         hasLiveMatches={hasLiveMatches}
+        navLayout={navLayout}
       />
 
       {loading ? (
@@ -594,12 +728,44 @@ export default function App() {
         </main>
       )}
 
-      {/* Floating Hamburger Menu Button */}
-      <button 
-        className="hamburger-btn" 
-        onClick={() => setSidebarOpen(true)}
-        title="Open Sidebar"
+      {/* Floating Hamburger Menu Button — click = sidebar, hold 3s = customizer */}
+      <button
+        className="hamburger-btn"
+        title="Open Sidebar (hold 3s to customize nav)"
+        onClick={() => {
+          if (holdProgress < 5) setSidebarOpen(true);
+        }}
+        onPointerDown={startHold}
+        onPointerUp={cancelHold}
+        onPointerLeave={cancelHold}
+        onContextMenu={(e) => e.preventDefault()}
+        style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 999 }}
       >
+        {/* SVG progress ring — only visible while holding */}
+        {holdProgress > 0 && (
+          <svg
+            width="52" height="52"
+            style={{ position: 'absolute', top: '-4px', left: '-4px', pointerEvents: 'none' }}
+          >
+            <circle
+              cx="26" cy="26" r="23"
+              fill="none"
+              stroke="rgba(139,92,246,0.2)"
+              strokeWidth="3"
+            />
+            <circle
+              cx="26" cy="26" r="23"
+              fill="none"
+              stroke="var(--primary)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 23}`}
+              strokeDashoffset={`${2 * Math.PI * 23 * (1 - holdProgress / 100)}`}
+              transform="rotate(-90 26 26)"
+              style={{ transition: 'stroke-dashoffset 0.05s linear', filter: 'drop-shadow(0 0 4px rgba(139,92,246,0.8))' }}
+            />
+          </svg>
+        )}
         <Menu size={20} />
       </button>
 
@@ -639,59 +805,54 @@ export default function App() {
           </div>
         )}
 
-        {/* Sidebar Nav Links */}
+        {/* Sidebar Nav Links — driven by navLayout (sidebar items only) */}
         <div className="sidebar-section">
           <label className="sidebar-label">Navigation</label>
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'live' ? 'active' : ''}`}
-            onClick={() => {
-              handleTabChange('live');
-              setSidebarOpen(false);
-            }}
-            style={{ color: '#ffffff' }}
-          >
-            {hasLiveMatches && <span className="live-dot" style={{ width: '8px', height: '8px', margin: 0 }} />}
-            Live Matches
-          </button>
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'match-view' ? 'active' : ''}`}
-            onClick={() => {
-              handleTabChange('match-view');
-              setSidebarOpen(false);
-            }}
-          >
-            <Award size={18} />
-            Results
-          </button>
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'stats' ? 'active' : ''}`}
-            onClick={() => {
-              handleTabChange('stats');
-              setSidebarOpen(false);
-            }}
-          >
-            <BarChart2 size={18} />
-            Stats
-          </button>
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'logs' ? 'active' : ''}`}
-            onClick={() => {
-              handleTabChange('logs');
-              setSidebarOpen(false);
-            }}
-          >
-            <List size={18} />
-            Logs
-          </button>
-          <button 
-            className={`sidebar-nav-btn ${activeTab === 'info' ? 'active' : ''}`}
-            onClick={() => {
-              handleTabChange('info');
-              setSidebarOpen(false);
+          {navLayout
+            .filter(item => !item.inHeader)
+            .map(item => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  className={`sidebar-nav-btn ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    handleTabChange(item.id);
+                    setSidebarOpen(false);
+                  }}
+                  style={item.id === 'live' ? { color: '#ffffff' } : undefined}
+                >
+                  {item.id === 'live' && hasLiveMatches && (
+                    <span className="live-dot" style={{ width: '8px', height: '8px', margin: 0 }} />
+                  )}
+                  {item.id === 'match-view' && <Award size={18} />}
+                  {item.id === 'stats'      && <BarChart2 size={18} />}
+                  {item.id === 'logs'       && <List size={18} />}
+                  {item.id === 'info'       && <Info size={18} />}
+                  {item.label}
+                </button>
+              );
+            })
+          }
+          {/* Hint to open customizer */}
+          <button
+            onClick={() => { setSidebarOpen(false); setNavCustomizerOpen(true); }}
+            style={{
+              marginTop: '4px',
+              background: 'transparent',
+              border: '1px dashed rgba(139,92,246,0.25)',
+              borderRadius: '8px',
+              color: 'rgba(139,92,246,0.6)',
+              fontSize: '11px',
+              fontWeight: '700',
+              padding: '7px 14px',
+              cursor: 'pointer',
+              textAlign: 'right',
+              letterSpacing: '0.03em',
+              transition: 'all 0.2s',
             }}
           >
-            <Info size={18} />
-            Info
+            ✦ Customize Nav
           </button>
         </div>
 
@@ -717,6 +878,17 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Nav Customizer Modal */}
+      {navCustomizerOpen && (
+        <NavCustomizerModal
+          navLayout={navLayout}
+          playerName={activePlayerName}
+          isSyncing={navLayoutSyncing}
+          onSave={handleSaveNavLayout}
+          onClose={() => setNavCustomizerOpen(false)}
+        />
+      )}
 
       {showScrollTop && (
         <button
