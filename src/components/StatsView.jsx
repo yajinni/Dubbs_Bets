@@ -16,7 +16,17 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     // Count correct answers
     const correctWinners = pPreds.filter(pred => pred.points_winner > 0).length;
     const correctOu = pPreds.filter(pred => pred.points_ou > 0).length;
-    const underdogBonus = pPreds.filter(pred => pred.points_cards_ou > 0).length;
+    const underdogCorrect = pPreds.filter(pred => pred.points_cards_ou > 0).length;
+    const underdogAttempts = pPreds.filter(pred => {
+      if (!pred.predicted_winner) return false;
+      const m = matches.find(mt => mt.id === pred.match_id);
+      if (!m || m.home_win_pct == null || m.away_win_pct == null || m.draw_pct == null) return false;
+      const maxPct = Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
+      if (pred.predicted_winner === 'home' && m.home_win_pct < maxPct) return true;
+      if (pred.predicted_winner === 'away' && m.away_win_pct < maxPct) return true;
+      if (pred.predicted_winner === 'draw' && m.draw_pct < maxPct) return true;
+      return false;
+    }).length;
     const correctScores = pPreds.filter(pred => pred.points_score > 0).length;
     const correctFirstScorers = pPreds.filter(pred => pred.points_first_scorer > 0).length;
     const correctExactCards = pPreds.filter(pred => pred.points_total_cards > 0).length;
@@ -31,6 +41,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     const exactCardsPct = totalFinishedPreds > 0 ? Math.round((correctExactCards / totalFinishedPreds) * 100) : 0;
     const halfPct = totalFinishedPreds > 0 ? Math.round((correctHalf / totalFinishedPreds) * 100) : 0;
     const cleanPct = totalFinishedPreds > 0 ? Math.round((correctClean / totalFinishedPreds) * 100) : 0;
+    const underdogPct = underdogAttempts > 0 ? Math.round((underdogCorrect / underdogAttempts) * 100) : 0;
 
     return {
       id: p.id,
@@ -38,7 +49,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       totalFinishedPreds,
       correctWinners,
       correctOu,
-      underdogBonus,
+      underdogCorrect,
+      underdogAttempts,
+      underdogPct,
       correctScores,
       correctFirstScorers,
       correctExactCards,
@@ -153,7 +166,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   if (hasFinishedPreds) {
     topWinner = [...stats].sort((a, b) => b.winnerPct - a.winnerPct || b.correctWinners - a.correctWinners)[0];
     topOu = [...stats].sort((a, b) => b.ouPct - a.ouPct || b.correctOu - a.correctOu)[0];
-    topCards = [...stats].sort((a, b) => b.underdogBonus - a.underdogBonus)[0];
+    topCards = [...stats].sort((a, b) => b.underdogPct - a.underdogPct || b.underdogCorrect - a.underdogCorrect)[0];
     topScore = [...stats].sort((a, b) => b.scorePct - a.scorePct || b.correctScores - a.correctScores)[0];
     topFirstScorer = [...stats].sort((a, b) => b.firstScorerPct - a.firstScorerPct || b.correctFirstScorers - a.correctFirstScorers)[0];
     topExactCards = [...stats].sort((a, b) => b.exactCardsPct - a.exactCardsPct || b.correctExactCards - a.correctExactCards)[0];
@@ -615,7 +628,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Underdog Whisperer 🐉</h4>
               <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topCards?.name}</span>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                {topCards?.underdogBonus} underdog bonus point{topCards?.underdogBonus !== 1 ? 's' : ''} earned
+                {topCards?.underdogPct}% Accuracy ({topCards?.underdogCorrect}/{topCards?.underdogAttempts})
               </p>
             </div>
           </div>
@@ -697,9 +710,12 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: '#fbbf24', fontWeight: '700' }}>🐉 {row.underdogBonus} bonus pt{row.underdogBonus !== 1 ? 's' : ''}</span>
+                      <span style={{ color: '#fbbf24', fontWeight: '700' }}>{row.underdogPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.underdogCorrect}/{row.underdogAttempts}</span>
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Picked underdog &amp; won</div>
+                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${row.underdogPct}%`, height: '100%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)', borderRadius: '3px' }}></div>
+                    </div>
                   </div>
                 </td>
 
