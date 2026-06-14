@@ -660,14 +660,14 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center' }}>Bets</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Winner</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Over / Under Goals</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>🐉 Underdog</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Scored First</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Highest Half</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Clean Sheet</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Score</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Exact Cards</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Winners</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>O/U</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Underdog</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>SF</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Half</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>CS</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⚽</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Cards</th>
             </tr>
           </thead>
           <tbody>
@@ -796,14 +796,14 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
         </h3>
         {stats.map((row) => {
           const statRows = [
-            { label: 'Winner', pct: row.winnerPct, num: row.correctWinners, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
-            { label: 'O/U Goals', pct: row.ouPct, num: row.correctOu, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #22c55e, #4ade80)' },
+            { label: 'Winners', pct: row.winnerPct, num: row.correctWinners, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
+            { label: 'O/U', pct: row.ouPct, num: row.correctOu, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #22c55e, #4ade80)' },
             { label: 'Underdog', pct: row.underdogPct, num: row.underdogCorrect, denom: row.underdogAttempts, color: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
-            { label: 'Scored First', pct: row.firstScorerPct, num: row.correctFirstScorers, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #ec4899, #f472b6)' },
-            { label: 'Highest Half', pct: row.halfPct, num: row.correctHalf, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
-            { label: 'Clean Sheet', pct: row.cleanPct, num: row.correctClean, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #38bdf8, #7dd3fc)' },
-            { label: 'Exact Score', pct: row.scorePct, num: row.correctScores, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #eab308, #fde047)' },
-            { label: 'Exact Cards', pct: row.exactCardsPct, num: row.correctExactCards, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #06b6d4, #67e8f9)' },
+            { label: 'SF', pct: row.firstScorerPct, num: row.correctFirstScorers, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #ec4899, #f472b6)' },
+            { label: 'Half', pct: row.halfPct, num: row.correctHalf, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
+            { label: 'CS', pct: row.cleanPct, num: row.correctClean, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #38bdf8, #7dd3fc)' },
+            { label: '⚽', pct: row.scorePct, num: row.correctScores, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #eab308, #fde047)' },
+            { label: 'Cards', pct: row.exactCardsPct, num: row.correctExactCards, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #06b6d4, #67e8f9)' },
           ];
           return (
             <div key={row.id} className="stats-card">

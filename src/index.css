@@ -1376,15 +1376,15 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 5px;
   }
   .stats-card-label {
-    width: 60px;
+    width: 54px;
     font-size: 10px;
   }
   .stats-card-pct {
-    width: 30px;
+    width: 28px;
     font-size: 11px;
   }
   .stats-card-frac {
-    width: 34px;
+    width: 32px;
     font-size: 9px;
   }
   .stats-card-bar-wrap {
