@@ -997,6 +997,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
       // 2. Score match job (kickoff + 105 minutes)
       const scoreEpoch = Math.floor((matchTime + 105 * 60 * 1000) / 1000);
       const lockPublishUrl = `${pagesUrl}/api/sync${encodeURIComponent(`?lockMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`)}`;
+      let scorePublishUrl = '';
       
       let lockMsgId = null;
       let scoreMsgId = null;
@@ -1030,7 +1031,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
         
         // Schedule score match job if in the future
         if (scoreEpoch * 1000 > currentTime) {
-          const scorePublishUrl = `${pagesUrl}/api/sync${encodeURIComponent(`?scoreMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`)}`;
+          scorePublishUrl = `${pagesUrl}/api/sync${encodeURIComponent(`?scoreMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`)}`;
           const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${scorePublishUrl}`, {
             method: 'POST',
             headers: {
@@ -1058,9 +1059,10 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
           .bind(lockMsgId, scoreMsgId, m.id)
           .run();
       } catch (err) {
+        const failedUrl = (lockPublishUrl || scorePublishUrl || '');
         console.error(`[QStash Scheduler] Failed to schedule QStash jobs for match ${m.id}:`, err.message);
         try {
-          await logChange(db, 'system', m.id, null, 'QStash Scheduling Failed', null, err.message);
+          await logChange(db, 'system', m.id, null, 'QStash Scheduling Failed', null, `${err.message} | Constructed URL: ${failedUrl} | pagesUrl: ${pagesUrl}`);
         } catch (logErr) {
           console.error('Failed to log scheduling error:', logErr.message);
         }
