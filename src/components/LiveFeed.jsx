@@ -494,7 +494,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
       </div>
 
       {/* Feed List */}
-      <div className="live-feed-list" style={{ padding: subTab === 'stats' ? '16px' : '0' }}>
+      <div className="live-feed-list" style={{ padding: subTab === 'stats' ? '16px' : '0', maxHeight: subTab === 'stats' ? 'none' : undefined, overflowY: subTab === 'stats' ? 'visible' : undefined }}>
         {subTab === 'commentary' ? (
           commentary.map(item => {
             const cat = item.category;
