@@ -83,6 +83,9 @@ export default function LiveFeed({ espnEventId, matchStatus, homeName, awayName 
         }));
       }
 
+      // Reverse so latest commentary is at the top (newest first)
+      items.reverse();
+
       setCommentary(items);
       setError(null);
       setLastRefreshed(new Date());

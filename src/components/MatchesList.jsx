@@ -259,17 +259,6 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           {getRoundLabel(m)}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Live Feed Toggle */}
-          {m.status !== 'scheduled' || m.espn_event_id ? (
-            <button
-              className={`live-feed-toggle-btn${isLive ? ' live-active' : ''}${showFeed ? ' open' : ''}`}
-              onClick={() => setShowFeed(v => !v)}
-              aria-label="Toggle live feed"
-            >
-              <Radio size={11} />
-              {isLive ? 'Live Feed' : 'Commentary'}
-            </button>
-          ) : null}
           <span style={{ fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
             <Calendar size={14} />
             {formatMatchDate(m.local_date)}
@@ -730,48 +719,77 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
           }}
         />
 
-        {/* Live Feed Panel */}
-        {showFeed && (
-          <LiveFeed
-            espnEventId={m.espn_event_id}
-            matchStatus={m.status}
-            homeName={homeName}
-            awayName={awayName}
-          />
-        )}
       </div>
       </>
       )}
 
-      {m.finished === 1 && (
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="btn-secondary"
-          style={{ 
-            alignSelf: 'center', 
-            marginTop: isCollapsed ? '0px' : '10px', 
-            fontSize: '12px', 
-            padding: '6px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            width: '100%',
-            justifyContent: 'center',
-            border: '1px solid var(--glass-border)',
-            borderRadius: '8px'
-          }}
-        >
-          {isCollapsed ? (
-            <>
-              Show Details & Picks <ChevronDown size={14} />
-            </>
-          ) : (
-            <>
-              Hide Details & Picks <ChevronUp size={14} />
-            </>
-          )}
-        </button>
+      {/* Live Feed Panel (expanded commentary) */}
+      {showFeed && (
+        <LiveFeed
+          espnEventId={m.espn_event_id}
+          matchStatus={m.status}
+          homeName={homeName}
+          awayName={awayName}
+        />
       )}
+
+      {/* Action Buttons at the bottom of the card */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '10px' }}>
+        {/* Live Commentary Toggle Button */}
+        {(m.status !== 'scheduled' || m.espn_event_id) && (
+          <button 
+            type="button"
+            onClick={() => setShowFeed(!showFeed)}
+            className="btn-secondary"
+            style={{ 
+              alignSelf: 'center', 
+              fontSize: '12px', 
+              padding: '6px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              width: '100%',
+              justifyContent: 'center',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '8px'
+            }}
+          >
+            <Radio size={12} className={m.status === 'live' ? 'pulse-icon' : ''} />
+            {showFeed ? 'Hide Live Commentary' : 'Live Commentary'}
+          </button>
+        )}
+
+        {/* Show/Hide Details Button */}
+        {m.finished === 1 && (
+          <button 
+            type="button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="btn-secondary"
+            style={{ 
+              alignSelf: 'center', 
+              fontSize: '12px', 
+              padding: '6px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              width: '100%',
+              justifyContent: 'center',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '8px'
+            }}
+          >
+            {isCollapsed ? (
+              <>
+                Show Details & Picks <ChevronDown size={14} />
+              </>
+            ) : (
+              <>
+                Hide Details & Picks <ChevronUp size={14} />
+              </>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
