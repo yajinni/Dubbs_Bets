@@ -43,11 +43,18 @@ export default function Header({ activeTab, setActiveTab, hasLiveMatches }) {
           Dashboard
         </button>
         <button 
+          id="nav-matches"
+          className={`nav-btn ${activeTab === 'matches' ? 'active' : ''}`}
+          onClick={() => setActiveTab('matches')}
+        >
+          Bets
+        </button>
+        <button 
           id="nav-live"
           className={`nav-btn ${activeTab === 'live' ? 'active' : ''}`}
           onClick={() => setActiveTab('live')}
           style={{ 
-            color: 'var(--success)', 
+            color: '#ffffff', 
             display: 'flex', 
             alignItems: 'center', 
             gap: '6px', 
@@ -55,13 +62,6 @@ export default function Header({ activeTab, setActiveTab, hasLiveMatches }) {
           }}
         >
           {hasLiveMatches && <span className="live-dot" style={{ margin: 0 }} />} Live
-        </button>
-        <button 
-          id="nav-matches"
-          className={`nav-btn ${activeTab === 'matches' ? 'active' : ''}`}
-          onClick={() => setActiveTab('matches')}
-        >
-          Bets
         </button>
       </nav>
     </header>

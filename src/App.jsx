@@ -557,7 +557,7 @@ export default function App() {
               handleTabChange('live');
               setSidebarOpen(false);
             }}
-            style={{ color: 'var(--success)' }}
+            style={{ color: '#ffffff' }}
           >
             {hasLiveMatches && <span className="live-dot" style={{ width: '8px', height: '8px', margin: 0 }} />}
             Live Matches
