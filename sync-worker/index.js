@@ -5,7 +5,7 @@ export default {
     const secret = env.SYNC_SECRET;
     
     // Construct sync url with secret if available
-    const url = `${pagesUrl}/api/sync?skipOdds=true${secret ? `&secret=${secret}` : ''}`;
+    const url = `${pagesUrl}/api/sync?skipOdds=true&trigger=cron${secret ? `&secret=${secret}` : ''}`;
     
     console.log(`[Cron Trigger] Starting sync fetch to: ${pagesUrl}/api/sync...`);
     

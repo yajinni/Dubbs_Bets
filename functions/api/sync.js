@@ -50,6 +50,7 @@ export async function onRequest(context) {
       if (!apiKeyOdds) {
         return new Response(JSON.stringify({ error: 'THE_ODDS_API_KEY is missing' }), { status: 400, headers });
       }
+      await logChange(env.db, 'system', parseInt(lockMatchId), null, 'QStash Webhook Received: Lock Match Odds', null, `Match ID: ${lockMatchId}`);
       await handleLockMatchTask(env.db, parseInt(lockMatchId), apiKeyOdds);
       return new Response(JSON.stringify({ success: true, message: `Match ${lockMatchId} odds locked.` }), { status: 200, headers });
     }
@@ -57,6 +58,7 @@ export async function onRequest(context) {
     const scoreMatchId = url.searchParams.get('scoreMatchId');
     if (scoreMatchId) {
       const pagesUrl = env.PAGES_URL || "https://dubbs-bets.pages.dev";
+      await logChange(env.db, 'system', parseInt(scoreMatchId), null, 'QStash Webhook Received: Score Match & Recalculate Predictions', null, `Match ID: ${scoreMatchId}`);
       await handleScoreMatchTask(env.db, parseInt(scoreMatchId), env.QSTASH_TOKEN, pagesUrl, env.SYNC_SECRET, env.QSTASH_URL);
       return new Response(JSON.stringify({ success: true, message: `Match ${scoreMatchId} scores synced and predictions scored.` }), { status: 200, headers });
     }
@@ -123,6 +125,9 @@ export async function onRequest(context) {
     const skipOdds = url.searchParams.get('skipOdds') === 'true';
     let syncResults = { source: 'espn', matchesUpdated: 0, oddsUpdated: 0 };
 
+    const trigger = url.searchParams.get('trigger') || (force ? 'manual_force' : 'web_request');
+    await logChange(env.db, 'system', null, null, `Sync Started (${trigger})`, null, `skipOdds: ${skipOdds}`);
+
     // Run actual sync. If it fails, let the error propagate.
     syncResults = await syncFromESPN(env.db, env.QSTASH_TOKEN, env.QSTASH_URL);
 
@@ -149,6 +154,8 @@ export async function onRequest(context) {
     // 3. Update last sync time
     const isoString = new Date().toISOString();
     await env.db.prepare("UPDATE settings SET value = ? WHERE key = 'last_sync'").bind(isoString).run();
+
+    await logChange(env.db, 'system', null, null, `Sync Completed successfully`, null, `Updated: ${syncResults.matchesUpdated} matches, ${syncResults.oddsUpdated} odds. Source: ${syncResults.source}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -294,10 +301,10 @@ async function syncFromESPN(db, qstashToken = null, qstashUrl = null) {
 
         if (qstashToken) {
           if (dbMatch.qstash_lock_msg_id) {
-            await cancelQStashMessage(dbMatch.qstash_lock_msg_id, qstashToken, qstashUrl);
+            await cancelQStashMessage(db, dbMatch.qstash_lock_msg_id, qstashToken, qstashUrl);
           }
           if (dbMatch.qstash_score_msg_id) {
-            await cancelQStashMessage(dbMatch.qstash_score_msg_id, qstashToken, qstashUrl);
+            await cancelQStashMessage(db, dbMatch.qstash_score_msg_id, qstashToken, qstashUrl);
           }
         }
       }
@@ -891,6 +898,7 @@ async function handleScoreMatchTask(db, matchId, qstashToken, pagesUrl, secret, 
           console.error(`[QStash Webhook] Failed to schedule retry on QStash: ${errText}`);
         } else {
           console.log(`[QStash Webhook] Successfully rescheduled match ${matchId} score sync in 1 minute.`);
+          await logChange(db, 'system', matchId, null, 'QStash Message Sent: Rescheduled Score Sync (Retry)', null, `Scheduled Time: 1 minute from now`);
         }
       } catch (err) {
         console.error(`[QStash Webhook] Failed to reschedule score sync:`, err.message);
@@ -948,6 +956,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
           try {
             const resJson = await lockRes.json();
             lockMsgId = resJson.messageId || null;
+            await logChange(db, 'system', m.id, null, 'QStash Message Sent: Scheduled Odds Lock', null, `Msg ID: ${lockMsgId}, Scheduled Time: ${new Date(lockEpoch * 1000).toISOString()}`);
           } catch (e) {
             console.error('[QStash Scheduler] Failed to parse lock response JSON:', e.message);
           }
@@ -972,6 +981,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
           try {
             const resJson = await scoreRes.json();
             scoreMsgId = resJson.messageId || null;
+            await logChange(db, 'system', m.id, null, 'QStash Message Sent: Scheduled Score Sync', null, `Msg ID: ${scoreMsgId}, Scheduled Time: ${new Date(scoreEpoch * 1000).toISOString()}`);
           } catch (e) {
             console.error('[QStash Scheduler] Failed to parse score response JSON:', e.message);
           }
@@ -991,7 +1001,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
   }
 }
 
-async function cancelQStashMessage(messageId, qstashToken, qstashUrl) {
+async function cancelQStashMessage(db, messageId, qstashToken, qstashUrl) {
   if (!messageId) return;
   const qstashEndpoint = qstashUrl || "https://qstash-us-east-1.upstash.io";
   try {
@@ -1007,6 +1017,7 @@ async function cancelQStashMessage(messageId, qstashToken, qstashUrl) {
       console.error(`[QStash Scheduler] Failed to cancel message ${messageId}: status ${res.status} - ${errText}`);
     } else {
       console.log(`[QStash Scheduler] Message ${messageId} successfully cancelled.`);
+      await logChange(db, 'system', null, null, 'QStash Message Cancelled', null, `Msg ID: ${messageId}`);
     }
   } catch (err) {
     console.error(`[QStash Scheduler] Error cancelling message ${messageId}:`, err.message);

@@ -4,7 +4,7 @@ import { RefreshCw, Search, Database, Clock, ChevronRight } from 'lucide-react';
 export default function LogsView() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('prediction');
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchLogs = async () => {
@@ -50,6 +50,8 @@ export default function LogsView() {
 
   const getCategoryBadgeColor = (category) => {
     switch (category) {
+      case 'system':
+        return { bg: 'rgba(234, 179, 8, 0.15)', text: '#eab308', border: 'rgba(234, 179, 8, 0.3)' };
       case 'odds':
         return { bg: 'rgba(168, 85, 247, 0.15)', text: '#c084fc', border: 'rgba(168, 85, 247, 0.3)' };
       case 'match_time':
@@ -136,7 +138,7 @@ export default function LogsView() {
               className="admin-select"
               style={{ width: '160px', textTransform: 'capitalize', cursor: 'pointer' }}
             >
-              {['all', 'prediction', 'odds', 'match_time', 'score', 'cards'].map((cat) => (
+              {['all', 'prediction', 'system', 'odds', 'match_time', 'score', 'cards'].map((cat) => (
                 <option key={cat} value={cat} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
                   {cat.replace('_', ' ')}
                 </option>
