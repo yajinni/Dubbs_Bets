@@ -437,17 +437,44 @@ export default function App() {
                 </div>
               ) : (
                 liveTabMatches.map(m => (
-                  <MatchCard
-                    key={m.id}
-                    m={m}
-                    pred={predictions.find(p => p.match_id === m.id)}
-                    activeParticipantId={activeParticipantId}
-                    onSave={refreshAllData}
-                    allPredictions={allPredictions}
-                    leaderboard={leaderboard}
-                    runningPointsMap={runningPointsMap}
-                    selectedMatchId={null}
-                  />
+                  <div key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <MatchCard
+                      m={m}
+                      pred={predictions.find(p => p.match_id === m.id)}
+                      activeParticipantId={activeParticipantId}
+                      onSave={refreshAllData}
+                      allPredictions={allPredictions}
+                      leaderboard={leaderboard}
+                      runningPointsMap={runningPointsMap}
+                      selectedMatchId={null}
+                    />
+                    {m.finished !== 1 && (
+                      <a
+                        href="https://istreameast.app/v52"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-secondary"
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          gap: '8px', 
+                          textDecoration: 'none', 
+                          padding: '10px', 
+                          borderRadius: '8px', 
+                          fontSize: '13px', 
+                          fontWeight: '700', 
+                          background: 'rgba(255,255,255,0.03)', 
+                          border: '1px solid var(--glass-border)',
+                          color: 'var(--text-primary)',
+                          marginTop: '-12px',
+                          marginBottom: '8px'
+                        }}
+                      >
+                        📺 Watch Live Stream
+                      </a>
+                    )}
+                  </div>
                 ))
               )}
             </div>
