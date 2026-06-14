@@ -381,7 +381,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
           {/* Synced/Locked Timestamp Status */}
           {m.odds_updated_at && (
             <div style={{ 
-              fontSize: '11px', 
+              fontSize: '13px', 
               color: '#10b981', 
               marginTop: '12px',
               paddingTop: '8px',
@@ -391,9 +391,9 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
               fontWeight: '500'
             }}>
               {m.odds_locked === 1 ? (
-                <span>Locked: {new Date(m.odds_updated_at).toLocaleString()}</span>
+                <span>Odds Locked: {new Date(m.odds_updated_at).toLocaleString()}</span>
               ) : (
-                <span>Synced: {new Date(m.odds_updated_at).toLocaleString()}</span>
+                <span>Odds Synced: {new Date(m.odds_updated_at).toLocaleString()}</span>
               )}
             </div>
           )}
