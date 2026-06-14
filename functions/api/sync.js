@@ -1059,6 +1059,11 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
           .run();
       } catch (err) {
         console.error(`[QStash Scheduler] Failed to schedule QStash jobs for match ${m.id}:`, err.message);
+        try {
+          await logChange(db, 'system', m.id, null, 'QStash Scheduling Failed', null, err.message);
+        } catch (logErr) {
+          console.error('Failed to log scheduling error:', logErr.message);
+        }
       }
     } else {
       // Kickoff is already in the past, just mark as scheduled
