@@ -1474,7 +1474,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Scrollable event list */
 .live-feed-list {
-  max-height: 340px;
+  max-height: 450px;
   overflow-y: auto;
   padding: 6px 0;
 }
