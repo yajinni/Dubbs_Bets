@@ -489,7 +489,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               className="chart-tooltip-mobile"
               style={{
                 position: 'absolute',
-                top: `${paddingTop + 10}px`,
+                top: `${paddingTop - 5}px`,
                 left: isTooltipOnLeft ? 'auto' : `${getX(hoveredIndex) + 20}px`,
                 right: isTooltipOnLeft ? `${svgWidth - getX(hoveredIndex) + 20}px` : 'auto',
                 background: 'rgba(17, 17, 17, 0.95)',

@@ -1764,7 +1764,7 @@ h1, h2, h3, h4, h5, h6 {
 @media (max-width: 640px) {
   .chart-tooltip-mobile {
     position: absolute !important;
-    top: 50% !important;
+    top: calc(50% - 15px) !important;
     left: 50% !important;
     right: auto !important;
     transform: translate(-50%, -50%) !important;
