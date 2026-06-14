@@ -120,12 +120,13 @@ export async function onRequest(context) {
 
     // 2. Perform Sync
     const apiKeyOdds = env.THE_ODDS_API_KEY;
+    const skipOdds = url.searchParams.get('skipOdds') === 'true';
     let syncResults = { source: 'espn', matchesUpdated: 0, oddsUpdated: 0 };
 
     // Run actual sync. If it fails, let the error propagate.
-    syncResults = await syncFromESPN(env.db);
+    syncResults = await syncFromESPN(env.db, env.QSTASH_TOKEN, env.QSTASH_URL);
 
-    if (apiKeyOdds && apiKeyOdds !== '') {
+    if (!skipOdds && apiKeyOdds && apiKeyOdds !== '') {
       try {
         const oddsResults = await syncFromTheOddsAPI(env.db, apiKeyOdds);
         syncResults.oddsUpdated = oddsResults.oddsUpdated;
@@ -187,7 +188,7 @@ function normalizeTeamName(name) {
 // --------------------------------------------------------
 // ESPN Scoreboard Sync Implementation (Free, Keyless)
 // --------------------------------------------------------
-async function syncFromESPN(db) {
+async function syncFromESPN(db, qstashToken = null, qstashUrl = null) {
   console.log('Syncing from ESPN Scoreboard API...');
   const res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard');
   const data = await res.json();
@@ -280,8 +281,25 @@ async function syncFromESPN(db) {
       const dbKickoff = new Date(dbMatch.local_date).getTime();
       const espnKickoff = new Date(event.date).getTime();
       let newLocalDate = dbMatch.local_date;
+      let dateChanged = false;
       if (dbKickoff !== espnKickoff) {
         newLocalDate = new Date(event.date).toISOString();
+        dateChanged = true;
+      }
+
+      if (dateChanged) {
+        const matchLabel = `${dbMatch.home_team_name} vs ${dbMatch.away_team_name}`;
+        console.log(`[Sync] Kickoff time changed for match ${dbMatch.id} (${matchLabel}). Old: ${dbMatch.local_date}, New: ${newLocalDate}. Rescheduling QStash triggers.`);
+        await logChange(db, 'match_time', dbMatch.id, null, `${matchLabel} Kickoff Time Changed`, dbMatch.local_date, newLocalDate);
+
+        if (qstashToken) {
+          if (dbMatch.qstash_lock_msg_id) {
+            await cancelQStashMessage(dbMatch.qstash_lock_msg_id, qstashToken, qstashUrl);
+          }
+          if (dbMatch.qstash_score_msg_id) {
+            await cancelQStashMessage(dbMatch.qstash_score_msg_id, qstashToken, qstashUrl);
+          }
+        }
       }
 
       // Update D1 database
@@ -297,7 +315,10 @@ async function syncFromESPN(db) {
           actual_cards = ?,
           actual_first_scorer = ?,
           espn_event_id = ?,
-          local_date = ?
+          local_date = ?,
+          qstash_scheduled = ?,
+          qstash_lock_msg_id = ?,
+          qstash_score_msg_id = ?
         WHERE id = ?
       `).bind(
         homeScore,
@@ -310,6 +331,9 @@ async function syncFromESPN(db) {
         actualFirstScorer,
         event.id,
         newLocalDate,
+        dateChanged ? 0 : dbMatch.qstash_scheduled,
+        dateChanged ? null : dbMatch.qstash_lock_msg_id,
+        dateChanged ? null : dbMatch.qstash_score_msg_id,
         dbMatch.id
       ).run();
       
@@ -903,6 +927,9 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
       const scoreEpoch = Math.floor((matchTime + 105 * 60 * 1000) / 1000);
       const scoreUrl = `${pagesUrl}/api/sync?scoreMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`;
       
+      let lockMsgId = null;
+      let scoreMsgId = null;
+      
       try {
         // Schedule lock odds job if in the future
         if (lockEpoch * 1000 > currentTime) {
@@ -917,6 +944,12 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
           if (!lockRes.ok) {
             const errText = await lockRes.text();
             throw new Error(`QStash Lock publish failed with status ${lockRes.status}: ${errText}`);
+          }
+          try {
+            const resJson = await lockRes.json();
+            lockMsgId = resJson.messageId || null;
+          } catch (e) {
+            console.error('[QStash Scheduler] Failed to parse lock response JSON:', e.message);
           }
         } else {
           console.log(`[QStash Scheduler] Lock time is in the past for match ${m.id}, skipping lock schedule.`);
@@ -936,10 +969,18 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
             const errText = await scoreRes.text();
             throw new Error(`QStash Score publish failed with status ${scoreRes.status}: ${errText}`);
           }
+          try {
+            const resJson = await scoreRes.json();
+            scoreMsgId = resJson.messageId || null;
+          } catch (e) {
+            console.error('[QStash Scheduler] Failed to parse score response JSON:', e.message);
+          }
         }
         
-        // Mark match as scheduled in database
-        await db.prepare("UPDATE matches SET qstash_scheduled = 1 WHERE id = ?").bind(m.id).run();
+        // Mark match as scheduled in database and store the message IDs
+        await db.prepare("UPDATE matches SET qstash_scheduled = 1, qstash_lock_msg_id = ?, qstash_score_msg_id = ? WHERE id = ?")
+          .bind(lockMsgId, scoreMsgId, m.id)
+          .run();
       } catch (err) {
         console.error(`[QStash Scheduler] Failed to schedule QStash jobs for match ${m.id}:`, err.message);
       }
@@ -947,5 +988,27 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
       // Kickoff is already in the past, just mark as scheduled
       await db.prepare("UPDATE matches SET qstash_scheduled = 1 WHERE id = ?").bind(m.id).run();
     }
+  }
+}
+
+async function cancelQStashMessage(messageId, qstashToken, qstashUrl) {
+  if (!messageId) return;
+  const qstashEndpoint = qstashUrl || "https://qstash-us-east-1.upstash.io";
+  try {
+    console.log(`[QStash Scheduler] Cancelling message ${messageId}...`);
+    const res = await fetch(`${qstashEndpoint}/v2/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${qstashToken}`
+      }
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[QStash Scheduler] Failed to cancel message ${messageId}: status ${res.status} - ${errText}`);
+    } else {
+      console.log(`[QStash Scheduler] Message ${messageId} successfully cancelled.`);
+    }
+  } catch (err) {
+    console.error(`[QStash Scheduler] Error cancelling message ${messageId}:`, err.message);
   }
 }

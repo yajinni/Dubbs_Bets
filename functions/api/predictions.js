@@ -110,16 +110,18 @@ export async function onRequest(context) {
       const existing = await env.db.prepare(checkQuery).bind(participantId, matchId).first();
 
       // Log changes
+      const changes = [];
+      
       const oldWinner = existing ? existing.predicted_winner : null;
       const newWinner = predictedWinner || null;
       if (oldWinner !== newWinner) {
-        await logChange(env.db, 'prediction', matchId, participantId, `${participantName} winner prediction for ${matchLabel}`, oldWinner, newWinner);
+        changes.push(`Winner: ${oldWinner || 'None'} -> ${newWinner}`);
       }
 
       const oldOU = existing ? existing.predicted_over_under : null;
       const newOU = predictedOverUnder || null;
       if (oldOU !== newOU) {
-        await logChange(env.db, 'prediction', matchId, participantId, `${participantName} over/under prediction for ${matchLabel}`, oldOU, newOU);
+        changes.push(`O/U: ${oldOU || 'None'} -> ${newOU}`);
       }
 
       const oldHome = existing ? existing.predicted_home_score : null;
@@ -127,31 +129,39 @@ export async function onRequest(context) {
       const oldScore = (oldHome !== null && oldAway !== null) ? `${oldHome}-${oldAway}` : null;
       const newScore = (pHomeScore !== null && pAwayScore !== null) ? `${pHomeScore}-${pAwayScore}` : null;
       if (oldScore !== newScore) {
-        await logChange(env.db, 'prediction', matchId, participantId, `${participantName} score prediction for ${matchLabel}`, oldScore, newScore);
+        changes.push(`Score: ${oldScore || 'None'} -> ${newScore}`);
       }
 
       const oldCards = existing ? existing.predicted_total_cards : null;
       const newCards = pTotalCards;
       if (oldCards !== newCards) {
-        await logChange(env.db, 'prediction', matchId, participantId, `${participantName} total cards prediction for ${matchLabel}`, oldCards, newCards);
+        changes.push(`Cards: ${oldCards === null ? 'None' : oldCards} -> ${newCards === null ? 'None' : newCards}`);
       }
 
       const oldFirstScorer = existing ? existing.predicted_first_scorer : null;
       const newFirstScorer = pFirstScorer;
       if (oldFirstScorer !== newFirstScorer) {
-        await logChange(env.db, 'prediction', matchId, participantId, `${participantName} first scorer prediction for ${matchLabel}`, oldFirstScorer, newFirstScorer);
+        changes.push(`First Scorer: ${oldFirstScorer || 'None'} -> ${newFirstScorer || 'None'}`);
       }
 
       const oldHalf = existing ? existing.predicted_highest_scoring_half : null;
       const newHalf = pHalfPick;
       if (oldHalf !== newHalf) {
-        await logChange(env.db, 'prediction', matchId, participantId, `${participantName} highest scoring half prediction for ${matchLabel}`, oldHalf, newHalf);
+        changes.push(`Highest Scoring Half: ${oldHalf || 'None'} -> ${newHalf || 'None'}`);
       }
 
       const oldClean = existing ? existing.predicted_clean_sheet : null;
       const newClean = pCleanPick;
       if (oldClean !== newClean) {
-        await logChange(env.db, 'prediction', matchId, participantId, `${participantName} clean sheet prediction for ${matchLabel}`, oldClean, newClean);
+        changes.push(`Clean Sheet: ${oldClean || 'None'} -> ${newClean || 'None'}`);
+      }
+
+      if (changes.length > 0) {
+        const actionType = existing ? 'updated' : 'submitted';
+        const description = `${participantName} ${actionType} prediction for ${matchLabel}`;
+        const oldValue = existing ? 'Existing prediction' : 'None';
+        const newValue = changes.join(', ');
+        await logChange(env.db, 'prediction', matchId, participantId, description, oldValue, newValue);
       }
 
       if (existing) {

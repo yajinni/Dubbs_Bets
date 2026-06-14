@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS matches (
   under_odds REAL DEFAULT 1.9,
   odds_locked INTEGER DEFAULT 0,
   qstash_scheduled INTEGER DEFAULT 0,
+  qstash_lock_msg_id TEXT DEFAULT NULL,
+  qstash_score_msg_id TEXT DEFAULT NULL,
   odds_updated_at TEXT DEFAULT NULL
 );
 
