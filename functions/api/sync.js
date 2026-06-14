@@ -1071,7 +1071,9 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
           try {
             const resJson = await lockRes.json();
             lockMsgId = resJson.messageId || null;
-            await logChange(db, 'system', m.id, null, 'QStash Message Sent: Scheduled Odds Lock', null, `Msg ID: ${lockMsgId}, Scheduled Time: ${new Date(lockEpoch * 1000).toISOString()}`);
+            const hShort = String(homeCode).substring(0, 3).toUpperCase();
+            const aShort = String(awayCode).substring(0, 3).toUpperCase();
+            await logChange(db, 'system', m.id, null, `QStash: Scheduled Odds Lock ${hShort} vs ${aShort}`, null, `Msg ID: ${lockMsgId}, Scheduled Time: ${new Date(lockEpoch * 1000).toISOString()}`);
           } catch (e) {
             console.error('[QStash Scheduler] Failed to parse lock response JSON:', e.message);
           }
