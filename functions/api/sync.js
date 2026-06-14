@@ -936,7 +936,7 @@ async function handleScoreMatchTask(db, matchId, qstashToken, pagesUrl, secret, 
       const retryPublishUrl = `${pagesUrl}/api/sync${encodeURIComponent(`?scoreMatchId=${matchId}${secret ? `&secret=${secret}` : ''}`)}`;
       const homeCode = match.home_code || match.home_team_label || match.home_team_name || 'TBD';
       const awayCode = match.away_code || match.away_team_label || match.away_team_name || 'TBD';
-      const retryLabel = `SS: ${homeCode} vs ${awayCode}`;
+      const retryLabel = `SS_${homeCode}_${awayCode}`.replace(/[^a-zA-Z0-9_.-]/g, '');
       
       try {
         const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${retryPublishUrl}`, {
@@ -989,7 +989,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
       
       const homeCode = m.home_code || m.home_team_label || m.home_team_name || 'TBD';
       const awayCode = m.away_code || m.away_team_label || m.away_team_name || 'TBD';
-      const matchLabel = `${homeCode} vs ${awayCode}`;
+      const matchLabel = `${homeCode}_${awayCode}`.replace(/[^a-zA-Z0-9_.-]/g, '');
 
       // 1. Lock odds job (kickoff - 2 hours)
       const lockEpoch = Math.floor((matchTime - 2 * 60 * 60 * 1000) / 1000);
@@ -1010,7 +1010,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
               'Upstash-Not-Before': String(lockEpoch),
-              'Upstash-Label': `Odds: ${matchLabel}`
+              'Upstash-Label': `Odds_${matchLabel}`
             }
           });
           console.log(`[QStash Scheduler] Lock odds scheduled: status ${lockRes.status}`);
@@ -1037,7 +1037,7 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
               'Upstash-Not-Before': String(scoreEpoch),
-              'Upstash-Label': `Score: ${matchLabel}`
+              'Upstash-Label': `Score_${matchLabel}`
             }
           });
           console.log(`[QStash Scheduler] Score sync scheduled: status ${scoreRes.status}`);
