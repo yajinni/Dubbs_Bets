@@ -498,7 +498,7 @@ export default function App() {
             <select
               id="sidebar-player-select"
               className="admin-select"
-              style={{ width: '100%', padding: '10px 14px', fontSize: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+              style={{ width: '100%', padding: '10px 14px', fontSize: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', textAlignLast: 'right', textAlign: 'right' }}
               value={activeParticipantId || ''}
               onChange={(e) => {
                 setActiveParticipantId(parseInt(e.target.value) || null);

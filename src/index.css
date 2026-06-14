@@ -1646,8 +1646,8 @@ h1, h2, h3, h4, h5, h6 {
 .sidebar-container {
   position: fixed;
   top: 0;
-  right: -320px;
-  width: 320px;
+  right: -280px;
+  width: 280px;
   height: 100vh;
   height: 100dvh;
   background: rgba(9, 6, 20, 0.96);
@@ -1694,11 +1694,12 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.1em;
   color: var(--text-muted);
   margin-bottom: 4px;
+  text-align: right;
 }
 
 .sidebar-nav-btn {
   width: 100%;
-  text-align: left;
+  text-align: right;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--glass-border);
   color: var(--text-muted);
@@ -1709,6 +1710,8 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
   align-items: center;
   gap: 12px;
 }
