@@ -660,9 +660,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', textAlign: 'center' }}>Bets</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Winners</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Win</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>O/U</th>
-              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Underdog</th>
+              <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Dog</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>SF</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Half</th>
               <th style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>CS</th>
@@ -796,9 +796,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
         </h3>
         {stats.map((row) => {
           const statRows = [
-            { label: 'Winners', pct: row.winnerPct, num: row.correctWinners, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
+            { label: 'Win', pct: row.winnerPct, num: row.correctWinners, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
             { label: 'O/U', pct: row.ouPct, num: row.correctOu, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #22c55e, #4ade80)' },
-            { label: 'Underdog', pct: row.underdogPct, num: row.underdogCorrect, denom: row.underdogAttempts, color: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
+            { label: 'Dog', pct: row.underdogPct, num: row.underdogCorrect, denom: row.underdogAttempts, color: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
             { label: 'SF', pct: row.firstScorerPct, num: row.correctFirstScorers, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #ec4899, #f472b6)' },
             { label: 'Half', pct: row.halfPct, num: row.correctHalf, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
             { label: 'CS', pct: row.cleanPct, num: row.correctClean, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #38bdf8, #7dd3fc)' },
