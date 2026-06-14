@@ -63,6 +63,41 @@ export default function App() {
     return map;
   }, [matches, leaderboard, allPredictions]);
 
+  const liveTabMatches = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity
+    const nowMs = Date.now();
+    const fifteenMinsMs = 15 * 60 * 1000;
+
+    // 1. Swap to next live match 15 min before it starts
+    const upcomingClose = matches.filter(m => {
+      if (m.status !== 'scheduled' || m.finished === 1) return false;
+      const kickOffMs = new Date((m.local_date || '').replace(' ', 'T')).getTime();
+      const diff = kickOffMs - nowMs;
+      return diff > 0 && diff <= fifteenMinsMs;
+    });
+
+    if (upcomingClose.length > 0) {
+      return upcomingClose.sort((a, b) => new Date((a.local_date || '').replace(' ', 'T')) - new Date((b.local_date || '').replace(' ', 'T')));
+    }
+
+    // 2. Otherwise show currently live matches
+    const currentLive = matches.filter(m => m.status === 'live');
+    if (currentLive.length > 0) {
+      return currentLive;
+    }
+
+    // 3. Otherwise leave the previous live/finished game showing
+    const finishedMatches = matches.filter(m => m.finished === 1 || m.status === 'finished');
+    if (finishedMatches.length > 0) {
+      const sortedFinished = [...finishedMatches].sort((a, b) => {
+        return new Date((b.local_date || '').replace(' ', 'T')) - new Date((a.local_date || '').replace(' ', 'T'));
+      });
+      return [sortedFinished[0]];
+    }
+
+    return [];
+  }, [matches]);
+
   const fetchPredictions = async (pId) => {
     try {
       const res = await fetch(`/api/predictions?participantId=${pId}`);
@@ -393,15 +428,15 @@ export default function App() {
           {activeTab === 'live' && (
             <div className="matches-list" style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px', marginBottom: '10px' }}>
-                <span className="live-dot" />
+                {hasLiveMatches && <span className="live-dot" />}
                 <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0 }}>Live Matches</h2>
               </div>
-              {matches.filter(m => m.status === 'live').length === 0 ? (
+              {liveTabMatches.length === 0 ? (
                 <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  No matches are currently live.
+                  No live or recent matches.
                 </div>
               ) : (
-                matches.filter(m => m.status === 'live').map(m => (
+                liveTabMatches.map(m => (
                   <MatchCard
                     key={m.id}
                     m={m}
@@ -516,19 +551,17 @@ export default function App() {
         {/* Sidebar Nav Links */}
         <div className="sidebar-section">
           <label className="sidebar-label">Navigation</label>
-          {hasLiveMatches && (
-            <button 
-              className={`sidebar-nav-btn ${activeTab === 'live' ? 'active' : ''}`}
-              onClick={() => {
-                handleTabChange('live');
-                setSidebarOpen(false);
-              }}
-              style={{ color: 'var(--success)' }}
-            >
-              <span className="live-dot" style={{ width: '8px', height: '8px', margin: 0 }} />
-              Live Matches
-            </button>
-          )}
+          <button 
+            className={`sidebar-nav-btn ${activeTab === 'live' ? 'active' : ''}`}
+            onClick={() => {
+              handleTabChange('live');
+              setSidebarOpen(false);
+            }}
+            style={{ color: 'var(--success)' }}
+          >
+            {hasLiveMatches && <span className="live-dot" style={{ width: '8px', height: '8px', margin: 0 }} />}
+            Live Matches
+          </button>
           <button 
             className={`sidebar-nav-btn ${activeTab === 'match-view' ? 'active' : ''}`}
             onClick={() => {
