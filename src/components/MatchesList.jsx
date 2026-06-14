@@ -724,7 +724,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       )}
 
       {/* Live Feed Panel (expanded commentary) */}
-      {showFeed && (
+      {!isCollapsed && showFeed && (
         <LiveFeed
           espnEventId={m.espn_event_id}
           matchStatus={m.status}
@@ -736,7 +736,7 @@ function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], 
       {/* Action Buttons at the bottom of the card */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '10px' }}>
         {/* Live Commentary Toggle Button */}
-        {(m.status !== 'scheduled' || m.espn_event_id) && (
+        {!isCollapsed && (m.status !== 'scheduled' || m.espn_event_id) && (
           <button 
             type="button"
             onClick={() => setShowFeed(!showFeed)}
