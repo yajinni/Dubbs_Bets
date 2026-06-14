@@ -56,7 +56,8 @@ export async function onRequest(context) {
 
     const scoreMatchId = url.searchParams.get('scoreMatchId');
     if (scoreMatchId) {
-      await handleScoreMatchTask(env.db, parseInt(scoreMatchId));
+      const pagesUrl = env.PAGES_URL || "https://dubbs-bets.pages.dev";
+      await handleScoreMatchTask(env.db, parseInt(scoreMatchId), env.QSTASH_TOKEN, pagesUrl, env.SYNC_SECRET, env.QSTASH_URL);
       return new Response(JSON.stringify({ success: true, message: `Match ${scoreMatchId} scores synced and predictions scored.` }), { status: 200, headers });
     }
 
@@ -701,7 +702,7 @@ async function handleLockMatchTask(db, matchId, apiKey) {
   console.log(`[QStash Webhook] Successfully updated and locked odds for match ${matchId}.`);
 }
 
-async function handleScoreMatchTask(db, matchId) {
+async function handleScoreMatchTask(db, matchId, qstashToken, pagesUrl, secret, qstashUrl) {
   console.log(`[QStash Webhook] Syncing score and completing predictions for match ${matchId}...`);
   const match = await db.prepare("SELECT * FROM matches WHERE id = ?").bind(matchId).first();
   if (!match) {
@@ -721,6 +722,7 @@ async function handleScoreMatchTask(db, matchId) {
   const events = data.events || [];
   
   let matchFound = false;
+  let isMatchFinished = false;
   for (const event of events) {
     const comp = event.competitions[0];
     if (!comp) continue;
@@ -750,6 +752,7 @@ async function handleScoreMatchTask(db, matchId) {
       else if (state === 'post') status = 'finished';
       
       const finished = completed ? 1 : 0;
+      isMatchFinished = completed ? true : false;
       
       let homeHtScore = 0;
       let awayHtScore = 0;
@@ -839,6 +842,38 @@ async function handleScoreMatchTask(db, matchId) {
   
   if (!matchFound) {
     console.log(`[QStash Webhook] Match ${matchId} not found in ESPN scoreboard events.`);
+  }
+
+  const elapsedSinceKickoff = Date.now() - new Date(match.local_date).getTime();
+  const sixHoursInMs = 6 * 60 * 60 * 1000;
+  
+  if ((!matchFound || !isMatchFinished) && qstashToken) {
+    if (elapsedSinceKickoff < sixHoursInMs) {
+      console.log(`[QStash Webhook] Match ${matchId} is not finished yet. Scheduling a retry in 1 minute...`);
+      const qstashEndpoint = qstashUrl || "https://qstash-us-east-1.upstash.io";
+      const retryEpoch = Math.floor((Date.now() + 60 * 1000) / 1000);
+      const scoreUrl = `${pagesUrl}/api/sync?scoreMatchId=${matchId}${secret ? `&secret=${secret}` : ''}`;
+      
+      try {
+        const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${scoreUrl}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${qstashToken}`,
+            'Upstash-Not-Before': String(retryEpoch)
+          }
+        });
+        if (!scoreRes.ok) {
+          const errText = await scoreRes.text();
+          console.error(`[QStash Webhook] Failed to schedule retry on QStash: ${errText}`);
+        } else {
+          console.log(`[QStash Webhook] Successfully rescheduled match ${matchId} score sync in 1 minute.`);
+        }
+      } catch (err) {
+        console.error(`[QStash Webhook] Failed to reschedule score sync:`, err.message);
+      }
+    } else {
+      console.log(`[QStash Webhook] Match ${matchId} has been kicking off for over 6 hours and is still not finished. Stopping retries.`);
+    }
   }
 }
 
