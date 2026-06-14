@@ -1287,7 +1287,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .mobile-tab {
   flex-shrink: 0;
-  padding: 6px 12px;
+  padding: 6px 10px;
   font-size: 12px;
   font-weight: 700;
   border: 1px solid var(--glass-border);
