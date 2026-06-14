@@ -79,11 +79,31 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   const chartData = React.useMemo(() => {
     if (finishedMatches.length === 0 || leaderboard.length === 0) return null;
 
-    // Group finished matches by date
+    // Helper: convert UTC ISO string to Eastern Time date string (YYYY-MM-DD)
+    const toEasternDateStr = (isoStr) => {
+      try {
+        const d = new Date(isoStr);
+        // Use Intl to get the date in ET
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).formatToParts(d);
+        const y = parts.find(p => p.type === 'year').value;
+        const mo = parts.find(p => p.type === 'month').value;
+        const dy = parts.find(p => p.type === 'day').value;
+        return `${y}-${mo}-${dy}`;
+      } catch (_) {
+        return isoStr.split('T')[0];
+      }
+    };
+
+    // Group finished matches by date (in Eastern Time)
     const matchesByDate = {};
     finishedMatches.forEach(m => {
       if (!m.local_date) return;
-      const dateStr = m.local_date.split('T')[0];
+      const dateStr = toEasternDateStr(m.local_date);
       if (!matchesByDate[dateStr]) {
         matchesByDate[dateStr] = [];
       }
