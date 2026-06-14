@@ -242,11 +242,59 @@ function normalizeTeamName(name) {
 // --------------------------------------------------------
 async function syncFromESPN(db, qstashToken = null, qstashUrl = null) {
   console.log('Syncing from ESPN Scoreboard API...');
-  const res = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard');
-  const data = await res.json();
-  const events = data.events || [];
   
   const { results: dbMatches } = await db.prepare('SELECT * FROM matches').all();
+  
+  const datesToFetch = new Set();
+  const getYYYYMMDD = (d) => {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}${m}${day}`;
+  };
+  
+  const now = new Date();
+  datesToFetch.add(getYYYYMMDD(now));
+  
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  datesToFetch.add(getYYYYMMDD(yesterday));
+  datesToFetch.add(getYYYYMMDD(tomorrow));
+  
+  for (const m of dbMatches) {
+    if (m.finished === 0 && m.local_date) {
+      try {
+        const matchDate = new Date(m.local_date);
+        if (!isNaN(matchDate.getTime())) {
+          datesToFetch.add(getYYYYMMDD(matchDate));
+        }
+      } catch (e) {
+        console.error('Failed to parse match date:', m.local_date, e);
+      }
+    }
+  }
+  
+  let events = [];
+  const fetchedEventIds = new Set();
+  
+  for (const dateStr of datesToFetch) {
+    try {
+      console.log(`Fetching ESPN scoreboard for date: ${dateStr}`);
+      const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dateStr}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const dayEvents = data.events || [];
+      for (const ev of dayEvents) {
+        if (!fetchedEventIds.has(ev.id)) {
+          fetchedEventIds.add(ev.id);
+          events.push(ev);
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to fetch ESPN scoreboard for date ${dateStr}:`, err.message);
+    }
+  }
+  
   let matchesUpdated = 0;
   
   for (const event of events) {
