@@ -388,7 +388,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
               paddingTop: '8px',
               borderTop: '1px solid rgba(255, 255, 255, 0.05)',
               display: 'flex',
-              justifyContent: 'flex-end',
+              justifyContent: 'center',
               fontWeight: '500'
             }}>
               {m.odds_locked === 1 ? (
