@@ -31,7 +31,7 @@ function eventIcon(category) {
 
 const POLL_INTERVAL_MS = 30_000; // 30 seconds when live
 
-export default function LiveFeed({ espnEventId, matchStatus, homeName, awayName }) {
+export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode }) {
   const [commentary, setCommentary] = useState([]);
   const [stats, setStats] = useState([]);
   const [subTab, setSubTab] = useState('commentary'); // 'commentary' | 'stats'
@@ -275,9 +275,9 @@ export default function LiveFeed({ espnEventId, matchStatus, homeName, awayName 
           <>
             {/* Team Names Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '16px', fontWeight: '800', fontSize: '14px', letterSpacing: '0.03em' }}>
-              <span style={{ color: 'var(--primary)' }}>{homeName}</span>
+              <span style={{ color: 'var(--primary)' }}>{homeCode}</span>
               <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '11px', alignSelf: 'center' }}>VS</span>
-              <span style={{ color: 'var(--accent)', textAlign: 'right' }}>{awayName}</span>
+              <span style={{ color: 'var(--accent)', textAlign: 'right' }}>{awayCode}</span>
             </div>
             {stats.map(s => {
               const hVal = parseFloat(s.homeVal) || 0;

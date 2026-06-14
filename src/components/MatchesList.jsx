@@ -734,8 +734,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
         <LiveFeed
           espnEventId={m.espn_event_id}
           matchStatus={isLive ? 'live' : m.status}
-          homeName={homeName}
-          awayName={awayName}
+          homeCode={m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase()}
+          awayCode={m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase()}
         />
       )}
 
