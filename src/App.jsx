@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
 import MatchesList from './components/MatchesList';
@@ -6,7 +6,8 @@ import AdminPanel from './components/AdminPanel';
 import MatchView from './components/MatchView';
 import StatsView from './components/StatsView';
 import LogsView from './components/LogsView';
-import { Calendar, Users, Award, Play, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp } from 'lucide-react';
+import InfoView from './components/InfoView';
+import { Calendar, Award, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp, Menu, X, Info, BarChart2, List, RefreshCw, Clock } from 'lucide-react';
 import { shortenTeamName } from './utils/teamNames';
 
 export default function App() {
@@ -30,85 +31,19 @@ export default function App() {
     return Math.min(6, Math.max(1, week));
   });
   const [allPredictions, setAllPredictions] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // Scroll to top listener
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 300) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  };
-
-  // Load active player on change
-  useEffect(() => {
-    if (activeParticipantId) {
-      localStorage.setItem('active_participant_id', activeParticipantId.toString());
-      fetchPredictions(activeParticipantId);
-    } else {
-      localStorage.removeItem('active_participant_id');
-      setPredictions([]);
-    }
-  }, [activeParticipantId]);
-
-  // Initial load
-  useEffect(() => {
-    const initialize = async () => {
-      setLoading(true);
-      // Fetch last sync timestamp
-      await triggerBackgroundSync();
-      // Fetch data
-      await refreshAllData();
-      setLoading(false);
-    };
-    initialize();
-  }, []);
-
-  const triggerBackgroundSync = async () => {
+  const fetchPredictions = async (pId) => {
     try {
-      // Calls sync without force. The server checks if 6 hours have passed.
-      const res = await fetch('/api/sync?checkOnly=true');
+      const res = await fetch(`/api/predictions?participantId=${pId}`);
       const data = await res.json();
-      if (data.success && data.sync_time) {
-        setLastSync(data.sync_time);
-      } else if (data.last_sync) {
-        setLastSync(data.last_sync);
-      }
+      setPredictions(data);
     } catch (err) {
-      console.error('Auto sync check failed:', err);
-    }
-  };
-
-  const forceSync = async () => {
-    try {
-      const res = await fetch('/api/sync?force=true');
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setLastSync(data.sync_time);
-        await refreshAllData();
-        if (data.results && data.results.oddsError) {
-          alert(`Score sync succeeded, but Odds API failed: ${data.results.oddsError}`);
-        }
-      } else {
-        alert(`Sync failed: ${data.error || 'Unknown error'}`);
-      }
-    } catch (err) {
-      console.error('Manual sync failed:', err);
-      alert('Failed to sync. Check server logs.');
+      console.error('Failed to load predictions:', err);
     }
   };
 
@@ -135,20 +70,87 @@ export default function App() {
     }
   };
 
-  const fetchPredictions = async (pId) => {
+  const triggerBackgroundSync = async () => {
     try {
-      const res = await fetch(`/api/predictions?participantId=${pId}`);
+      // Calls sync without force. The server checks if 6 hours have passed.
+      const res = await fetch('/api/sync?checkOnly=true');
       const data = await res.json();
-      setPredictions(data);
+      if (data.success && data.sync_time) {
+        setLastSync(data.sync_time);
+      } else if (data.last_sync) {
+        setLastSync(data.last_sync);
+      }
     } catch (err) {
-      console.error('Failed to load predictions:', err);
+      console.error('Auto sync check failed:', err);
     }
   };
 
+  // Scroll to top listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
 
-  const getActiveParticipantObj = () => {
-    return leaderboard.find(p => p.id === activeParticipantId) || null;
+  // Load active player on change
+  useEffect(() => {
+    if (activeParticipantId) {
+      localStorage.setItem('active_participant_id', activeParticipantId.toString());
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchPredictions(activeParticipantId);
+    } else {
+      localStorage.removeItem('active_participant_id');
+      setPredictions([]);
+    }
+  }, [activeParticipantId]);
+
+  // Initial load
+  useEffect(() => {
+    const initialize = async () => {
+      setLoading(true);
+      // Fetch last sync timestamp
+      await triggerBackgroundSync();
+      // Fetch data
+      await refreshAllData();
+      setLoading(false);
+    };
+    initialize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const forceSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/sync?force=true');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setLastSync(data.sync_time);
+        await refreshAllData();
+        if (data.results && data.results.oddsError) {
+          alert(`Score sync succeeded, but Odds API failed: ${data.results.oddsError}`);
+        }
+      } else {
+        alert(`Sync failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Manual sync failed:', err);
+      alert('Failed to sync. Check server logs.');
+    } finally {
+      setSyncing(false);
+    }
   };
 
   // Helper stats for dashboard
@@ -187,6 +189,22 @@ export default function App() {
     if (diffTime < 0) return 1;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     return Math.floor(diffDays / 7) + 1;
+  };
+
+  const formatLastSync = (isoString) => {
+    if (!isoString) return 'Never';
+    const date = new Date(isoString);
+    // eslint-disable-next-line react-hooks/purity
+    const diffMs = Date.now() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    
+    return date.toLocaleDateString();
   };
 
   const getMatchesForWeek = (weekNum) => {
@@ -231,11 +249,6 @@ export default function App() {
       <Header 
         activeTab={activeTab} 
         setActiveTab={handleTabChange} 
-        lastSync={lastSync}
-        onSyncTrigger={forceSync}
-        leaderboard={leaderboard}
-        activeParticipantId={activeParticipantId}
-        setActiveParticipantId={setActiveParticipantId}
       />
 
       {loading ? (
@@ -393,8 +406,125 @@ export default function App() {
               onRefreshData={refreshAllData}
             />
           )}
+
+          {activeTab === 'info' && (
+            <InfoView />
+          )}
         </main>
       )}
+
+      {/* Floating Hamburger Menu Button */}
+      <button 
+        className="hamburger-btn" 
+        onClick={() => setSidebarOpen(true)}
+        title="Open Sidebar"
+      >
+        <Menu size={20} />
+      </button>
+
+      {/* Sidebar Navigation & Control Panel */}
+      <div 
+        className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+      <div className={`sidebar-container ${sidebarOpen ? 'open' : ''}`}>
+        <button 
+          className="sidebar-close-btn" 
+          onClick={() => setSidebarOpen(false)}
+          title="Close Sidebar"
+        >
+          <X size={24} />
+        </button>
+
+        {/* Player Name Selector */}
+        {leaderboard.length > 0 && (
+          <div className="sidebar-section">
+            <label htmlFor="sidebar-player-select" className="sidebar-label">Name</label>
+            <select
+              id="sidebar-player-select"
+              className="admin-select"
+              style={{ width: '100%', padding: '10px 14px', fontSize: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+              value={activeParticipantId || ''}
+              onChange={(e) => {
+                setActiveParticipantId(parseInt(e.target.value) || null);
+                setSidebarOpen(false);
+              }}
+            >
+              <option value="" style={{ background: '#120b2e', color: 'var(--text-muted)' }}>-- Choose Name --</option>
+              {leaderboard.map((p) => (
+                <option key={p.id} value={p.id} style={{ background: '#120b2e', color: 'var(--text-primary)' }}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Sidebar Nav Links */}
+        <div className="sidebar-section">
+          <label className="sidebar-label">Navigation</label>
+          <button 
+            className={`sidebar-nav-btn ${activeTab === 'match-view' ? 'active' : ''}`}
+            onClick={() => {
+              handleTabChange('match-view');
+              setSidebarOpen(false);
+            }}
+          >
+            <Award size={18} />
+            Results
+          </button>
+          <button 
+            className={`sidebar-nav-btn ${activeTab === 'stats' ? 'active' : ''}`}
+            onClick={() => {
+              handleTabChange('stats');
+              setSidebarOpen(false);
+            }}
+          >
+            <BarChart2 size={18} />
+            Stats
+          </button>
+          <button 
+            className={`sidebar-nav-btn ${activeTab === 'logs' ? 'active' : ''}`}
+            onClick={() => {
+              handleTabChange('logs');
+              setSidebarOpen(false);
+            }}
+          >
+            <List size={18} />
+            Logs
+          </button>
+          <button 
+            className={`sidebar-nav-btn ${activeTab === 'info' ? 'active' : ''}`}
+            onClick={() => {
+              handleTabChange('info');
+              setSidebarOpen(false);
+            }}
+          >
+            <Info size={18} />
+            Info
+          </button>
+        </div>
+
+        {/* Sync Controls */}
+        <div className="sidebar-section" style={{ marginTop: 'auto' }}>
+          <label className="sidebar-label">Data Sync</label>
+          <button 
+            id="sidebar-sync-btn"
+            className="sidebar-nav-btn" 
+            disabled={syncing}
+            onClick={forceSync}
+            style={{ justifyContent: 'center' }}
+          >
+            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Syncing...' : 'Sync Now'}
+          </button>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginTop: '4px', opacity: 0.8 }}>
+            <Clock size={12} className="text-muted" />
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Last synced: <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{formatLastSync(lastSync)}</span>
+            </span>
+          </div>
+        </div>
+      </div>
 
       {showScrollTop && (
         <button
