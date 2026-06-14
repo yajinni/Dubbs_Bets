@@ -125,26 +125,53 @@ export default function PlayerPicksList({
 
             const currentPeriod = comp.status?.period || 1;
 
+            const details = comp.details || [];
             const rawPlays = data.plays || [];
-            for (const p of rawPlays) {
-              const isGoal = p.scoringPlay || (p.type && p.type.text?.toLowerCase().includes('goal'));
-              if (isGoal) {
-                const pTeamId = p.team?.id;
-                const isHome = pTeamId && homeTeamId && String(pTeamId) === String(homeTeamId);
-                const isAway = pTeamId && awayTeamId && String(pTeamId) === String(awayTeamId);
 
-                const clockVal = p.clock?.value || 0;
+            if (details.length > 0) {
+              for (const detail of details) {
+                const isGoal = detail.scoringPlay || (detail.type && detail.type.text?.toLowerCase().includes('goal'));
+                if (isGoal) {
+                  const detailTeamId = detail.team?.id;
+                  const isHome = detailTeamId && homeTeamId && String(detailTeamId) === String(homeTeamId);
+                  const isAway = detailTeamId && awayTeamId && String(detailTeamId) === String(awayTeamId);
 
-                // First Scorer
-                if (clockVal < firstGoalTime && (isHome || isAway)) {
-                  firstGoalTime = clockVal;
-                  firstScorer = isHome ? 'home' : 'away';
+                  const clockVal = detail.clock?.value || 0;
+
+                  // First Scorer
+                  if (clockVal < firstGoalTime && (isHome || isAway)) {
+                    firstGoalTime = clockVal;
+                    firstScorer = isHome ? 'home' : 'away';
+                  }
+
+                  // Halftime goals
+                  const periodNum = detail.period?.number || (clockVal <= 2700 ? 1 : 2);
+                  if (periodNum === 1) {
+                    firstHalfGoals++;
+                  }
                 }
+              }
+            } else {
+              for (const p of rawPlays) {
+                const isGoal = p.scoringPlay || (p.type && p.type.text?.toLowerCase().includes('goal'));
+                if (isGoal) {
+                  const pTeamId = p.team?.id;
+                  const isHome = pTeamId && homeTeamId && String(pTeamId) === String(homeTeamId);
+                  const isAway = pTeamId && awayTeamId && String(pTeamId) === String(awayTeamId);
 
-                // Halftime goals
-                const periodNum = p.period?.number || (clockVal <= 2700 ? 1 : 2);
-                if (periodNum === 1) {
-                  firstHalfGoals++;
+                  const clockVal = p.clock?.value || 0;
+
+                  // First Scorer
+                  if (clockVal < firstGoalTime && (isHome || isAway)) {
+                    firstGoalTime = clockVal;
+                    firstScorer = isHome ? 'home' : 'away';
+                  }
+
+                  // Halftime goals
+                  const periodNum = p.period?.number || (clockVal <= 2700 ? 1 : 2);
+                  if (periodNum === 1) {
+                    firstHalfGoals++;
+                  }
                 }
               }
             }
