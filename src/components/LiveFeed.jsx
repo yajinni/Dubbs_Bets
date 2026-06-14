@@ -94,6 +94,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
   const [commentary, setCommentary] = useState([]);
   const [stats, setStats] = useState([]);
   const [liveScore, setLiveScore] = useState({ home: null, away: null });
+  const [goalsByHalf, setGoalsByHalf] = useState({ homeFirst: 0, homeSecond: 0, awayFirst: 0, awaySecond: 0 });
   const [liveStats, setLiveStats] = useState({
     totalCards: 0,
     firstScorer: 'none',
@@ -199,7 +200,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             // First Scorer & Highest Scoring Half
             let firstGoalTime = Infinity;
             let firstScorer = 'none';
-            let firstHalfGoals = 0;
+            let homeFirst = 0, homeSecond = 0, awayFirst = 0, awaySecond = 0;
 
             const currentPeriod = comp.status?.period || 1;
 
@@ -222,10 +223,14 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                     firstScorer = isHome ? 'home' : 'away';
                   }
 
-                  // Halftime goals
+                  // Goals by half per team
                   const periodNum = detail.period?.number || (clockVal <= 2700 ? 1 : 2);
                   if (periodNum === 1) {
-                    firstHalfGoals++;
+                    if (isHome) homeFirst++;
+                    if (isAway) awayFirst++;
+                  } else {
+                    if (isHome) homeSecond++;
+                    if (isAway) awaySecond++;
                   }
                 }
               }
@@ -245,10 +250,14 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                     firstScorer = isHome ? 'home' : 'away';
                   }
 
-                  // Halftime goals
+                  // Goals by half per team
                   const periodNum = p.period?.number || (clockVal <= 2700 ? 1 : 2);
                   if (periodNum === 1) {
-                    firstHalfGoals++;
+                    if (isHome) homeFirst++;
+                    if (isAway) awayFirst++;
+                  } else {
+                    if (isHome) homeSecond++;
+                    if (isAway) awaySecond++;
                   }
                 }
               }
@@ -263,11 +272,21 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
               }
             }
 
-            // Halftime score fallback/logic
-            if (currentPeriod === 1) {
-              firstHalfGoals = hScore + aScore;
+            // Fallback goals by half from total score if details/plays were incomplete
+            const firstHalfGoals = homeFirst + awayFirst;
+            const secondHalfGoals = homeSecond + awaySecond;
+            if (firstHalfGoals + secondHalfGoals < hScore + aScore) {
+              const remaining = (hScore + aScore) - (firstHalfGoals + secondHalfGoals);
+              if (currentPeriod === 1) {
+                homeFirst += hScore - homeFirst - homeSecond;
+                awayFirst += aScore - awayFirst - awaySecond;
+              } else {
+                homeSecond += hScore - homeFirst - homeSecond;
+                awaySecond += aScore - awayFirst - awaySecond;
+              }
             }
-            const secondHalfGoals = Math.max(0, (hScore + aScore) - firstHalfGoals);
+
+            setGoalsByHalf({ homeFirst, homeSecond, awayFirst, awaySecond });
 
             let highestScoringHalf = 'equal';
             if (firstHalfGoals > secondHalfGoals) highestScoringHalf = 'first';
@@ -494,10 +513,28 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
         ) : subTab === 'stats' ? (
           <>
             {/* Team Names Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '16px', fontWeight: '800', fontSize: '14px', letterSpacing: '0.03em' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '12px', fontWeight: '800', fontSize: '14px', letterSpacing: '0.03em' }}>
               <span style={{ color: 'var(--primary)' }}>{homeCode}</span>
               <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '11px', alignSelf: 'center' }}>VS</span>
               <span style={{ color: 'var(--accent)', textAlign: 'right' }}>{awayCode}</span>
+            </div>
+
+            {/* Goals by Half */}
+            <div style={{ marginBottom: '16px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>Goals</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                  {goalsByHalf.homeFirst + goalsByHalf.awayFirst} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>|</span> {goalsByHalf.homeSecond + goalsByHalf.awaySecond}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                <span style={{ color: 'var(--primary)' }}>
+                  {homeCode}: {goalsByHalf.homeFirst} <span style={{ color: 'var(--text-muted)' }}>|</span> {goalsByHalf.homeSecond}
+                </span>
+                <span style={{ color: 'var(--accent)' }}>
+                  {awayCode}: {goalsByHalf.awayFirst} <span style={{ color: 'var(--text-muted)' }}>|</span> {goalsByHalf.awaySecond}
+                </span>
+              </div>
             </div>
             {stats.map(s => {
               const hVal = parseFloat(s.homeVal) || 0;
