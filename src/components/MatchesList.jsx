@@ -461,16 +461,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
           isLocked ? (
             /* Locked Prediction View */
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '12px', flexWrap: 'wrap' }}>
-              <div className="locked-icon-container">
-                <Lock size={12} />
-                Locked (Started/Finished)
-              </div>
-              {pred ? (
-                <div style={{ textAlign: 'right' }}>
-
-
-                </div>
-              ) : (
+              {!pred && (
                 <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                   No prediction placed
                 </span>
