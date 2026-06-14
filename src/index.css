@@ -1357,9 +1357,44 @@ h1, h2, h3, h4, h5, h6 {
     display: none !important;
   }
   .mobile-stats-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stats-card {
+    padding: 10px;
+  }
+  .stats-card-header {
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+  .stats-card-name {
+    font-size: 13px;
+  }
+  .stats-card-stat {
+    gap: 4px;
+    margin-bottom: 5px;
+  }
+  .stats-card-label {
+    width: 60px;
+    font-size: 10px;
+  }
+  .stats-card-pct {
+    width: 30px;
+    font-size: 11px;
+  }
+  .stats-card-frac {
+    width: 34px;
+    font-size: 9px;
+  }
+  .stats-card-bar-wrap {
+    height: 3px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-stats-cards {
+    grid-template-columns: 1fr;
   }
 }
 
