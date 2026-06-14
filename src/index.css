@@ -1392,7 +1392,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 360px) {
   .mobile-stats-cards {
     grid-template-columns: 1fr;
   }
