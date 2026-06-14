@@ -477,9 +477,6 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   return (
     <div className="stats-view-container" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '20px 0' }}>
       
-      {/* Interactive Performance Timeline */}
-      {chartContent}
-
       {/* Overview Cards / Achievements */}
       {hasFinishedPreds && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
@@ -675,6 +672,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
           </tbody>
         </table>
       </div>
+
+      {/* Interactive Performance Timeline */}
+      {chartContent}
     </div>
   );
 }
