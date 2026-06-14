@@ -55,7 +55,76 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     };
   });
 
-  // 3. Find top performers in each category (only if there are finished predictions)
+  // State for Chart Options
+  const [chartType, setChartType] = React.useState('cumulative'); // 'cumulative' | 'daily'
+  const [hiddenPlayers, setHiddenPlayers] = React.useState(new Set());
+  const [hoveredIndex, setHoveredIndex] = React.useState(null);
+
+  // Colors for players
+  const playerColors = [
+    '#a855f7', // Purple
+    '#3b82f6', // Blue
+    '#22c55e', // Green
+    '#fbbf24', // Gold
+    '#ec4899', // Pink
+    '#06b6d4', // Cyan
+    '#f97316', // Orange
+    '#14b8a6', // Teal
+  ];
+
+  const getPlayerColor = (index) => playerColors[index % playerColors.length];
+
+  // 3. Compile daily points for plotting
+  const chartData = React.useMemo(() => {
+    if (finishedMatches.length === 0 || leaderboard.length === 0) return null;
+
+    // Group finished matches by date
+    const matchesByDate = {};
+    finishedMatches.forEach(m => {
+      if (!m.local_date) return;
+      const dateStr = m.local_date.split('T')[0];
+      if (!matchesByDate[dateStr]) {
+        matchesByDate[dateStr] = [];
+      }
+      matchesByDate[dateStr].push(m);
+    });
+
+    const dates = Object.keys(matchesByDate).sort();
+    if (dates.length === 0) return null;
+
+    const playerProgress = leaderboard.map((p, idx) => ({
+      id: p.id,
+      name: p.name,
+      color: getPlayerColor(idx),
+      daily: {},
+      cumulative: {}
+    }));
+
+    dates.forEach(date => {
+      const dayMatches = matchesByDate[date];
+      const matchIds = new Set(dayMatches.map(m => m.id));
+
+      playerProgress.forEach(pp => {
+        const dayPreds = allPredictions.filter(
+          pred => pred.participant_id === pp.id && matchIds.has(pred.match_id)
+        );
+        const dayPoints = dayPreds.reduce((sum, pred) => sum + (pred.total_points || 0), 0);
+        pp.daily[date] = dayPoints;
+      });
+    });
+
+    playerProgress.forEach(pp => {
+      let runningSum = 0;
+      dates.forEach(date => {
+        runningSum += pp.daily[date];
+        pp.cumulative[date] = runningSum;
+      });
+    });
+
+    return { dates, playerProgress };
+  }, [finishedMatches, leaderboard, allPredictions]);
+
+  // 4. Find top performers in each category
   const hasFinishedPreds = stats.some(s => s.totalFinishedPreds > 0);
   
   let topWinner = null;
@@ -66,7 +135,6 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   let topExactCards = null;
 
   if (hasFinishedPreds) {
-    // Sort and get max
     topWinner = [...stats].sort((a, b) => b.winnerPct - a.winnerPct || b.correctWinners - a.correctWinners)[0];
     topOu = [...stats].sort((a, b) => b.ouPct - a.ouPct || b.correctOu - a.correctOu)[0];
     topCards = [...stats].sort((a, b) => b.underdogBonus - a.underdogBonus)[0];
@@ -75,9 +143,25 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     topExactCards = [...stats].sort((a, b) => b.exactCardsPct - a.exactCardsPct || b.correctExactCards - a.correctExactCards)[0];
   }
 
+  // Toggle player line visibility
+  const togglePlayer = (playerId) => {
+    setHiddenPlayers(prev => {
+      const next = new Set(prev);
+      if (next.has(playerId)) {
+        next.delete(playerId);
+      } else {
+        next.add(playerId);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="stats-view-container" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '20px 0' }}>
       
+      {/* Interactive Performance Timeline */}
+      {chartContent}
+
       {/* Overview Cards / Achievements */}
       {hasFinishedPreds && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
