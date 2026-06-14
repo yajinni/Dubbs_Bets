@@ -467,16 +467,6 @@ export default function App() {
               ) : (
                 liveTabMatches.map(m => (
                   <div key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <MatchCard
-                      m={m}
-                      pred={predictions.find(p => p.match_id === m.id)}
-                      activeParticipantId={activeParticipantId}
-                      onSave={refreshAllData}
-                      allPredictions={allPredictions}
-                      leaderboard={leaderboard}
-                      runningPointsMap={runningPointsMap}
-                      selectedMatchId={null}
-                    />
                     {m.finished !== 1 && (
                       <button
                         onClick={() => handleWatchStream(m.id)}
@@ -488,13 +478,12 @@ export default function App() {
                           gap: '8px', 
                           padding: '10px', 
                           borderRadius: '8px', 
-                          fontSize: '13px', 
+                          fontSize: '14px', 
                           fontWeight: '700', 
                           background: 'rgba(255,255,255,0.03)', 
                           border: '1px solid var(--glass-border)',
                           color: 'var(--text-primary)',
-                          marginTop: '-12px',
-                          marginBottom: '8px',
+                          marginBottom: '4px',
                           width: '100%',
                           cursor: 'pointer'
                         }}
@@ -502,6 +491,16 @@ export default function App() {
                         📺 Watch Live Stream
                       </button>
                     )}
+                    <MatchCard
+                      m={m}
+                      pred={predictions.find(p => p.match_id === m.id)}
+                      activeParticipantId={activeParticipantId}
+                      onSave={refreshAllData}
+                      allPredictions={allPredictions}
+                      leaderboard={leaderboard}
+                      runningPointsMap={runningPointsMap}
+                      selectedMatchId={null}
+                    />
                   </div>
                 ))
               )}
