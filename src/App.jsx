@@ -533,52 +533,64 @@ export default function App() {
           )}
 
            {activeTab === 'matches' && (
-            <MatchesList 
-              matches={matches} 
-              predictions={predictions}
-              activeParticipantId={activeParticipantId}
-              onSave={refreshAllData}
-              selectedMatchId={selectedMatchId}
-              onSelectMatch={setSelectedMatchId}
-              allPredictions={allPredictions}
-              leaderboard={leaderboard}
-            />
-          )}
+             <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+               <MatchesList 
+                 matches={matches} 
+                 predictions={predictions}
+                 activeParticipantId={activeParticipantId}
+                 onSave={refreshAllData}
+                 selectedMatchId={selectedMatchId}
+                 onSelectMatch={setSelectedMatchId}
+                 allPredictions={allPredictions}
+                 leaderboard={leaderboard}
+               />
+             </div>
+           )}
 
-          {activeTab === 'match-view' && (
-            <MatchView 
-              matches={matches}
-              allPredictions={allPredictions}
-              leaderboard={leaderboard}
-              activeParticipantId={activeParticipantId}
-              selectedMatchId={selectedMatchId}
-              onClearSelectedMatch={() => setSelectedMatchId(null)}
-            />
-          )}
+           {activeTab === 'match-view' && (
+             <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+               <MatchView 
+                 matches={matches}
+                 allPredictions={allPredictions}
+                 leaderboard={leaderboard}
+                 activeParticipantId={activeParticipantId}
+                 selectedMatchId={selectedMatchId}
+                 onClearSelectedMatch={() => setSelectedMatchId(null)}
+               />
+             </div>
+           )}
 
-          {activeTab === 'stats' && (
-            <StatsView 
-              matches={matches}
-              allPredictions={allPredictions}
-              leaderboard={leaderboard}
-            />
-          )}
+           {activeTab === 'stats' && (
+             <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+               <StatsView 
+                 matches={matches}
+                 allPredictions={allPredictions}
+                 leaderboard={leaderboard}
+               />
+             </div>
+           )}
 
-          {activeTab === 'logs' && (
-            <LogsView />
-          )}
+           {activeTab === 'logs' && (
+             <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+               <LogsView />
+             </div>
+           )}
 
-          {activeTab === 'admin' && (
-            <AdminPanel 
-              matches={matches} 
-              leaderboard={leaderboard}
-              onRefreshData={refreshAllData}
-            />
-          )}
+           {activeTab === 'admin' && (
+             <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+               <AdminPanel 
+                 matches={matches} 
+                 leaderboard={leaderboard}
+                 onRefreshData={refreshAllData}
+               />
+             </div>
+           )}
 
-          {activeTab === 'info' && (
-            <InfoView />
-          )}
+           {activeTab === 'info' && (
+             <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+               <InfoView />
+             </div>
+           )}
         </main>
       )}
 
