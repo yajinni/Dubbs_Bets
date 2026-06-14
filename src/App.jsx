@@ -37,7 +37,13 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  const hasLiveMatches = matches.some(m => m.status === 'live');
+  const hasLiveMatches = matches.some(m => {
+    if (m.status === 'live') return true;
+    if (m.finished === 1 || m.status === 'finished') return false;
+    const kickOffMs = new Date((m.local_date || '').replace(' ', 'T')).getTime();
+    // eslint-disable-next-line react-hooks/purity
+    return kickOffMs <= Date.now();
+  });
 
   const runningPointsMap = useMemo(() => {
     const map = {};
@@ -68,20 +74,28 @@ export default function App() {
     const nowMs = Date.now();
     const fifteenMinsMs = 15 * 60 * 1000;
 
-    // 1. Swap to next live match 15 min before it starts
-    const upcomingClose = matches.filter(m => {
-      if (m.status !== 'scheduled' || m.finished === 1) return false;
+    const isMatchLive = (m) => {
+      if (m.status === 'live') return true;
+      if (m.finished === 1 || m.status === 'finished') return false;
+      const kickOffMs = new Date((m.local_date || '').replace(' ', 'T')).getTime();
+      return kickOffMs <= nowMs;
+    };
+
+    const isMatchStartingSoon = (m) => {
+      if (m.finished === 1 || m.status === 'finished' || m.status === 'live') return false;
       const kickOffMs = new Date((m.local_date || '').replace(' ', 'T')).getTime();
       const diff = kickOffMs - nowMs;
       return diff > 0 && diff <= fifteenMinsMs;
-    });
+    };
 
+    // 1. Swap to next live match 15 min before it starts
+    const upcomingClose = matches.filter(isMatchStartingSoon);
     if (upcomingClose.length > 0) {
       return upcomingClose.sort((a, b) => new Date((a.local_date || '').replace(' ', 'T')) - new Date((b.local_date || '').replace(' ', 'T')));
     }
 
-    // 2. Otherwise show currently live matches
-    const currentLive = matches.filter(m => m.status === 'live');
+    // 2. Otherwise show currently live matches (including started but not finished)
+    const currentLive = matches.filter(isMatchLive);
     if (currentLive.length > 0) {
       return currentLive;
     }
