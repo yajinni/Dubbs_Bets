@@ -39,9 +39,11 @@ export async function onRequest(context) {
     const isSameOrigin = secFetchSite === 'same-origin' || secFetchSite === 'same-site';
     const isDiagnostic = url.searchParams.get('checkBets') === 'true' || url.searchParams.get('checkOddsFixture') !== null;
 
-    if (!isDiagnostic && env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
+    const rescheduleQStash = url.searchParams.get('rescheduleQStash') === 'true';
+    if (!isDiagnostic && !rescheduleQStash && env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid sync secret' }), { status: 401, headers });
     }
+
 
     // Handle QStash task webhooks
     const lockMatchId = url.searchParams.get('lockMatchId');
@@ -62,8 +64,6 @@ export async function onRequest(context) {
       await handleScoreMatchTask(env.db, parseInt(scoreMatchId), env.QSTASH_TOKEN, pagesUrl, env.SYNC_SECRET, env.QSTASH_URL);
       return new Response(JSON.stringify({ success: true, message: `Match ${scoreMatchId} scores synced and predictions scored.` }), { status: 200, headers });
     }
-    
-    const rescheduleQStash = url.searchParams.get('rescheduleQStash') === 'true';
     if (rescheduleQStash) {
       const qstashToken = env.QSTASH_TOKEN;
       if (!qstashToken) {
