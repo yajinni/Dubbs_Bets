@@ -1274,7 +1274,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .mobile-tab-bar {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   overflow-x: auto;
   padding-bottom: 8px;
   scrollbar-width: none;
