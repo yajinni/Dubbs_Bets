@@ -650,7 +650,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       )}
 
       {/* Main Stats Table */}
-      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowX: 'auto' }}>
+      <div className="glass-panel desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowX: 'auto' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0, borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px' }}>
           Player Accuracy Leaderboard
         </h3>
@@ -787,6 +787,43 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Stats Cards */}
+      <div className="mobile-stats-cards">
+        <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 12px 0' }}>
+          Player Accuracy Leaderboard
+        </h3>
+        {stats.map((row) => {
+          const statRows = [
+            { label: 'Winner', pct: row.winnerPct, num: row.correctWinners, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
+            { label: 'O/U Goals', pct: row.ouPct, num: row.correctOu, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #22c55e, #4ade80)' },
+            { label: 'Underdog', pct: row.underdogPct, num: row.underdogCorrect, denom: row.underdogAttempts, color: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
+            { label: 'Scored First', pct: row.firstScorerPct, num: row.correctFirstScorers, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #ec4899, #f472b6)' },
+            { label: 'Highest Half', pct: row.halfPct, num: row.correctHalf, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
+            { label: 'Clean Sheet', pct: row.cleanPct, num: row.correctClean, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #38bdf8, #7dd3fc)' },
+            { label: 'Exact Score', pct: row.scorePct, num: row.correctScores, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #eab308, #fde047)' },
+            { label: 'Exact Cards', pct: row.exactCardsPct, num: row.correctExactCards, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #06b6d4, #67e8f9)' },
+          ];
+          return (
+            <div key={row.id} className="stats-card">
+              <div className="stats-card-header">
+                <span className="stats-card-name">{row.name}</span>
+                <span className="stats-card-bets">{row.totalFinishedPreds} bets</span>
+              </div>
+              {statRows.map(s => (
+                <div key={s.label} className="stats-card-stat">
+                  <span className="stats-card-label">{s.label}</span>
+                  <span className="stats-card-pct">{s.pct}%</span>
+                  <span className="stats-card-frac">{s.num}/{s.denom}</span>
+                  <div className="stats-card-bar-wrap">
+                    <div className="stats-card-bar-fill" style={{ width: `${s.pct}%`, background: s.color }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
 
       {/* Interactive Performance Timeline */}

@@ -1262,6 +1262,107 @@ h1, h2, h3, h4, h5, h6 {
   padding: 8px 10px;
 }
 
+/* Desktop-only table (hidden on mobile) */
+.desktop-only {
+  display: block;
+}
+
+/* Mobile stats cards (hidden on desktop, shown on mobile) */
+.mobile-stats-cards {
+  display: none;
+}
+
+.stats-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.stats-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 10px;
+}
+
+.stats-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stats-card-bets {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.stats-card-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.stats-card-stat:last-child {
+  margin-bottom: 0;
+}
+
+.stats-card-label {
+  width: 80px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.stats-card-pct {
+  width: 36px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.stats-card-frac {
+  width: 44px;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.stats-card-bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.stats-card-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+  .mobile-stats-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
 @media (max-width: 600px) {
   #root {
     padding: 0 8px 24px !important;
