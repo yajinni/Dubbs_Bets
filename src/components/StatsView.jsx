@@ -57,6 +57,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
 
   // State for Chart Options
   const [chartType, setChartType] = React.useState('cumulative'); // 'cumulative' | 'daily'
+  const [timeRange, setTimeRange] = React.useState('week'); // 'week' | 'all'
   const [hiddenPlayers, setHiddenPlayers] = React.useState(new Set());
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
 
@@ -175,7 +176,8 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       </div>
     );
   } else {
-    const { dates, playerProgress } = chartData;
+    const { dates: allDates, playerProgress } = chartData;
+    const dates = timeRange === 'week' ? allDates.slice(-7) : allDates;
     
     // Determine the max Y value based on active player scores
     let maxY = 10;
@@ -240,40 +242,78 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             </p>
           </div>
 
-          {/* Chart Type Toggle */}
-          <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
-            <button
-              onClick={() => setChartType('cumulative')}
-              style={{
-                padding: '6px 12px',
-                fontSize: '12px',
-                fontWeight: '600',
-                border: 'none',
-                background: chartType === 'cumulative' ? 'var(--primary-color, #a855f7)' : 'transparent',
-                color: chartType === 'cumulative' ? '#fff' : 'var(--text-secondary)',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              Cumulative
-            </button>
-            <button
-              onClick={() => setChartType('daily')}
-              style={{
-                padding: '6px 12px',
-                fontSize: '12px',
-                fontWeight: '600',
-                border: 'none',
-                background: chartType === 'daily' ? 'var(--primary-color, #a855f7)' : 'transparent',
-                color: chartType === 'daily' ? '#fff' : 'var(--text-secondary)',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              Daily
-            </button>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Time Range Selector */}
+            <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+              <button
+                onClick={() => setTimeRange('week')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  border: 'none',
+                  background: timeRange === 'week' ? 'var(--primary-color, #a855f7)' : 'transparent',
+                  color: timeRange === 'week' ? '#fff' : 'var(--text-secondary)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Past Week
+              </button>
+              <button
+                onClick={() => setTimeRange('all')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  border: 'none',
+                  background: timeRange === 'all' ? 'var(--primary-color, #a855f7)' : 'transparent',
+                  color: timeRange === 'all' ? '#fff' : 'var(--text-secondary)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                All
+              </button>
+            </div>
+
+            {/* Chart Type Toggle */}
+            <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+              <button
+                onClick={() => setChartType('cumulative')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  border: 'none',
+                  background: chartType === 'cumulative' ? 'var(--primary-color, #a855f7)' : 'transparent',
+                  color: chartType === 'cumulative' ? '#fff' : 'var(--text-secondary)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Cumulative
+              </button>
+              <button
+                onClick={() => setChartType('daily')}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  border: 'none',
+                  background: chartType === 'daily' ? 'var(--primary-color, #a855f7)' : 'transparent',
+                  color: chartType === 'daily' ? '#fff' : 'var(--text-secondary)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Daily
+              </button>
+            </div>
           </div>
         </div>
 
@@ -315,7 +355,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             viewBox={`0 0 ${svgWidth} ${svgHeight}`}
             width="100%"
             height="100%"
-            style={{ minWidth: '680px', display: 'block', overflow: 'visible' }}
+            style={{ display: 'block', overflow: 'visible' }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           >
