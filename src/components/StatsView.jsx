@@ -378,7 +378,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                   y={getY(tick) + 4}
                   textAnchor="end"
                   fill="var(--text-muted)"
-                  fontSize="11px"
+                  fontSize="10pt"
                   fontWeight="500"
                 >
                   {Math.round(tick)}
@@ -394,7 +394,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                 y={paddingTop + chartHeight + 20}
                 textAnchor="middle"
                 fill="var(--text-muted)"
-                fontSize="11px"
+                fontSize="10pt"
                 fontWeight="500"
               >
                 {formatLabelDate(date)}
@@ -464,6 +464,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
           {/* Interactive Tooltip Card */}
           {hoveredIndex !== null && (
             <div
+              className="chart-tooltip-mobile"
               style={{
                 position: 'absolute',
                 top: `${paddingTop + 10}px`,
