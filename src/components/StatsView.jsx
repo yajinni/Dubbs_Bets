@@ -218,7 +218,12 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     const handleMouseMove = (e) => {
       const svgRect = e.currentTarget.getBoundingClientRect();
       const mouseX = e.clientX - svgRect.left;
-      const chartMouseX = mouseX - paddingLeft;
+      
+      // Scale screen mouse coordinates to SVG viewBox coordinates
+      const scaleX = svgWidth / svgRect.width;
+      const logicalMouseX = mouseX * scaleX;
+      
+      const chartMouseX = logicalMouseX - paddingLeft;
       const pct = chartMouseX / chartWidth;
       const index = Math.max(0, Math.min(dates.length - 1, Math.round(pct * (dates.length - 1))));
       setHoveredIndex(index);
