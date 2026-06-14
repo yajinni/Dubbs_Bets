@@ -73,6 +73,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   const [timeRange, setTimeRange] = React.useState('week'); // 'week' | 'all'
   const [hiddenPlayers, setHiddenPlayers] = React.useState(new Set());
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
+  const [mobileStatTab, setMobileStatTab] = React.useState('win');
 
   // Colors for players
   const playerColors = [
@@ -789,41 +790,62 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
         </table>
       </div>
 
-      {/* Mobile Stats Cards */}
-      <div className="mobile-stats-cards">
-        <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 12px 0' }}>
+      {/* Mobile Stats Tabs */}
+      <div className="mobile-stats-tabs">
+        <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 10px 0' }}>
           Player Accuracy Leaderboard
         </h3>
-        {stats.map((row) => {
-          const statRows = [
-            { label: 'Win', pct: row.winnerPct, num: row.correctWinners, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
-            { label: 'O/U', pct: row.ouPct, num: row.correctOu, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #22c55e, #4ade80)' },
-            { label: 'Dog', pct: row.underdogPct, num: row.underdogCorrect, denom: row.underdogAttempts, color: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
-            { label: 'SF', pct: row.firstScorerPct, num: row.correctFirstScorers, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #ec4899, #f472b6)' },
-            { label: 'Half', pct: row.halfPct, num: row.correctHalf, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
-            { label: 'CS', pct: row.cleanPct, num: row.correctClean, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #38bdf8, #7dd3fc)' },
-            { label: '⚽', pct: row.scorePct, num: row.correctScores, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #eab308, #fde047)' },
-            { label: 'Cards', pct: row.exactCardsPct, num: row.correctExactCards, denom: row.totalFinishedPreds, color: 'linear-gradient(90deg, #06b6d4, #67e8f9)' },
-          ];
-          return (
-            <div key={row.id} className="stats-card">
-              <div className="stats-card-header">
-                <span className="stats-card-name">{row.name}</span>
-                <span className="stats-card-bets">{row.totalFinishedPreds} bets</span>
-              </div>
-              {statRows.map(s => (
-                <div key={s.label} className="stats-card-stat">
-                  <span className="stats-card-label">{s.label}</span>
-                  <span className="stats-card-pct">{s.pct}%</span>
-                  <span className="stats-card-frac">{s.num}/{s.denom}</span>
-                  <div className="stats-card-bar-wrap">
-                    <div className="stats-card-bar-fill" style={{ width: `${s.pct}%`, background: s.color }}></div>
-                  </div>
+        <div className="mobile-tab-bar">
+          {[
+            { key: 'bets', label: 'Bets' },
+            { key: 'win', label: 'Win' },
+            { key: 'ou', label: 'O/U' },
+            { key: 'dog', label: 'Dog' },
+            { key: 'sf', label: 'SF' },
+            { key: 'half', label: 'Half' },
+            { key: 'cs', label: 'CS' },
+            { key: 'score', label: '⚽' },
+            { key: 'cards', label: 'Cards' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              className={`mobile-tab ${mobileStatTab === tab.key ? 'active' : ''}`}
+              onClick={() => setMobileStatTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mobile-tab-content">
+          {(() => {
+            const tabConfig = {
+              bets:  { pct: r => r.totalFinishedPreds * 100 / (r.totalFinishedPreds || 1), val: r => r.totalFinishedPreds, num: r => r.totalFinishedPreds, denom: r => r.totalFinishedPreds, label: 'Bets', color: 'var(--primary)' },
+              win:   { pct: r => r.winnerPct, val: r => `${r.winnerPct}%`, num: r => r.correctWinners, denom: r => r.totalFinishedPreds, label: 'Win', color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
+              ou:    { pct: r => r.ouPct, val: r => `${r.ouPct}%`, num: r => r.correctOu, denom: r => r.totalFinishedPreds, label: 'O/U', color: 'linear-gradient(90deg, #22c55e, #4ade80)' },
+              dog:   { pct: r => r.underdogPct, val: r => `${r.underdogPct}%`, num: r => r.underdogCorrect, denom: r => r.underdogAttempts, label: 'Dog', color: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
+              sf:    { pct: r => r.firstScorerPct, val: r => `${r.firstScorerPct}%`, num: r => r.correctFirstScorers, denom: r => r.totalFinishedPreds, label: 'SF', color: 'linear-gradient(90deg, #ec4899, #f472b6)' },
+              half:  { pct: r => r.halfPct, val: r => `${r.halfPct}%`, num: r => r.correctHalf, denom: r => r.totalFinishedPreds, label: 'Half', color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
+              cs:    { pct: r => r.cleanPct, val: r => `${r.cleanPct}%`, num: r => r.correctClean, denom: r => r.totalFinishedPreds, label: 'CS', color: 'linear-gradient(90deg, #38bdf8, #7dd3fc)' },
+              score: { pct: r => r.scorePct, val: r => `${r.scorePct}%`, num: r => r.correctScores, denom: r => r.totalFinishedPreds, label: '⚽', color: 'linear-gradient(90deg, #eab308, #fde047)' },
+              cards: { pct: r => r.exactCardsPct, val: r => `${r.exactCardsPct}%`, num: r => r.correctExactCards, denom: r => r.totalFinishedPreds, label: 'Cards', color: 'linear-gradient(90deg, #06b6d4, #67e8f9)' },
+            };
+            const cfg = tabConfig[mobileStatTab];
+            if (!cfg) return null;
+            const sorted = [...stats].sort((a, b) => cfg.pct(b) - cfg.pct(a));
+            return sorted.map((row, i) => (
+              <div key={row.id} className="mobile-stat-row">
+                <span className="mobile-stat-rank">{i + 1}</span>
+                <span className="mobile-stat-name">{row.name}</span>
+                <span className="mobile-stat-val">{cfg.val(row)}</span>
+                <span className="mobile-stat-frac">{cfg.num(row)}/{cfg.denom(row)}</span>
+                <div className="mobile-stat-bar-wrap">
+                  <div className="mobile-stat-bar-fill" style={{ width: `${cfg.pct(row)}%`, background: cfg.color }}></div>
                 </div>
-              ))}
-            </div>
-          );
-        })}
+              </div>
+            ));
+          })()}
+        </div>
       </div>
 
       {/* Interactive Performance Timeline */}
