@@ -847,11 +847,11 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
   const qstashEndpoint = qstashUrl || "https://qstash-us-east-1.upstash.io";
   const { results: allDbMatches } = await db.prepare("SELECT * FROM matches WHERE qstash_scheduled = 0 AND finished = 0").all();
   
-  // Only schedule matches starting within the next 7 days to stay well within QStash Free Tier limits
-  const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+  // Only schedule matches starting within the next 3 days to stay well within QStash Free Tier limits
+  const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
   const unscheduledMatches = allDbMatches.filter(m => {
     const matchTime = new Date(m.local_date).getTime();
-    return matchTime > currentTime && (matchTime - currentTime) <= sevenDaysInMs;
+    return matchTime > currentTime && (matchTime - currentTime) <= threeDaysInMs;
   });
   
   for (const m of unscheduledMatches) {
