@@ -166,6 +166,21 @@ export default function App() {
     });
   };
 
+  const handleWatchStream = async (matchId) => {
+    try {
+      const res = await fetch(`/api/stream?matchId=${matchId}`);
+      const data = await res.json();
+      if (data.streamUrl) {
+        window.open(data.streamUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        window.open('https://istreameast.app/v52', '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      console.error('Failed to resolve stream link:', err);
+      window.open('https://istreameast.app/v52', '_blank', 'noopener,noreferrer');
+    }
+  };
+
   // Load active player on change
   useEffect(() => {
     if (activeParticipantId) {
@@ -449,17 +464,14 @@ export default function App() {
                       selectedMatchId={null}
                     />
                     {m.finished !== 1 && (
-                      <a
-                        href="https://istreameast.app/v52"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => handleWatchStream(m.id)}
                         className="btn-secondary"
                         style={{ 
                           display: 'flex', 
                           alignItems: 'center', 
                           justifyContent: 'center', 
                           gap: '8px', 
-                          textDecoration: 'none', 
                           padding: '10px', 
                           borderRadius: '8px', 
                           fontSize: '13px', 
@@ -468,11 +480,13 @@ export default function App() {
                           border: '1px solid var(--glass-border)',
                           color: 'var(--text-primary)',
                           marginTop: '-12px',
-                          marginBottom: '8px'
+                          marginBottom: '8px',
+                          width: '100%',
+                          cursor: 'pointer'
                         }}
                       >
                         📺 Watch Live Stream
-                      </a>
+                      </button>
                     )}
                   </div>
                 ))
