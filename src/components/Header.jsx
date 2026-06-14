@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Trophy } from 'lucide-react';
 
-export default function Header({ activeTab, setActiveTab }) {
+export default function Header({ activeTab, setActiveTab, hasLiveMatches }) {
   const [trophyClicks, setTrophyClicks] = useState(0);
   const [lastTrophyClickTime, setLastTrophyClickTime] = useState(0);
 
@@ -42,6 +42,22 @@ export default function Header({ activeTab, setActiveTab }) {
         >
           Dashboard
         </button>
+        {hasLiveMatches && (
+          <button 
+            id="nav-live"
+            className={`nav-btn ${activeTab === 'live' ? 'active' : ''}`}
+            onClick={() => setActiveTab('live')}
+            style={{ 
+              color: 'var(--success)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              fontWeight: '700' 
+            }}
+          >
+            <span className="live-dot" style={{ margin: 0 }} /> Live
+          </button>
+        )}
         <button 
           id="nav-matches"
           className={`nav-btn ${activeTab === 'matches' ? 'active' : ''}`}

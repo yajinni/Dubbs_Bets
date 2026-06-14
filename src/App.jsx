@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
-import MatchesList from './components/MatchesList';
+import MatchesList, { MatchCard } from './components/MatchesList';
 import AdminPanel from './components/AdminPanel';
 import MatchView from './components/MatchView';
 import StatsView from './components/StatsView';
@@ -36,6 +36,32 @@ export default function App() {
   
   const [loading, setLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const hasLiveMatches = matches.some(m => m.status === 'live');
+
+  const runningPointsMap = useMemo(() => {
+    const map = {};
+    const sorted = [...matches].sort((a, b) => {
+      const dateA = new Date((a.local_date || '').replace(' ', 'T'));
+      const dateB = new Date((b.local_date || '').replace(' ', 'T'));
+      if (dateA - dateB !== 0) return dateA - dateB;
+      return a.id - b.id;
+    });
+
+    leaderboard.forEach(p => {
+      let runningSum = 0;
+      sorted.forEach(m => {
+        if (m.finished === 1) {
+          const pred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === p.id);
+          if (pred) {
+            runningSum += pred.total_points || 0;
+          }
+        }
+        map[`${p.id}_${m.id}`] = runningSum;
+      });
+    });
+    return map;
+  }, [matches, leaderboard, allPredictions]);
 
   const fetchPredictions = async (pId) => {
     try {
@@ -249,6 +275,7 @@ export default function App() {
       <Header 
         activeTab={activeTab} 
         setActiveTab={handleTabChange} 
+        hasLiveMatches={hasLiveMatches}
       />
 
       {loading ? (
@@ -363,6 +390,34 @@ export default function App() {
             </div>
           )}
 
+          {activeTab === 'live' && (
+            <div className="matches-list" style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px', marginBottom: '10px' }}>
+                <span className="live-dot" />
+                <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0 }}>Live Matches</h2>
+              </div>
+              {matches.filter(m => m.status === 'live').length === 0 ? (
+                <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  No matches are currently live.
+                </div>
+              ) : (
+                matches.filter(m => m.status === 'live').map(m => (
+                  <MatchCard
+                    key={m.id}
+                    m={m}
+                    pred={predictions.find(p => p.match_id === m.id)}
+                    activeParticipantId={activeParticipantId}
+                    onSave={refreshAllData}
+                    allPredictions={allPredictions}
+                    leaderboard={leaderboard}
+                    runningPointsMap={runningPointsMap}
+                    selectedMatchId={null}
+                  />
+                ))
+              )}
+            </div>
+          )}
+
            {activeTab === 'matches' && (
             <MatchesList 
               matches={matches} 
@@ -461,6 +516,19 @@ export default function App() {
         {/* Sidebar Nav Links */}
         <div className="sidebar-section">
           <label className="sidebar-label">Navigation</label>
+          {hasLiveMatches && (
+            <button 
+              className={`sidebar-nav-btn ${activeTab === 'live' ? 'active' : ''}`}
+              onClick={() => {
+                handleTabChange('live');
+                setSidebarOpen(false);
+              }}
+              style={{ color: 'var(--success)' }}
+            >
+              <span className="live-dot" style={{ width: '8px', height: '8px', margin: 0 }} />
+              Live Matches
+            </button>
+          )}
           <button 
             className={`sidebar-nav-btn ${activeTab === 'match-view' ? 'active' : ''}`}
             onClick={() => {

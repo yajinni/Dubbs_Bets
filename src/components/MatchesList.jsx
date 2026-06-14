@@ -4,7 +4,7 @@ import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 import LiveFeed from './LiveFeed';
 
-function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {}, selectedMatchId }) {
+export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {}, selectedMatchId }) {
   const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
   const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
   const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
