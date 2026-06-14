@@ -62,7 +62,8 @@ export default function PlayerPicksList({
   leaderboard, 
   activeParticipantId, 
   runningPointsMap = {}, 
-  winnerLocalState = {} 
+  winnerLocalState = {},
+  showLiveResults = false
 }) {
   const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
   const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
@@ -71,8 +72,8 @@ export default function PlayerPicksList({
 
   const [liveStats, setLiveStats] = useState(null);
 
-  // Poll live data if match is currently active/not finished
-  const isLive = m.finished !== 1 && m.espn_event_id;
+  // Only poll live data for actually live matches when in the Live tab
+  const isLive = showLiveResults && m.status === 'live' && m.espn_event_id;
 
   useEffect(() => {
     if (!isLive || !m.espn_event_id) return;

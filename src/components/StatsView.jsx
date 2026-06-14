@@ -83,17 +83,12 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     const toEasternDateStr = (isoStr) => {
       try {
         const d = new Date(isoStr);
-        // Use Intl to get the date in ET
-        const parts = new Intl.DateTimeFormat('en-US', {
+        return new Intl.DateTimeFormat('en-CA', {
           timeZone: 'America/New_York',
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
-        }).formatToParts(d);
-        const y = parts.find(p => p.type === 'year').value;
-        const mo = parts.find(p => p.type === 'month').value;
-        const dy = parts.find(p => p.type === 'day').value;
-        return `${y}-${mo}-${dy}`;
+        }).format(d);
       } catch (_) {
         return isoStr.split('T')[0];
       }

@@ -214,6 +214,7 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                   leaderboard={leaderboard}
                   activeParticipantId={activeParticipantId}
                   runningPointsMap={runningPointsMap}
+                  showLiveResults={true}
                 />
               </div>
             );
