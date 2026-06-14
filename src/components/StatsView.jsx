@@ -508,7 +508,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                         <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: item.color }}></span>
                         <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
                       </div>
-                      <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{item.val} pts</span>
+                      <span style={{ fontWeight: '700', color: 'var(--text-primary)' }}>
+                        {item.val} {chartType === 'cumulative' ? 'total' : ''} pts
+                      </span>
                     </div>
                   ))
                 }
