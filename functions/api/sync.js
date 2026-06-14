@@ -16,6 +16,7 @@ export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const force = url.searchParams.get('force') === 'true';
+  const startTime = new Date().toISOString();
 
   try {
     if (!env.db) {
@@ -170,9 +171,6 @@ export async function onRequest(context) {
     const skipOdds = url.searchParams.get('skipOdds') === 'true';
     let syncResults = { source: 'espn', matchesUpdated: 0, oddsUpdated: 0 };
 
-    const trigger = url.searchParams.get('trigger') || (force ? 'manual_force' : 'web_request');
-    await logChange(env.db, 'system', null, null, `Sync Started (${trigger})`, null, `skipOdds: ${skipOdds}`);
-
     // Run actual sync. If it fails, let the error propagate.
     syncResults = await syncFromESPN(env.db, env.QSTASH_TOKEN, env.QSTASH_URL);
 
@@ -200,7 +198,8 @@ export async function onRequest(context) {
     const isoString = new Date().toISOString();
     await env.db.prepare("UPDATE settings SET value = ? WHERE key = 'last_sync'").bind(isoString).run();
 
-    await logChange(env.db, 'system', null, null, `Sync Completed successfully`, null, `Updated: ${syncResults.matchesUpdated} matches, ${syncResults.oddsUpdated} odds. Source: ${syncResults.source}`);
+    const logDetails = `Started: ${startTime} | Updated: ${syncResults.matchesUpdated} matches, ${syncResults.oddsUpdated} odds.` + (syncResults.oddsError ? ` Odds Error: ${syncResults.oddsError}` : '');
+    await logChange(env.db, 'system', null, null, '✅ ESPN Live MatchPulse', null, logDetails);
 
     return new Response(JSON.stringify({
       success: true,
@@ -210,6 +209,12 @@ export async function onRequest(context) {
     }), { status: 200, headers });
 
   } catch (error) {
+    const logDetails = `Started: ${startTime} | Error: ${error.message}`;
+    try {
+      await logChange(env.db, 'system', null, null, '❌ ESPN Live MatchPulse', null, logDetails);
+    } catch (logErr) {
+      console.error('Failed to log sync error:', logErr);
+    }
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
   }
 }
