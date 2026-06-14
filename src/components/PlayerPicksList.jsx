@@ -73,7 +73,7 @@ export default function PlayerPicksList({
   const [liveStats, setLiveStats] = useState(null);
 
   // Only poll live data for actually live matches when in the Live tab
-  const isLive = showLiveResults && m.status === 'live' && m.espn_event_id;
+  const isLive = showLiveResults && m.espn_event_id;
 
   useEffect(() => {
     if (!isLive || !m.espn_event_id) return;
