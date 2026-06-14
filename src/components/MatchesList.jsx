@@ -33,7 +33,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
   const noGoalPct = Math.round(noGoalProb);
   const awayFirstPct = 100 - homeFirstPct - noGoalPct;
 
-  const isLive = m.status === 'live';
+  // eslint-disable-next-line react-hooks/purity
+  const isLive = m.status === 'live' || (m.finished === 0 && m.status === 'scheduled' && new Date(m.local_date).getTime() <= Date.now());
   // Auto-open feed for live matches
   const [showFeed, setShowFeed] = useState(isLive);
   const [isCollapsed, setIsCollapsed] = useState(m.finished === 1);
