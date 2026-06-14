@@ -272,27 +272,35 @@ export default function LiveFeed({ espnEventId, matchStatus, homeName, awayName 
             );
           })
         ) : (
-          stats.map(s => {
-            const hVal = parseFloat(s.homeVal) || 0;
-            const aVal = parseFloat(s.awayVal) || 0;
-            let total = hVal + aVal;
-            if (total === 0) total = 1;
-            const homePct = (hVal / total) * 100;
-            const awayPct = (aVal / total) * 100;
-            return (
-              <div key={s.name} style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '6px' }}>
-                  <span style={{ minWidth: '40px' }}>{s.homeVal}{s.name === 'possessionPct' ? '%' : ''}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>{s.label}</span>
-                  <span style={{ minWidth: '40px', textAlign: 'right' }}>{s.awayVal}{s.name === 'possessionPct' ? '%' : ''}</span>
+          <>
+            {/* Team Names Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '16px', fontWeight: '800', fontSize: '14px', letterSpacing: '0.03em' }}>
+              <span style={{ color: 'var(--primary)' }}>{homeName}</span>
+              <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '11px', alignSelf: 'center' }}>VS</span>
+              <span style={{ color: 'var(--accent)', textAlign: 'right' }}>{awayName}</span>
+            </div>
+            {stats.map(s => {
+              const hVal = parseFloat(s.homeVal) || 0;
+              const aVal = parseFloat(s.awayVal) || 0;
+              let total = hVal + aVal;
+              if (total === 0) total = 1;
+              const homePct = (hVal / total) * 100;
+              const awayPct = (aVal / total) * 100;
+              return (
+                <div key={s.name} style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '6px' }}>
+                    <span style={{ minWidth: '40px' }}>{s.homeVal}{s.name === 'possessionPct' ? '%' : ''}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>{s.label}</span>
+                    <span style={{ minWidth: '40px', textAlign: 'right' }}>{s.awayVal}{s.name === 'possessionPct' ? '%' : ''}</span>
+                  </div>
+                  <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', overflow: 'hidden' }}>
+                    <div style={{ width: `${homePct}%`, background: 'var(--primary)', height: '100%' }}></div>
+                    <div style={{ width: `${awayPct}%`, background: 'var(--accent)', height: '100%' }}></div>
+                  </div>
                 </div>
-                <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', overflow: 'hidden' }}>
-                  <div style={{ width: `${homePct}%`, background: 'var(--primary)', height: '100%' }}></div>
-                  <div style={{ width: `${awayPct}%`, background: 'var(--accent)', height: '100%' }}></div>
-                </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </>
         )}
       </div>
 
