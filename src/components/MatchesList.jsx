@@ -719,7 +719,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
       {!isCollapsed && showFeed && (
         <LiveFeed
           espnEventId={m.espn_event_id}
-          matchStatus={m.status}
+          matchStatus={isLive ? 'live' : m.status}
           homeName={homeName}
           awayName={awayName}
         />
