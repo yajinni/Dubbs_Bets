@@ -158,7 +158,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   };
 
   // 5. SVG Line Chart Rendering Logic
-  const chartHeight = 220;
+  const chartHeight = 260;
   const chartWidth = 650;
   const paddingLeft = 40;
   const paddingRight = 40;
@@ -239,6 +239,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Player Performance Timeline</h3>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
               Track players' points progression over match days
+            </p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0 0', opacity: 0.8 }}>
+              Click on dots on the line to see values
             </p>
           </div>
 
