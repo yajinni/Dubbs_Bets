@@ -148,12 +148,12 @@ export async function onRequest(context) {
       const activeMatchInWindow = dbMatches.some(m => {
         const matchTime = new Date(m.local_date).getTime();
         const elapsedMinutes = (currentTime - matchTime) / (60 * 1000);
-        return elapsedMinutes >= 105 && elapsedMinutes < 300;
+        return elapsedMinutes >= 0 && elapsedMinutes < 300;
       });
 
       if (activeMatchInWindow) {
         shouldSync = true;
-        reason = 'Sync triggered: Active match in the 105-minute post-start window.';
+        reason = 'Sync triggered: Active match in the 0 to 300-minute post-start window.';
       }
     }
 

@@ -221,6 +221,27 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Live polling effect: every 60 seconds if there are live matches
+  useEffect(() => {
+    if (!hasLiveMatches) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const syncRes = await fetch('/api/sync');
+        const syncData = await syncRes.json();
+        if (syncRes.ok && syncData.success && syncData.sync_time) {
+          setLastSync(syncData.sync_time);
+        }
+      } catch (err) {
+        console.error('Interval sync failed:', err);
+      }
+      await refreshAllData();
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLiveMatches, activeParticipantId]);
+
   const forceSync = async () => {
     setSyncing(true);
     try {
