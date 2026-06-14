@@ -33,6 +33,8 @@ const POLL_INTERVAL_MS = 30_000; // 30 seconds when live
 
 export default function LiveFeed({ espnEventId, matchStatus, homeName, awayName }) {
   const [commentary, setCommentary] = useState([]);
+  const [stats, setStats] = useState([]);
+  const [subTab, setSubTab] = useState('commentary'); // 'commentary' | 'stats'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(null);
@@ -85,6 +87,24 @@ export default function LiveFeed({ espnEventId, matchStatus, homeName, awayName 
 
       // Reverse so latest commentary is at the top (newest first)
       items.reverse();
+
+      // Pull stats if available
+      if (data.boxscore && data.boxscore.teams) {
+        const homeTeam = data.boxscore.teams.find(t => t.homeAway === 'home');
+        const awayTeam = data.boxscore.teams.find(t => t.homeAway === 'away');
+        if (homeTeam && awayTeam && homeTeam.statistics && awayTeam.statistics) {
+          const combinedStats = homeTeam.statistics.map(s => {
+            const opposingStat = awayTeam.statistics.find(os => os.name === s.name) || {};
+            return {
+              name: s.name,
+              label: s.label,
+              homeVal: s.displayValue || '0',
+              awayVal: opposingStat.displayValue || '0',
+            };
+          }).filter(s => ['possessionPct', 'totalShots', 'shotsOnTarget', 'wonCorners', 'foulsCommitted', 'yellowCards', 'redCards', 'saves'].includes(s.name));
+          setStats(combinedStats);
+        }
+      }
 
       setCommentary(items);
       setError(null);
@@ -189,22 +209,88 @@ export default function LiveFeed({ espnEventId, matchStatus, homeName, awayName 
         </div>
       </div>
 
+      {/* Sub-tabs if stats are available */}
+      {stats.length > 0 && (
+        <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(0,0,0,0.1)' }}>
+          <button 
+            type="button" 
+            onClick={() => setSubTab('commentary')}
+            style={{ 
+              flex: 1, 
+              padding: '10px', 
+              fontSize: '12px', 
+              fontWeight: '700', 
+              color: subTab === 'commentary' ? 'var(--primary)' : 'var(--text-secondary)',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: subTab === 'commentary' ? '2px solid var(--primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Commentary
+          </button>
+          <button 
+            type="button" 
+            onClick={() => setSubTab('stats')}
+            style={{ 
+              flex: 1, 
+              padding: '10px', 
+              fontSize: '12px', 
+              fontWeight: '700', 
+              color: subTab === 'stats' ? 'var(--primary)' : 'var(--text-secondary)',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: subTab === 'stats' ? '2px solid var(--primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Match Stats
+          </button>
+        </div>
+      )}
+
       {/* Feed List */}
-      <div className="live-feed-list">
-        {commentary.map(item => {
-          const cat = item.category;
-          return (
-            <div key={item.id} className={`feed-event feed-event-${cat}`}>
-              <div className="feed-event-left">
-                <span className="feed-event-icon">{eventIcon(cat)}</span>
-                {item.minute && (
-                  <span className="feed-event-time">{item.minute}</span>
-                )}
+      <div className="live-feed-list" style={{ padding: subTab === 'stats' ? '16px' : '0' }}>
+        {subTab === 'commentary' ? (
+          commentary.map(item => {
+            const cat = item.category;
+            return (
+              <div key={item.id} className={`feed-event feed-event-${cat}`}>
+                <div className="feed-event-left">
+                  <span className="feed-event-icon">{eventIcon(cat)}</span>
+                  {item.minute && (
+                    <span className="feed-event-time">{item.minute}</span>
+                  )}
+                </div>
+                <span className="feed-event-text">{item.text}</span>
               </div>
-              <span className="feed-event-text">{item.text}</span>
-            </div>
-          );
-        })}
+            );
+          })
+        ) : (
+          stats.map(s => {
+            const hVal = parseFloat(s.homeVal) || 0;
+            const aVal = parseFloat(s.awayVal) || 0;
+            let total = hVal + aVal;
+            if (total === 0) total = 1;
+            const homePct = (hVal / total) * 100;
+            const awayPct = (aVal / total) * 100;
+            return (
+              <div key={s.name} style={{ marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '6px' }}>
+                  <span style={{ minWidth: '40px' }}>{s.homeVal}{s.name === 'possessionPct' ? '%' : ''}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>{s.label}</span>
+                  <span style={{ minWidth: '40px', textAlign: 'right' }}>{s.awayVal}{s.name === 'possessionPct' ? '%' : ''}</span>
+                </div>
+                <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', overflow: 'hidden' }}>
+                  <div style={{ width: `${homePct}%`, background: 'var(--primary)', height: '100%' }}></div>
+                  <div style={{ width: `${awayPct}%`, background: 'var(--accent)', height: '100%' }}></div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {isLive && (
