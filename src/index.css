@@ -1649,13 +1649,14 @@ h1, h2, h3, h4, h5, h6 {
   right: -320px;
   width: 320px;
   height: 100vh;
+  height: 100dvh;
   background: rgba(9, 6, 20, 0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-left: 1px solid var(--glass-border);
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
   z-index: 1001;
-  padding: 24px 20px;
+  padding: 24px 20px 64px 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
