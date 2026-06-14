@@ -521,18 +521,10 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
 
             {/* Goals by Half */}
             <div style={{ marginBottom: '16px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>Goals</span>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
                   {goalsByHalf.homeFirst + goalsByHalf.awayFirst} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>|</span> {goalsByHalf.homeSecond + goalsByHalf.awaySecond}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                <span style={{ color: 'var(--primary)' }}>
-                  {homeCode}: {goalsByHalf.homeFirst} <span style={{ color: 'var(--text-muted)' }}>|</span> {goalsByHalf.homeSecond}
-                </span>
-                <span style={{ color: 'var(--accent)' }}>
-                  {awayCode}: {goalsByHalf.awayFirst} <span style={{ color: 'var(--text-muted)' }}>|</span> {goalsByHalf.awaySecond}
                 </span>
               </div>
             </div>
