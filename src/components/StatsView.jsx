@@ -245,9 +245,6 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
               Track players' points progression over match days
             </p>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0 0', opacity: 0.8 }}>
-              Click on the dates to see values for that day
-            </p>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -553,6 +550,10 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               </div>
             </div>
           )}
+        </div>
+
+        <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', opacity: 0.8, marginTop: '8px' }}>
+          Click on the dates to see values for that day
         </div>
       </div>
     );
