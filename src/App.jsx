@@ -224,7 +224,7 @@ export default function App() {
   useEffect(() => {
     if (!hasLiveMatches) return;
 
-    const intervalId = setInterval(async () => {
+    const performSync = async () => {
       try {
         const syncRes = await fetch('/api/sync');
         const syncData = await syncRes.json();
@@ -235,7 +235,12 @@ export default function App() {
         console.error('Interval sync failed:', err);
       }
       await refreshAllData();
-    }, 60000);
+    };
+
+    // Run immediately
+    performSync();
+
+    const intervalId = setInterval(performSync, 60000);
 
     return () => clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
