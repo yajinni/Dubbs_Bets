@@ -40,9 +40,10 @@ export async function onRequest(context) {
     const isDiagnostic = url.searchParams.get('checkBets') === 'true' || url.searchParams.get('checkOddsFixture') !== null;
 
     const rescheduleQStash = url.searchParams.get('rescheduleQStash') === 'true';
-    if (!isDiagnostic && !rescheduleQStash && env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
+    if (!isDiagnostic && env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid sync secret' }), { status: 401, headers });
     }
+
 
 
     // Handle QStash task webhooks
