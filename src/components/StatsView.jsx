@@ -366,6 +366,16 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             style={{ display: 'block', overflow: 'visible' }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
+            onClick={(e) => {
+              const svgRect = e.currentTarget.getBoundingClientRect();
+              const mouseX = e.clientX - svgRect.left;
+              const scaleX = svgWidth / svgRect.width;
+              const logicalMouseX = mouseX * scaleX;
+              const chartMouseX = logicalMouseX - paddingLeft;
+              const pct = chartMouseX / chartWidth;
+              const index = Math.max(0, Math.min(dates.length - 1, Math.round(pct * (dates.length - 1))));
+              setHoveredIndex(index);
+            }}
           >
             {/* Grid Lines & Y Labels */}
             {yTicks.map((tick, i) => (
@@ -403,6 +413,11 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                 textAnchor="middle"
                 fill="var(--text-muted)"
                 fontWeight="500"
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation(); // prevent triggering parent SVG click
+                  setHoveredIndex(i);
+                }}
               >
                 {formatLabelDate(date)}
               </text>
