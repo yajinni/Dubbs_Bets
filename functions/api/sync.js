@@ -883,16 +883,16 @@ async function handleScoreMatchTask(db, matchId, qstashToken, pagesUrl, secret, 
       console.log(`[QStash Webhook] Match ${matchId} is not finished yet. Scheduling a retry in 1 minute...`);
       const qstashEndpoint = qstashUrl || "https://qstash-us-east-1.upstash.io";
       const retryEpoch = Math.floor((Date.now() + 60 * 1000) / 1000);
-      const safeHome = match.home_team_name.replace(/\s+/g, '_');
-      const safeAway = match.away_team_name.replace(/\s+/g, '_');
-      const scoreUrl = `${pagesUrl}/api/sync?scoreMatchId=${matchId}&desc=Score_Sync_Retry_${safeHome}_vs_${safeAway}${secret ? `&secret=${secret}` : ''}`;
+      const scoreUrl = `${pagesUrl}/api/sync?scoreMatchId=${matchId}${secret ? `&secret=${secret}` : ''}`;
+      const retryLabel = `Score Sync Retry: ${match.home_team_name} vs ${match.away_team_name}`;
       
       try {
         const scoreRes = await fetch(`${qstashEndpoint}/v2/publish/${scoreUrl}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${qstashToken}`,
-            'Upstash-Not-Before': String(retryEpoch)
+            'Upstash-Not-Before': String(retryEpoch),
+            'Upstash-Label': retryLabel
           }
         });
         if (!scoreRes.ok) {
@@ -929,16 +929,15 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
     if (matchTime > currentTime) {
       console.log(`[QStash Scheduler] Scheduling QStash jobs for match ${m.id} (${m.home_team_name} vs ${m.away_team_name})...`);
       
-      const safeHome = m.home_team_name.replace(/\s+/g, '_');
-      const safeAway = m.away_team_name.replace(/\s+/g, '_');
+      const matchLabel = `${m.home_team_name} vs ${m.away_team_name}`;
 
       // 1. Lock odds job (kickoff - 2 hours)
       const lockEpoch = Math.floor((matchTime - 2 * 60 * 60 * 1000) / 1000);
-      const lockUrl = `${pagesUrl}/api/sync?lockMatchId=${m.id}&desc=Odds_Lock_${safeHome}_vs_${safeAway}${secret ? `&secret=${secret}` : ''}`;
+      const lockUrl = `${pagesUrl}/api/sync?lockMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`;
       
       // 2. Score match job (kickoff + 105 minutes)
       const scoreEpoch = Math.floor((matchTime + 105 * 60 * 1000) / 1000);
-      const scoreUrl = `${pagesUrl}/api/sync?scoreMatchId=${m.id}&desc=Score_Sync_${safeHome}_vs_${safeAway}${secret ? `&secret=${secret}` : ''}`;
+      const scoreUrl = `${pagesUrl}/api/sync?scoreMatchId=${m.id}${secret ? `&secret=${secret}` : ''}`;
       
       let lockMsgId = null;
       let scoreMsgId = null;
@@ -950,7 +949,8 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
-              'Upstash-Not-Before': String(lockEpoch)
+              'Upstash-Not-Before': String(lockEpoch),
+              'Upstash-Label': `Odds Lock: ${matchLabel}`
             }
           });
           console.log(`[QStash Scheduler] Lock odds scheduled: status ${lockRes.status}`);
@@ -975,7 +975,8 @@ async function checkAndScheduleQStashJobs(db, qstashToken, pagesUrl, secret, qst
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${qstashToken}`,
-              'Upstash-Not-Before': String(scoreEpoch)
+              'Upstash-Not-Before': String(scoreEpoch),
+              'Upstash-Label': `Score Sync: ${matchLabel}`
             }
           });
           console.log(`[QStash Scheduler] Score sync scheduled: status ${scoreRes.status}`);
