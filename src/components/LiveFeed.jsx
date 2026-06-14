@@ -93,7 +93,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeName, awayName 
         const homeTeam = data.boxscore.teams.find(t => t.homeAway === 'home');
         const awayTeam = data.boxscore.teams.find(t => t.homeAway === 'away');
         if (homeTeam && awayTeam && homeTeam.statistics && awayTeam.statistics) {
-          const desiredOrder = ['wonCorners', 'totalShots', 'shotsOnTarget', 'saves', 'possessionPct', 'foulsCommitted', 'yellowCards', 'redCards'];
+           const desiredOrder = ['totalShots', 'shotsOnTarget', 'saves', 'wonCorners', 'possessionPct', 'foulsCommitted', 'yellowCards', 'redCards'];
           const combinedStats = desiredOrder.map(statName => {
             const s = homeTeam.statistics.find(st => st.name === statName);
             if (!s) return null;
