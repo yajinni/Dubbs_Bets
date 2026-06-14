@@ -455,8 +455,8 @@ export default function App() {
           )}
 
           {activeTab === 'live' && (
-            <div className="matches-list" style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px', marginBottom: '10px' }}>
+            <div className="matches-list" style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px', marginBottom: '0px' }}>
                 {hasLiveMatches && <span className="live-dot" />}
                 <h2 style={{ fontSize: '20px', fontWeight: '800', margin: 0 }}>Live Matches</h2>
               </div>
@@ -478,7 +478,7 @@ export default function App() {
                           gap: '8px', 
                           padding: '10px', 
                           borderRadius: '8px', 
-                          fontSize: '14px', 
+                          fontSize: '16px', 
                           fontWeight: '700', 
                           background: 'rgba(255,255,255,0.03)', 
                           border: '1px solid var(--glass-border)',
