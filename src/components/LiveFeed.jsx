@@ -16,7 +16,7 @@ function classifyEvent(type) {
   return 'default';
 }
 
-const fractionPctStats = ['crossPct', 'longballPct', 'tacklePct'];
+const fractionPctStats = ['tacklePct'];
 
 function formatStatValue(statName, rawValue) {
   const val = parseFloat(rawValue);
@@ -32,10 +32,8 @@ const STAT_SECTION = {
   insideBoxAttempts: 'Shooting', outsideBoxAttempts: 'Shooting', hitWoodwork: 'Shooting',
   possessionPct: 'Possession & Passing',
   totalPasses: 'Possession & Passing',
-  totalCrosses: 'Possession & Passing', accurateCrosses: 'Possession & Passing',
-  crossPct: 'Possession & Passing',
-  totalLongBalls: 'Possession & Passing', accurateLongBalls: 'Possession & Passing',
-  longballPct: 'Possession & Passing', wonCorners: 'Possession & Passing',
+  totalCrosses: 'Possession & Passing',
+  totalLongBalls: 'Possession & Passing', wonCorners: 'Possession & Passing',
   saves: 'Defense',
   effectiveTackles: 'Defense', totalTackles: 'Defense', tacklePct: 'Defense',
   interceptions: 'Defense',
@@ -51,8 +49,8 @@ const STAT_ORDER = [
   'insideBoxAttempts', 'outsideBoxAttempts', 'hitWoodwork',
   'blockedShots', 'penaltyKickGoals', 'penaltyKickShots',
   'possessionPct', 'totalPasses',
-  'accurateCrosses', 'totalCrosses', 'crossPct',
-  'totalLongBalls', 'accurateLongBalls', 'longballPct', 'wonCorners',
+  'totalCrosses',
+  'totalLongBalls', 'wonCorners',
   'saves', 'effectiveTackles', 'totalTackles', 'tacklePct',
   'interceptions', 'effectiveClearance', 'totalClearance',
   'foulsCommitted', 'yellowCards', 'redCards', 'offsides',
@@ -623,7 +621,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
               let lastSection = null;
               const totalShotsStat = stats.find(st => st.name === 'totalShots');
               return stats.map(s => {
-                if (s.name === 'accuratePasses') return null;
+                if (s.name === 'accuratePasses' || s.name === 'accurateCrosses' || s.name === 'accurateLongBalls') return null;
                 const section = STAT_SECTION[s.name] || '';
                 const sectionChanged = section && section !== lastSection;
                 lastSection = section;
@@ -645,6 +643,20 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                 if (passesStat) {
                   const hAcc = parseFloat(passesStat.homeVal) || 0;
                   const aAcc = parseFloat(passesStat.awayVal) || 0;
+                  if (hVal > 0) homeDisplay += ' (' + Math.round(hAcc / hVal * 100) + '%)';
+                  if (aVal > 0) awayDisplay += ' (' + Math.round(aAcc / aVal * 100) + '%)';
+                }
+                const crossesStat = s.name === 'totalCrosses' ? stats.find(st => st.name === 'accurateCrosses') : null;
+                if (crossesStat) {
+                  const hAcc = parseFloat(crossesStat.homeVal) || 0;
+                  const aAcc = parseFloat(crossesStat.awayVal) || 0;
+                  if (hVal > 0) homeDisplay += ' (' + Math.round(hAcc / hVal * 100) + '%)';
+                  if (aVal > 0) awayDisplay += ' (' + Math.round(aAcc / aVal * 100) + '%)';
+                }
+                const longBallsStat = s.name === 'totalLongBalls' ? stats.find(st => st.name === 'accurateLongBalls') : null;
+                if (longBallsStat) {
+                  const hAcc = parseFloat(longBallsStat.homeVal) || 0;
+                  const aAcc = parseFloat(longBallsStat.awayVal) || 0;
                   if (hVal > 0) homeDisplay += ' (' + Math.round(hAcc / hVal * 100) + '%)';
                   if (aVal > 0) awayDisplay += ' (' + Math.round(aAcc / aVal * 100) + '%)';
                 }
