@@ -405,7 +405,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             { name: 'insideBoxAttempts', label: 'Inside Box', homeVal: String(homeInside), awayVal: String(awayInside) },
             { name: 'outsideBoxAttempts', label: 'Outside Box', homeVal: String(homeOutside), awayVal: String(awayOutside) },
             { name: 'hitWoodwork', label: 'Hit Woodwork', homeVal: String(homeWoodwork), awayVal: String(awayWoodwork) },
-          ];
+          ].filter(st => st.name !== 'hitWoodwork' || (parseInt(st.homeVal) > 0 || parseInt(st.awayVal) > 0));
 
           const combinedStats = [...filteredStats, ...playStats];
           combinedStats.sort((a, b) => {
