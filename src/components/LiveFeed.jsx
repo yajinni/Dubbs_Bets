@@ -510,13 +510,42 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
 
   return (
     <div className="live-feed-panel">
-      {/* Feed Header */}
-      <div className="live-feed-header">
-        <div className="live-feed-title">
-          {isLive ? (
-            <><span className="live-dot" />Live Commentary</>
-          ) : (
-            <><span style={{ fontSize: 14 }}>📋</span> Match Commentary</>
+      {/* Feed Header with tabs */}
+      <div className="live-feed-header" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span
+            onClick={() => setSubTab('commentary')}
+            style={{
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '700',
+              color: subTab === 'commentary' ? 'var(--primary)' : 'var(--text-secondary)',
+              borderBottom: subTab === 'commentary' ? '2px solid var(--primary)' : '2px solid transparent',
+              paddingBottom: '10px',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            {isLive && <span className="live-dot" />}
+            Live Commentary
+          </span>
+          {stats.length > 0 && (
+            <span
+              onClick={() => setSubTab('stats')}
+              style={{
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '700',
+                color: subTab === 'stats' ? 'var(--primary)' : 'var(--text-secondary)',
+                borderBottom: subTab === 'stats' ? '2px solid var(--primary)' : '2px solid transparent',
+                paddingBottom: '10px',
+                transition: 'all 0.2s',
+              }}
+            >
+              Match Stats
+            </span>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -535,48 +564,6 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             <RefreshCw size={12} className={refreshing ? 'spin-icon' : ''} />
           </button>
         </div>
-      </div>
-
-      {/* Sub-tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', background: 'rgba(0,0,0,0.1)' }}>
-        <button
-          type="button"
-          onClick={() => setSubTab('commentary')}
-          style={{
-            flex: 1,
-            padding: '10px',
-            fontSize: '12px',
-            fontWeight: '700',
-            color: subTab === 'commentary' ? 'var(--primary)' : 'var(--text-secondary)',
-            background: 'transparent',
-            border: 'none',
-            borderBottom: subTab === 'commentary' ? '2px solid var(--primary)' : '2px solid transparent',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-        >
-          Commentary
-        </button>
-        {stats.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setSubTab('stats')}
-            style={{
-              flex: 1,
-              padding: '10px',
-              fontSize: '12px',
-              fontWeight: '700',
-              color: subTab === 'stats' ? 'var(--primary)' : 'var(--text-secondary)',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: subTab === 'stats' ? '2px solid var(--primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            Match Stats
-          </button>
-        )}
       </div>
 
       {/* Feed List */}
