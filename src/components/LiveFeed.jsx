@@ -29,7 +29,7 @@ function formatStatValue(statName, rawValue) {
 const STAT_SECTION = {
   totalShots: 'Shooting', shotsOnTarget: 'Shooting', shotPct: 'Shooting',
   blockedShots: 'Shooting', penaltyKickGoals: 'Shooting', penaltyKickShots: 'Shooting',
-  shotsOffTarget: 'Shooting', shotsHitWoodwork: 'Shooting', wonCorners: 'Shooting',
+  shotsOnTargetLive: 'Shooting', shotsOffTarget: 'Shooting', shotsBlockedLive: 'Shooting', shotsHitWoodwork: 'Shooting', wonCorners: 'Shooting',
   possessionPct: 'Possession & Passing',
   totalPasses: 'Possession & Passing', accuratePasses: 'Possession & Passing',
   passPct: 'Possession & Passing',
@@ -362,26 +362,31 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             if (hTeam) homeTeamId = hTeam.id || hTeam.team?.id;
             if (aTeam) awayTeamId = aTeam.id || aTeam.team?.id;
           }
+          let homeShotOnTarget = 0, awayShotOnTarget = 0;
           let homeShotOffTarget = 0, awayShotOffTarget = 0;
+          let homeShotBlocked = 0, awayShotBlocked = 0;
           let homeShotHitWoodwork = 0, awayShotHitWoodwork = 0;
           for (const play of rawPlays) {
             const type = play.type?.type;
             const teamId = play.team?.id;
             const isHome = homeTeamId && String(teamId) === String(homeTeamId);
             const isAway = awayTeamId && String(teamId) === String(awayTeamId);
-            if (type === 'shot-off-target') {
+            if (type === 'shot-on-target') {
+              if (isHome) homeShotOnTarget++; else if (isAway) awayShotOnTarget++;
+            } else if (type === 'shot-off-target') {
               if (isHome) homeShotOffTarget++; else if (isAway) awayShotOffTarget++;
+            } else if (type === 'shot-blocked') {
+              if (isHome) homeShotBlocked++; else if (isAway) awayShotBlocked++;
             } else if (type === 'shot-hit-woodwork') {
               if (isHome) homeShotHitWoodwork++; else if (isAway) awayShotHitWoodwork++;
             }
           }
-          const shotStats = [];
-          if (homeShotOffTarget > 0 || awayShotOffTarget > 0) {
-            shotStats.push({ name: 'shotsOffTarget', label: 'Shots Off Target', homeVal: String(homeShotOffTarget), awayVal: String(awayShotOffTarget) });
-          }
-          if (homeShotHitWoodwork > 0 || awayShotHitWoodwork > 0) {
-            shotStats.push({ name: 'shotsHitWoodwork', label: 'Hit Woodwork', homeVal: String(homeShotHitWoodwork), awayVal: String(awayShotHitWoodwork) });
-          }
+          const shotStats = [
+            { name: 'shotsOnTargetLive', label: 'Shots on Target (Live)', homeVal: String(homeShotOnTarget), awayVal: String(awayShotOnTarget) },
+            { name: 'shotsOffTarget', label: 'Shots Off Target', homeVal: String(homeShotOffTarget), awayVal: String(awayShotOffTarget) },
+            { name: 'shotsBlockedLive', label: 'Shots Blocked (Live)', homeVal: String(homeShotBlocked), awayVal: String(awayShotBlocked) },
+            { name: 'shotsHitWoodwork', label: 'Hit Woodwork', homeVal: String(homeShotHitWoodwork), awayVal: String(awayShotHitWoodwork) },
+          ];
 
           const combinedStats = [...allStats, ...shotStats];
           combinedStats.sort((a, b) => {
