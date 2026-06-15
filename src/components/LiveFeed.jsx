@@ -34,7 +34,7 @@ const STAT_SECTION = {
   saves: 'Defense',
   totalTackles: 'Defense',
   interceptions: 'Defense',
-  effectiveClearance: 'Defense', totalClearance: 'Defense',
+  totalClearance: 'Defense',
   foulsCommitted: 'Discipline',
   yellowCards: 'Discipline', redCards: 'Discipline', offsides: 'Discipline',
 };
@@ -49,7 +49,7 @@ const STAT_ORDER = [
   'totalCrosses',
   'totalLongBalls', 'wonCorners',
   'saves', 'totalTackles',
-  'interceptions', 'effectiveClearance', 'totalClearance',
+  'interceptions', 'totalClearance',
   'foulsCommitted', 'yellowCards', 'redCards', 'offsides',
 ];
 
@@ -618,7 +618,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
               let lastSection = null;
               const totalShotsStat = stats.find(st => st.name === 'totalShots');
               return stats.map(s => {
-                if (s.name === 'accuratePasses' || s.name === 'accurateCrosses' || s.name === 'accurateLongBalls' || s.name === 'effectiveTackles') return null;
+                if (s.name === 'accuratePasses' || s.name === 'accurateCrosses' || s.name === 'accurateLongBalls' || s.name === 'effectiveTackles' || s.name === 'effectiveClearance') return null;
                 const section = STAT_SECTION[s.name] || '';
                 const sectionChanged = section && section !== lastSection;
                 lastSection = section;
@@ -661,6 +661,13 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                 if (tacklesStat) {
                   const hEff = parseFloat(tacklesStat.homeVal) || 0;
                   const aEff = parseFloat(tacklesStat.awayVal) || 0;
+                  if (hVal > 0) homeDisplay += ' (' + Math.round(hEff / hVal * 100) + '%)';
+                  if (aVal > 0) awayDisplay += ' (' + Math.round(aEff / aVal * 100) + '%)';
+                }
+                const clearsStat = s.name === 'totalClearance' ? stats.find(st => st.name === 'effectiveClearance') : null;
+                if (clearsStat) {
+                  const hEff = parseFloat(clearsStat.homeVal) || 0;
+                  const aEff = parseFloat(clearsStat.awayVal) || 0;
                   if (hVal > 0) homeDisplay += ' (' + Math.round(hEff / hVal * 100) + '%)';
                   if (aVal > 0) awayDisplay += ' (' + Math.round(aEff / aVal * 100) + '%)';
                 }
