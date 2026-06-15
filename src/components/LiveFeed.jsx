@@ -29,7 +29,7 @@ function formatStatValue(statName, rawValue) {
 const STAT_SECTION = {
   totalShots: 'Shooting', shotsOnTarget: 'Shooting', shotPct: 'Shooting',
   blockedShots: 'Shooting', penaltyKickGoals: 'Shooting', penaltyKickShots: 'Shooting',
-  shotsOnTargetLive: 'Shooting', shotsOffTarget: 'Shooting', shotsBlockedLive: 'Shooting', shotsHitWoodwork: 'Shooting', wonCorners: 'Shooting',
+  wonCorners: 'Shooting',
   possessionPct: 'Possession & Passing',
   totalPasses: 'Possession & Passing', accuratePasses: 'Possession & Passing',
   passPct: 'Possession & Passing',
@@ -46,6 +46,17 @@ const STAT_SECTION = {
 };
 
 const SECTION_ORDER = ['Shooting', 'Possession & Passing', 'Defense', 'Discipline'];
+
+const STAT_ORDER = [
+  'totalShots', 'shotsOnTarget', 'shotPct', 'wonCorners',
+  'blockedShots', 'penaltyKickGoals', 'penaltyKickShots',
+  'possessionPct', 'accuratePasses', 'totalPasses', 'passPct',
+  'accurateCrosses', 'totalCrosses', 'crossPct',
+  'totalLongBalls', 'accurateLongBalls', 'longballPct',
+  'saves', 'effectiveTackles', 'totalTackles', 'tacklePct',
+  'interceptions', 'effectiveClearance', 'totalClearance',
+  'foulsCommitted', 'yellowCards', 'redCards', 'offsides',
+];
 
 function eventIcon(category) {
   switch (category) {
@@ -351,50 +362,11 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             };
           });
 
-          // Count shot types from plays (only the ones not in boxscore)
-          const rawPlays = data.plays || [];
-          const competitions = data.header?.competitions || [];
-          let homeTeamId = null, awayTeamId = null;
-          if (competitions.length > 0) {
-            const comp = competitions[0];
-            const hTeam = comp.competitors?.find(c => c.homeAway === 'home');
-            const aTeam = comp.competitors?.find(c => c.homeAway === 'away');
-            if (hTeam) homeTeamId = hTeam.id || hTeam.team?.id;
-            if (aTeam) awayTeamId = aTeam.id || aTeam.team?.id;
-          }
-          let homeShotOnTarget = 0, awayShotOnTarget = 0;
-          let homeShotOffTarget = 0, awayShotOffTarget = 0;
-          let homeShotBlocked = 0, awayShotBlocked = 0;
-          let homeShotHitWoodwork = 0, awayShotHitWoodwork = 0;
-          for (const play of rawPlays) {
-            const type = play.type?.type;
-            const teamId = play.team?.id;
-            const isHome = homeTeamId && String(teamId) === String(homeTeamId);
-            const isAway = awayTeamId && String(teamId) === String(awayTeamId);
-            if (type === 'shot-on-target') {
-              if (isHome) homeShotOnTarget++; else if (isAway) awayShotOnTarget++;
-            } else if (type === 'shot-off-target') {
-              if (isHome) homeShotOffTarget++; else if (isAway) awayShotOffTarget++;
-            } else if (type === 'shot-blocked') {
-              if (isHome) homeShotBlocked++; else if (isAway) awayShotBlocked++;
-            } else if (type === 'shot-hit-woodwork') {
-              if (isHome) homeShotHitWoodwork++; else if (isAway) awayShotHitWoodwork++;
-            }
-          }
-          const shotStats = [
-            { name: 'shotsOnTargetLive', label: 'Shots on Target (Live)', homeVal: String(homeShotOnTarget), awayVal: String(awayShotOnTarget) },
-            { name: 'shotsOffTarget', label: 'Shots Off Target', homeVal: String(homeShotOffTarget), awayVal: String(awayShotOffTarget) },
-            { name: 'shotsBlockedLive', label: 'Shots Blocked (Live)', homeVal: String(homeShotBlocked), awayVal: String(awayShotBlocked) },
-            { name: 'shotsHitWoodwork', label: 'Hit Woodwork', homeVal: String(homeShotHitWoodwork), awayVal: String(awayShotHitWoodwork) },
-          ];
-
-          const combinedStats = [...allStats, ...shotStats];
+          const combinedStats = [...allStats];
           combinedStats.sort((a, b) => {
-            const aSec = STAT_SECTION[a.name] || '';
-            const bSec = STAT_SECTION[b.name] || '';
-            const aOrder = SECTION_ORDER.indexOf(aSec);
-            const bOrder = SECTION_ORDER.indexOf(bSec);
-            return aOrder - bOrder;
+            const aIdx = STAT_ORDER.indexOf(a.name);
+            const bIdx = STAT_ORDER.indexOf(b.name);
+            return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
           });
           setStats(combinedStats);
         }
