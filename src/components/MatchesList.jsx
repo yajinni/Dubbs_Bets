@@ -36,7 +36,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
   // eslint-disable-next-line react-hooks/purity
   const isLive = m.status === 'live' || (m.finished === 0 && m.status === 'scheduled' && new Date(m.local_date).getTime() <= Date.now());
   // Auto-open feed for live matches
-  const [showFeed, setShowFeed] = useState(isLive);
+  const [feedTab, setFeedTab] = useState(isLive ? 'commentary' : null);
   const [isCollapsed, setIsCollapsed] = useState(m.finished === 1);
 
   // Auto-expand if this match is selected from another view (e.g. Dashboard)
@@ -732,7 +732,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
       )}
 
       {/* Live Feed Panel (expanded commentary) */}
-      {!isCollapsed && showFeed && (
+      {!isCollapsed && feedTab && (
         <LiveFeed
           espnEventId={m.espn_event_id}
           matchStatus={isLive ? 'live' : m.status}
@@ -741,33 +741,57 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
           match={m}
           allPredictions={allPredictions}
           leaderboard={leaderboard}
+          tab={feedTab}
         />
       )}
 
       {/* Action Buttons at the bottom of the card */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '10px' }}>
-        {/* Live Commentary Toggle Button */}
+        {/* Feed Tab Buttons */}
         {!isCollapsed && (m.status !== 'scheduled' || m.espn_event_id) && (
-          <button 
-            type="button"
-            onClick={() => setShowFeed(!showFeed)}
-            className="btn-secondary"
-            style={{ 
-              alignSelf: 'center', 
-              fontSize: '12px', 
-              padding: '6px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              width: '100%',
-              justifyContent: 'center',
-              border: '1px solid var(--glass-border)',
-              borderRadius: '8px'
-            }}
-          >
-            <Radio size={12} className={m.status === 'live' ? 'pulse-icon' : ''} />
-            {showFeed ? 'Hide Live Commentary' : 'Live Commentary'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+            <button 
+              type="button"
+              onClick={() => setFeedTab(feedTab === 'commentary' ? null : 'commentary')}
+              className={feedTab === 'commentary' ? '' : 'btn-secondary'}
+              style={{ 
+                flex: 1,
+                fontSize: '12px', 
+                padding: '6px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                justifyContent: 'center',
+                border: '1px solid var(--glass-border)',
+                borderRadius: '8px',
+                fontWeight: feedTab === 'commentary' ? '700' : '500',
+                color: feedTab === 'commentary' ? 'var(--primary)' : undefined,
+              }}
+            >
+              <Radio size={12} className={m.status === 'live' ? 'pulse-icon' : ''} />
+              Live Commentary
+            </button>
+            <button 
+              type="button"
+              onClick={() => setFeedTab(feedTab === 'stats' ? null : 'stats')}
+              className={feedTab === 'stats' ? '' : 'btn-secondary'}
+              style={{ 
+                flex: 1,
+                fontSize: '12px', 
+                padding: '6px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                justifyContent: 'center',
+                border: '1px solid var(--glass-border)',
+                borderRadius: '8px',
+                fontWeight: feedTab === 'stats' ? '700' : '500',
+                color: feedTab === 'stats' ? 'var(--primary)' : undefined,
+              }}
+            >
+              Match Stats
+            </button>
+          </div>
         )}
 
         {/* Show/Hide Details Button */}

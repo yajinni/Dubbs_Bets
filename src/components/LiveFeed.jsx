@@ -127,7 +127,7 @@ function calcLivePoints(pred, match, liveHomeScore, liveAwayScore, liveTotalCard
 
 const POLL_INTERVAL_MS = 30_000; // 30 seconds when live
 
-export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode, match = null, allPredictions = [], leaderboard = [] }) {
+export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode, match = null, allPredictions = [], leaderboard = [], tab }) {
   const [commentary, setCommentary] = useState([]);
   const [stats, setStats] = useState([]);
   const [liveScore, setLiveScore] = useState({ home: null, away: null });
@@ -138,7 +138,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
     highestScoringHalf: 'equal',
     cleanSheet: 'yes',
   });
-  const [subTab, setSubTab] = useState('commentary'); // 'commentary' | 'stats' | 'points'
+  const [subTab, setSubTab] = useState(tab); // 'commentary' | 'stats' | 'points'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(null);
@@ -146,6 +146,11 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
   const intervalRef = useRef(null);
   const isLive = matchStatus === 'live';
   const isScheduled = matchStatus === 'scheduled';
+
+  // Sync subTab when parent changes tab
+  useEffect(() => {
+    if (tab) setSubTab(tab);
+  }, [tab]);
 
   const fetchFeed = useCallback(async (showRefreshing = false) => {
     if (!espnEventId) {
