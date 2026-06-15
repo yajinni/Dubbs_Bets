@@ -16,12 +16,9 @@ function classifyEvent(type) {
   return 'default';
 }
 
-const fractionPctStats = ['tacklePct'];
-
 function formatStatValue(statName, rawValue) {
   const val = parseFloat(rawValue);
   if (isNaN(val)) return rawValue;
-  if (fractionPctStats.includes(statName)) return (val * 100).toFixed(0) + '%';
   if (statName === 'possessionPct') return rawValue + '%';
   return rawValue;
 }
@@ -35,7 +32,7 @@ const STAT_SECTION = {
   totalCrosses: 'Possession & Passing',
   totalLongBalls: 'Possession & Passing', wonCorners: 'Possession & Passing',
   saves: 'Defense',
-  effectiveTackles: 'Defense', totalTackles: 'Defense', tacklePct: 'Defense',
+  totalTackles: 'Defense',
   interceptions: 'Defense',
   effectiveClearance: 'Defense', totalClearance: 'Defense',
   foulsCommitted: 'Discipline',
@@ -51,7 +48,7 @@ const STAT_ORDER = [
   'possessionPct', 'totalPasses',
   'totalCrosses',
   'totalLongBalls', 'wonCorners',
-  'saves', 'effectiveTackles', 'totalTackles', 'tacklePct',
+  'saves', 'totalTackles',
   'interceptions', 'effectiveClearance', 'totalClearance',
   'foulsCommitted', 'yellowCards', 'redCards', 'offsides',
 ];
@@ -621,7 +618,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
               let lastSection = null;
               const totalShotsStat = stats.find(st => st.name === 'totalShots');
               return stats.map(s => {
-                if (s.name === 'accuratePasses' || s.name === 'accurateCrosses' || s.name === 'accurateLongBalls') return null;
+                if (s.name === 'accuratePasses' || s.name === 'accurateCrosses' || s.name === 'accurateLongBalls' || s.name === 'effectiveTackles') return null;
                 const section = STAT_SECTION[s.name] || '';
                 const sectionChanged = section && section !== lastSection;
                 lastSection = section;
@@ -659,6 +656,13 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                   const aAcc = parseFloat(longBallsStat.awayVal) || 0;
                   if (hVal > 0) homeDisplay += ' (' + Math.round(hAcc / hVal * 100) + '%)';
                   if (aVal > 0) awayDisplay += ' (' + Math.round(aAcc / aVal * 100) + '%)';
+                }
+                const tacklesStat = s.name === 'totalTackles' ? stats.find(st => st.name === 'effectiveTackles') : null;
+                if (tacklesStat) {
+                  const hEff = parseFloat(tacklesStat.homeVal) || 0;
+                  const aEff = parseFloat(tacklesStat.awayVal) || 0;
+                  if (hVal > 0) homeDisplay += ' (' + Math.round(hEff / hVal * 100) + '%)';
+                  if (aVal > 0) awayDisplay += ' (' + Math.round(aEff / aVal * 100) + '%)';
                 }
                 return (
                   <React.Fragment key={s.name}>
