@@ -675,7 +675,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                   <React.Fragment key={s.name}>
                     {sectionChanged && (
                       <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '14px 0 6px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>
-                        {section}
+                        {section}{section === 'Possession & Passing' ? ' (Acc)' : section === 'Defense' ? ' (Effective)' : ''}
                       </div>
                     )}
                     <div style={{ marginBottom: '12px' }}>
