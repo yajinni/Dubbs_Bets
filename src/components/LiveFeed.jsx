@@ -29,7 +29,7 @@ function formatStatValue(statName, rawValue) {
 const STAT_SECTION = {
   totalShots: 'Shooting', shotsOnTarget: 'Shooting', shotPct: 'Shooting',
   blockedShots: 'Shooting', penaltyKickGoals: 'Shooting', penaltyKickShots: 'Shooting',
-  wonCorners: 'Shooting',
+  wonCorners: 'Shooting', insideBoxAttempts: 'Shooting', outsideBoxAttempts: 'Shooting', hitWoodwork: 'Shooting',
   possessionPct: 'Possession & Passing',
   totalPasses: 'Possession & Passing', accuratePasses: 'Possession & Passing',
   passPct: 'Possession & Passing',
@@ -49,6 +49,7 @@ const SECTION_ORDER = ['Shooting', 'Possession & Passing', 'Defense', 'Disciplin
 
 const STAT_ORDER = [
   'totalShots', 'shotsOnTarget', 'shotPct', 'wonCorners',
+  'insideBoxAttempts', 'outsideBoxAttempts', 'hitWoodwork',
   'blockedShots', 'penaltyKickGoals', 'penaltyKickShots',
   'possessionPct', 'accuratePasses', 'totalPasses', 'passPct',
   'accurateCrosses', 'totalCrosses', 'crossPct',
@@ -362,7 +363,42 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             };
           });
 
-          const combinedStats = [...allStats];
+          // Count play-based stats: inside/outside box attempts & woodwork
+          const rawPlays = data.plays || [];
+          const competitions = data.header?.competitions || [];
+          let homeTeamId = null, awayTeamId = null;
+          if (competitions.length > 0) {
+            const comp = competitions[0];
+            const hTeam = comp.competitors?.find(c => c.homeAway === 'home');
+            const aTeam = comp.competitors?.find(c => c.homeAway === 'away');
+            if (hTeam) homeTeamId = hTeam.id || hTeam.team?.id;
+            if (aTeam) awayTeamId = aTeam.id || aTeam.team?.id;
+          }
+          let homeInside = 0, awayInside = 0;
+          let homeOutside = 0, awayOutside = 0;
+          let homeWoodwork = 0, awayWoodwork = 0;
+          const shotTypes = ['goal', 'shot-on-target', 'shot-off-target', 'shot-blocked', 'shot-hit-woodwork'];
+          for (const play of rawPlays) {
+            const type = play.type?.type;
+            if (!shotTypes.includes(type) || play.fieldPositionX == null) continue;
+            const teamId = play.team?.id;
+            const isHome = homeTeamId && String(teamId) === String(homeTeamId);
+            const isAway = awayTeamId && String(teamId) === String(awayTeamId);
+            if (!isHome && !isAway) continue;
+            const x = parseFloat(play.fieldPositionX);
+            if (x >= 84) { if (isHome) homeInside++; else awayInside++; }
+            else { if (isHome) homeOutside++; else awayOutside++; }
+            if (type === 'shot-hit-woodwork') {
+              if (isHome) homeWoodwork++; else awayWoodwork++;
+            }
+          }
+          const playStats = [
+            { name: 'insideBoxAttempts', label: 'Inside Box', homeVal: String(homeInside), awayVal: String(awayInside) },
+            { name: 'outsideBoxAttempts', label: 'Outside Box', homeVal: String(homeOutside), awayVal: String(awayOutside) },
+            { name: 'hitWoodwork', label: 'Hit Woodwork', homeVal: String(homeWoodwork), awayVal: String(awayWoodwork) },
+          ];
+
+          const combinedStats = [...allStats, ...playStats];
           combinedStats.sort((a, b) => {
             const aIdx = STAT_ORDER.indexOf(a.name);
             const bIdx = STAT_ORDER.indexOf(b.name);
