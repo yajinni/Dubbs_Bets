@@ -16,6 +16,37 @@ function classifyEvent(type) {
   return 'default';
 }
 
+const fractionPctStats = ['shotPct', 'passPct', 'crossPct', 'longballPct', 'tacklePct'];
+
+function formatStatValue(statName, rawValue) {
+  const val = parseFloat(rawValue);
+  if (isNaN(val)) return rawValue;
+  if (fractionPctStats.includes(statName)) return (val * 100).toFixed(0) + '%';
+  if (statName === 'possessionPct') return rawValue + '%';
+  return rawValue;
+}
+
+const STAT_SECTION = {
+  totalShots: 'Shooting', shotsOnTarget: 'Shooting', shotPct: 'Shooting',
+  blockedShots: 'Shooting', penaltyKickGoals: 'Shooting', penaltyKickShots: 'Shooting',
+  shotsOffTarget: 'Shooting', shotsHitWoodwork: 'Shooting', wonCorners: 'Shooting',
+  possessionPct: 'Possession & Passing',
+  totalPasses: 'Possession & Passing', accuratePasses: 'Possession & Passing',
+  passPct: 'Possession & Passing',
+  totalCrosses: 'Possession & Passing', accurateCrosses: 'Possession & Passing',
+  crossPct: 'Possession & Passing',
+  totalLongBalls: 'Possession & Passing', accurateLongBalls: 'Possession & Passing',
+  longballPct: 'Possession & Passing',
+  saves: 'Defense',
+  effectiveTackles: 'Defense', totalTackles: 'Defense', tacklePct: 'Defense',
+  interceptions: 'Defense',
+  effectiveClearance: 'Defense', totalClearance: 'Defense',
+  foulsCommitted: 'Discipline',
+  yellowCards: 'Discipline', redCards: 'Discipline', offsides: 'Discipline',
+};
+
+const SECTION_ORDER = ['Shooting', 'Possession & Passing', 'Defense', 'Discipline'];
+
 function eventIcon(category) {
   switch (category) {
     case 'goal':    return '⚽';
@@ -305,24 +336,54 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
         // ignore score parse errors
       }
 
-      // Pull stats if available
+      // Pull all stats from boxscore
       if (data.boxscore && data.boxscore.teams) {
         const homeTeam = data.boxscore.teams.find(t => t.homeAway === 'home');
         const awayTeam = data.boxscore.teams.find(t => t.homeAway === 'away');
         if (homeTeam && awayTeam && homeTeam.statistics && awayTeam.statistics) {
-           const desiredOrder = ['totalShots', 'shotsOnTarget', 'saves', 'wonCorners', 'possessionPct', 'foulsCommitted', 'yellowCards', 'redCards'];
-          const combinedStats = desiredOrder.map(statName => {
-            const s = homeTeam.statistics.find(st => st.name === statName);
-            if (!s) return null;
-            const opposingStat = awayTeam.statistics.find(os => os.name === statName) || {};
+          const allStats = homeTeam.statistics.map(s => {
+            const opposingStat = awayTeam.statistics.find(os => os.name === s.name) || {};
             return {
               name: s.name,
               label: s.label,
               homeVal: s.displayValue || '0',
               awayVal: opposingStat.displayValue || '0',
             };
-          }).filter(Boolean);
-          setStats(combinedStats);
+          });
+
+          // Count shot types from plays (only the ones not in boxscore)
+          const rawPlays = data.plays || [];
+          const competitions = data.header?.competitions || [];
+          let homeTeamId = null, awayTeamId = null;
+          if (competitions.length > 0) {
+            const comp = competitions[0];
+            const hTeam = comp.competitors?.find(c => c.homeAway === 'home');
+            const aTeam = comp.competitors?.find(c => c.homeAway === 'away');
+            if (hTeam) homeTeamId = hTeam.id || hTeam.team?.id;
+            if (aTeam) awayTeamId = aTeam.id || aTeam.team?.id;
+          }
+          let homeShotOffTarget = 0, awayShotOffTarget = 0;
+          let homeShotHitWoodwork = 0, awayShotHitWoodwork = 0;
+          for (const play of rawPlays) {
+            const type = play.type?.type;
+            const teamId = play.team?.id;
+            const isHome = homeTeamId && String(teamId) === String(homeTeamId);
+            const isAway = awayTeamId && String(teamId) === String(awayTeamId);
+            if (type === 'shot-off-target') {
+              if (isHome) homeShotOffTarget++; else if (isAway) awayShotOffTarget++;
+            } else if (type === 'shot-hit-woodwork') {
+              if (isHome) homeShotHitWoodwork++; else if (isAway) awayShotHitWoodwork++;
+            }
+          }
+          const shotStats = [];
+          if (homeShotOffTarget > 0 || awayShotOffTarget > 0) {
+            shotStats.push({ name: 'shotsOffTarget', label: 'Shots Off Target', homeVal: String(homeShotOffTarget), awayVal: String(awayShotOffTarget) });
+          }
+          if (homeShotHitWoodwork > 0 || awayShotHitWoodwork > 0) {
+            shotStats.push({ name: 'shotsHitWoodwork', label: 'Hit Woodwork', homeVal: String(homeShotHitWoodwork), awayVal: String(awayShotHitWoodwork) });
+          }
+
+          setStats([...allStats, ...shotStats]);
         }
       }
 
@@ -528,27 +589,40 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                 </span>
               </div>
             </div>
-            {stats.map(s => {
-              const hVal = parseFloat(s.homeVal) || 0;
-              const aVal = parseFloat(s.awayVal) || 0;
-              let total = hVal + aVal;
-              if (total === 0) total = 1;
-              const homePct = (hVal / total) * 100;
-              const awayPct = (aVal / total) * 100;
-              return (
-                <div key={s.name} style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '6px' }}>
-                    <span style={{ minWidth: '40px' }}>{s.homeVal}{s.name === 'possessionPct' ? '%' : ''}</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>{s.label}</span>
-                    <span style={{ minWidth: '40px', textAlign: 'right' }}>{s.awayVal}{s.name === 'possessionPct' ? '%' : ''}</span>
-                  </div>
-                  <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', overflow: 'hidden' }}>
-                    <div style={{ width: `${homePct}%`, background: 'var(--primary)', height: '100%' }}></div>
-                    <div style={{ width: `${awayPct}%`, background: 'var(--accent)', height: '100%' }}></div>
-                  </div>
-                </div>
-              );
-            })}
+            {(() => {
+              let lastSection = null;
+              return stats.map(s => {
+                const section = STAT_SECTION[s.name] || '';
+                const sectionChanged = section && section !== lastSection;
+                lastSection = section;
+                const hVal = parseFloat(s.homeVal) || 0;
+                const aVal = parseFloat(s.awayVal) || 0;
+                let total = hVal + aVal;
+                if (total === 0) total = 1;
+                const homePct = (hVal / total) * 100;
+                const awayPct = (aVal / total) * 100;
+                return (
+                  <React.Fragment key={s.name}>
+                    {sectionChanged && (
+                      <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', padding: '14px 0 6px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '4px' }}>
+                        {section}
+                      </div>
+                    )}
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '5px' }}>
+                        <span style={{ minWidth: '36px' }}>{formatStatValue(s.name, s.homeVal)}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>{s.label}</span>
+                        <span style={{ minWidth: '36px', textAlign: 'right' }}>{formatStatValue(s.name, s.awayVal)}</span>
+                      </div>
+                      <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', overflow: 'hidden' }}>
+                        <div style={{ width: `${homePct}%`, background: 'var(--primary)', height: '100%' }}></div>
+                        <div style={{ width: `${awayPct}%`, background: 'var(--accent)', height: '100%' }}></div>
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              });
+            })()}
           </>
         ) : null}
       </div>
