@@ -16,7 +16,7 @@ function classifyEvent(type) {
   return 'default';
 }
 
-const fractionPctStats = ['passPct', 'crossPct', 'longballPct', 'tacklePct'];
+const fractionPctStats = ['crossPct', 'longballPct', 'tacklePct'];
 
 function formatStatValue(statName, rawValue) {
   const val = parseFloat(rawValue);
@@ -31,8 +31,7 @@ const STAT_SECTION = {
   blockedShots: 'Shooting', penaltyKickGoals: 'Shooting', penaltyKickShots: 'Shooting',
   insideBoxAttempts: 'Shooting', outsideBoxAttempts: 'Shooting', hitWoodwork: 'Shooting',
   possessionPct: 'Possession & Passing',
-  totalPasses: 'Possession & Passing', accuratePasses: 'Possession & Passing',
-  passPct: 'Possession & Passing',
+  totalPasses: 'Possession & Passing',
   totalCrosses: 'Possession & Passing', accurateCrosses: 'Possession & Passing',
   crossPct: 'Possession & Passing',
   totalLongBalls: 'Possession & Passing', accurateLongBalls: 'Possession & Passing',
@@ -51,7 +50,7 @@ const STAT_ORDER = [
   'totalShots', 'shotsOnTarget',
   'insideBoxAttempts', 'outsideBoxAttempts', 'hitWoodwork',
   'blockedShots', 'penaltyKickGoals', 'penaltyKickShots',
-  'possessionPct', 'accuratePasses', 'totalPasses', 'passPct',
+  'possessionPct', 'totalPasses',
   'accurateCrosses', 'totalCrosses', 'crossPct',
   'totalLongBalls', 'accurateLongBalls', 'longballPct', 'wonCorners',
   'saves', 'effectiveTackles', 'totalTackles', 'tacklePct',
@@ -624,6 +623,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
               let lastSection = null;
               const totalShotsStat = stats.find(st => st.name === 'totalShots');
               return stats.map(s => {
+                if (s.name === 'accuratePasses') return null;
                 const section = STAT_SECTION[s.name] || '';
                 const sectionChanged = section && section !== lastSection;
                 lastSection = section;
@@ -640,6 +640,13 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                   const aTotal = parseFloat(totalShotsStat.awayVal) || 0;
                   if (hTotal > 0) homeDisplay += ' (' + Math.round(hVal / hTotal * 100) + '%)';
                   if (aTotal > 0) awayDisplay += ' (' + Math.round(aVal / aTotal * 100) + '%)';
+                }
+                const passesStat = s.name === 'totalPasses' ? stats.find(st => st.name === 'accuratePasses') : null;
+                if (passesStat) {
+                  const hAcc = parseFloat(passesStat.homeVal) || 0;
+                  const aAcc = parseFloat(passesStat.awayVal) || 0;
+                  if (hVal > 0) homeDisplay += ' (' + Math.round(hAcc / hVal * 100) + '%)';
+                  if (aVal > 0) awayDisplay += ' (' + Math.round(aAcc / aVal * 100) + '%)';
                 }
                 return (
                   <React.Fragment key={s.name}>
