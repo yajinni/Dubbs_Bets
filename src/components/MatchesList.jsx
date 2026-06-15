@@ -731,23 +731,9 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
       </>
       )}
 
-      {/* Live Feed Panel (expanded commentary) */}
-      {!isCollapsed && feedTab && (
-        <LiveFeed
-          espnEventId={m.espn_event_id}
-          matchStatus={isLive ? 'live' : m.status}
-          homeCode={m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase()}
-          awayCode={m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase()}
-          match={m}
-          allPredictions={allPredictions}
-          leaderboard={leaderboard}
-          tab={feedTab}
-        />
-      )}
-
-      {/* Action Buttons at the bottom of the card */}
+      {/* Action Buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '10px' }}>
-        {/* Feed Tab Buttons */}
+        {/* Feed Tab Buttons (above the feed panel) */}
         {!isCollapsed && (m.status !== 'scheduled' || m.espn_event_id) && (
           <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
             <button 
@@ -793,8 +779,24 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
             </button>
           </div>
         )}
+      </div>
 
-        {/* Show/Hide Details Button */}
+      {/* Live Feed Panel (below the buttons) */}
+      {!isCollapsed && feedTab && (
+        <LiveFeed
+          espnEventId={m.espn_event_id}
+          matchStatus={isLive ? 'live' : m.status}
+          homeCode={m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase()}
+          awayCode={m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase()}
+          match={m}
+          allPredictions={allPredictions}
+          leaderboard={leaderboard}
+          tab={feedTab}
+        />
+      )}
+
+      {/* Show/Hide Details Button */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '10px' }}>
         {m.finished === 1 && (
           <button 
             type="button"
