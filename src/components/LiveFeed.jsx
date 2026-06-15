@@ -383,7 +383,15 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             shotStats.push({ name: 'shotsHitWoodwork', label: 'Hit Woodwork', homeVal: String(homeShotHitWoodwork), awayVal: String(awayShotHitWoodwork) });
           }
 
-          setStats([...allStats, ...shotStats]);
+          const combinedStats = [...allStats, ...shotStats];
+          combinedStats.sort((a, b) => {
+            const aSec = STAT_SECTION[a.name] || '';
+            const bSec = STAT_SECTION[b.name] || '';
+            const aOrder = SECTION_ORDER.indexOf(aSec);
+            const bOrder = SECTION_ORDER.indexOf(bSec);
+            return aOrder - bOrder;
+          });
+          setStats(combinedStats);
         }
       }
 
