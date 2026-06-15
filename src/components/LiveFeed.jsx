@@ -357,12 +357,12 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             };
           });
 
-          const penaltyNames = ['penaltyKickGoals', 'penaltyKickShots'];
+          const hiddenStats = ['shotPct', 'passPct', 'crossPct', 'longballPct', 'tacklePct', 'penaltyKickGoals', 'penaltyKickShots'];
           const filteredStats = allStats.filter(s => {
-            if (penaltyNames.includes(s.name)) {
+            if (s.name === 'penaltyKickGoals' || s.name === 'penaltyKickShots') {
               return s.homeVal !== '0' || s.awayVal !== '0';
             }
-            return true;
+            return !hiddenStats.includes(s.name);
           });
 
           // Count play-based stats from commentary: inside/outside box attempts & woodwork
