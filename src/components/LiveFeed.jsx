@@ -16,7 +16,7 @@ function classifyEvent(type) {
   return 'default';
 }
 
-const fractionPctStats = ['shotPct', 'passPct', 'crossPct', 'longballPct', 'tacklePct'];
+const fractionPctStats = ['passPct', 'crossPct', 'longballPct', 'tacklePct'];
 
 function formatStatValue(statName, rawValue) {
   const val = parseFloat(rawValue);
@@ -27,7 +27,7 @@ function formatStatValue(statName, rawValue) {
 }
 
 const STAT_SECTION = {
-  totalShots: 'Shooting', shotsOnTarget: 'Shooting', shotPct: 'Shooting',
+  totalShots: 'Shooting', shotsOnTarget: 'Shooting',
   blockedShots: 'Shooting', penaltyKickGoals: 'Shooting', penaltyKickShots: 'Shooting',
   wonCorners: 'Shooting', insideBoxAttempts: 'Shooting', outsideBoxAttempts: 'Shooting', hitWoodwork: 'Shooting',
   possessionPct: 'Possession & Passing',
@@ -48,7 +48,7 @@ const STAT_SECTION = {
 const SECTION_ORDER = ['Shooting', 'Possession & Passing', 'Defense', 'Discipline'];
 
 const STAT_ORDER = [
-  'totalShots', 'shotsOnTarget', 'shotPct', 'wonCorners',
+  'totalShots', 'shotsOnTarget', 'wonCorners',
   'insideBoxAttempts', 'outsideBoxAttempts', 'hitWoodwork',
   'blockedShots', 'penaltyKickGoals', 'penaltyKickShots',
   'possessionPct', 'accuratePasses', 'totalPasses', 'passPct',
@@ -614,6 +614,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             </div>
             {(() => {
               let lastSection = null;
+              const totalShotsStat = stats.find(st => st.name === 'totalShots');
               return stats.map(s => {
                 const section = STAT_SECTION[s.name] || '';
                 const sectionChanged = section && section !== lastSection;
@@ -624,6 +625,14 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                 if (total === 0) total = 1;
                 const homePct = (hVal / total) * 100;
                 const awayPct = (aVal / total) * 100;
+                let homeDisplay = formatStatValue(s.name, s.homeVal);
+                let awayDisplay = formatStatValue(s.name, s.awayVal);
+                if (s.name === 'shotsOnTarget' && totalShotsStat) {
+                  const hTotal = parseFloat(totalShotsStat.homeVal) || 0;
+                  const aTotal = parseFloat(totalShotsStat.awayVal) || 0;
+                  if (hTotal > 0) homeDisplay += ' (' + Math.round(hVal / hTotal * 100) + '%)';
+                  if (aTotal > 0) awayDisplay += ' (' + Math.round(aVal / aTotal * 100) + '%)';
+                }
                 return (
                   <React.Fragment key={s.name}>
                     {sectionChanged && (
@@ -633,9 +642,9 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                     )}
                     <div style={{ marginBottom: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '5px' }}>
-                        <span style={{ minWidth: '36px' }}>{formatStatValue(s.name, s.homeVal)}</span>
+                        <span style={{ minWidth: '36px' }}>{homeDisplay}</span>
                         <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>{s.label}</span>
-                        <span style={{ minWidth: '36px', textAlign: 'right' }}>{formatStatValue(s.name, s.awayVal)}</span>
+                        <span style={{ minWidth: '36px', textAlign: 'right' }}>{awayDisplay}</span>
                       </div>
                       <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255, 255, 255, 0.05)', display: 'flex', overflow: 'hidden' }}>
                         <div style={{ width: `${homePct}%`, background: 'var(--primary)', height: '100%' }}></div>
