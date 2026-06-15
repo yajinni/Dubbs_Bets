@@ -515,43 +515,11 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
 
   return (
     <div className="live-feed-panel">
-      {/* Feed Header with tabs */}
+      {/* Feed Header */}
       <div className="live-feed-header" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span
-            onClick={() => setSubTab('commentary')}
-            style={{
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '700',
-              color: subTab === 'commentary' ? 'var(--primary)' : 'var(--text-secondary)',
-              borderBottom: subTab === 'commentary' ? '2px solid var(--primary)' : '2px solid transparent',
-              paddingBottom: '10px',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            {isLive && <span className="live-dot" />}
-            Live Commentary
-          </span>
-          {stats.length > 0 && (
-            <span
-              onClick={() => setSubTab('stats')}
-              style={{
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: '700',
-                color: subTab === 'stats' ? 'var(--primary)' : 'var(--text-secondary)',
-                borderBottom: subTab === 'stats' ? '2px solid var(--primary)' : '2px solid transparent',
-                paddingBottom: '10px',
-                transition: 'all 0.2s',
-              }}
-            >
-              Match Stats
-            </span>
-          )}
+        <div className="live-feed-title">
+          {isLive && <span className="live-dot" />}
+          {subTab === 'commentary' ? 'Live Commentary' : 'Match Stats'}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {timeLabel && (
