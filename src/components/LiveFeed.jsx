@@ -29,14 +29,14 @@ function formatStatValue(statName, rawValue) {
 const STAT_SECTION = {
   totalShots: 'Shooting', shotsOnTarget: 'Shooting',
   blockedShots: 'Shooting', penaltyKickGoals: 'Shooting', penaltyKickShots: 'Shooting',
-  wonCorners: 'Shooting', insideBoxAttempts: 'Shooting', outsideBoxAttempts: 'Shooting', hitWoodwork: 'Shooting',
+  insideBoxAttempts: 'Shooting', outsideBoxAttempts: 'Shooting', hitWoodwork: 'Shooting',
   possessionPct: 'Possession & Passing',
   totalPasses: 'Possession & Passing', accuratePasses: 'Possession & Passing',
   passPct: 'Possession & Passing',
   totalCrosses: 'Possession & Passing', accurateCrosses: 'Possession & Passing',
   crossPct: 'Possession & Passing',
   totalLongBalls: 'Possession & Passing', accurateLongBalls: 'Possession & Passing',
-  longballPct: 'Possession & Passing',
+  longballPct: 'Possession & Passing', wonCorners: 'Possession & Passing',
   saves: 'Defense',
   effectiveTackles: 'Defense', totalTackles: 'Defense', tacklePct: 'Defense',
   interceptions: 'Defense',
@@ -48,12 +48,12 @@ const STAT_SECTION = {
 const SECTION_ORDER = ['Shooting', 'Possession & Passing', 'Defense', 'Discipline'];
 
 const STAT_ORDER = [
-  'totalShots', 'shotsOnTarget', 'wonCorners',
+  'totalShots', 'shotsOnTarget',
   'insideBoxAttempts', 'outsideBoxAttempts', 'hitWoodwork',
   'blockedShots', 'penaltyKickGoals', 'penaltyKickShots',
   'possessionPct', 'accuratePasses', 'totalPasses', 'passPct',
   'accurateCrosses', 'totalCrosses', 'crossPct',
-  'totalLongBalls', 'accurateLongBalls', 'longballPct',
+  'totalLongBalls', 'accurateLongBalls', 'longballPct', 'wonCorners',
   'saves', 'effectiveTackles', 'totalTackles', 'tacklePct',
   'interceptions', 'effectiveClearance', 'totalClearance',
   'foulsCommitted', 'yellowCards', 'redCards', 'offsides',
@@ -363,6 +363,14 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             };
           });
 
+          const penaltyNames = ['penaltyKickGoals', 'penaltyKickShots'];
+          const filteredStats = allStats.filter(s => {
+            if (penaltyNames.includes(s.name)) {
+              return s.homeVal !== '0' || s.awayVal !== '0';
+            }
+            return true;
+          });
+
           // Count play-based stats from commentary: inside/outside box attempts & woodwork
           const rawCommentary = data.commentary || [];
           const competitions = data.header?.competitions || [];
@@ -400,7 +408,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             { name: 'hitWoodwork', label: 'Hit Woodwork', homeVal: String(homeWoodwork), awayVal: String(awayWoodwork) },
           ];
 
-          const combinedStats = [...allStats, ...playStats];
+          const combinedStats = [...filteredStats, ...playStats];
           combinedStats.sort((a, b) => {
             const aIdx = STAT_ORDER.indexOf(a.name);
             const bIdx = STAT_ORDER.indexOf(b.name);
