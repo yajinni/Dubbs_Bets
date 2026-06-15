@@ -4,7 +4,7 @@ import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 import LiveFeed from './LiveFeed';
 
-export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {}, selectedMatchId }) {
+export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {}, selectedMatchId, showLiveResults = false, onRefresh }) {
   const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
   const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
   const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
@@ -723,6 +723,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
             highestScoringHalf,
             cleanSheet
           }}
+          showLiveResults={showLiveResults}
+          onRefresh={onRefresh}
         />
 
       </div>
@@ -803,7 +805,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
   );
 }
 
-export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, allPredictions = [], leaderboard = [] }) {
+export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, allPredictions = [], leaderboard = [], onRefresh }) {
   const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
 
   const runningPointsMap = useMemo(() => {
@@ -916,6 +918,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
               leaderboard={leaderboard}
               runningPointsMap={runningPointsMap}
               selectedMatchId={selectedMatchId}
+              onRefresh={onRefresh}
             />
           ))
         )}

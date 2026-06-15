@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users } from 'lucide-react';
+import { Users, RefreshCw } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 
 // Helper to compute live points
@@ -63,7 +63,8 @@ export default function PlayerPicksList({
   activeParticipantId, 
   runningPointsMap = {}, 
   winnerLocalState = {},
-  showLiveResults = false
+  showLiveResults = false,
+  onRefresh
 }) {
   const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
   const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
@@ -236,7 +237,7 @@ export default function PlayerPicksList({
   const activeHomeScore = liveStats ? liveStats.homeScore : m.home_score;
   const activeAwayScore = liveStats ? liveStats.awayScore : m.away_score;
 
-  if (m.finished === 1 || liveStats) {
+  if (m.finished === 1 || liveStats || showLiveResults) {
     if (activeHomeScore > activeAwayScore) actualWinner = 'home';
     else if (activeAwayScore > activeHomeScore) actualWinner = 'away';
     else actualWinner = 'draw';
@@ -271,9 +272,18 @@ export default function PlayerPicksList({
 
   return (
     <div style={{ marginTop: '16px', borderTop: '1px dashed var(--glass-border)', paddingTop: '12px' }}>
-      <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <Users size={12} strokeWidth={2.5} />
-        {showsLiveTitle ? "Results Based on Current Time" : "Players' Picks"}
+      <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Users size={12} strokeWidth={2.5} />
+          {showsLiveTitle ? "Results Based on Current Time" : "Players' Picks"}
+        </div>
+        <button
+          onClick={onRefresh}
+          title="Refresh picks"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+        >
+          <RefreshCw size={12} />
+        </button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {leaderboard.length === 0 ? (

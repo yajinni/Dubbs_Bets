@@ -3,7 +3,7 @@ import { Calendar, Users, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 
-export default function MatchView({ matches, allPredictions = [], leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch }) {
+export default function MatchView({ matches, allPredictions = [], leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch, onRefresh }) {
   const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
 
   const handleScroll = (e, matchId) => {
@@ -214,7 +214,8 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                   leaderboard={leaderboard}
                   activeParticipantId={activeParticipantId}
                   runningPointsMap={runningPointsMap}
-                  showLiveResults={true}
+                  showLiveResults={m.status === 'live'}
+                  onRefresh={onRefresh}
                 />
               </div>
             );

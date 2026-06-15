@@ -706,6 +706,8 @@ export default function App() {
                       leaderboard={leaderboard}
                       runningPointsMap={runningPointsMap}
                       selectedMatchId={null}
+                      showLiveResults={m.status === 'live'}
+                      onRefresh={refreshAllData}
                     />
                   </div>
                 ))
@@ -715,29 +717,31 @@ export default function App() {
 
            {activeTab === 'matches' && (
              <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
-               <MatchesList 
-                 matches={matches} 
-                 predictions={predictions}
-                 activeParticipantId={activeParticipantId}
-                 onSave={refreshAllData}
-                 selectedMatchId={selectedMatchId}
-                 onSelectMatch={setSelectedMatchId}
-                 allPredictions={allPredictions}
-                 leaderboard={leaderboard}
-               />
+                <MatchesList 
+                  matches={matches} 
+                  predictions={predictions}
+                  activeParticipantId={activeParticipantId}
+                  onSave={refreshAllData}
+                  selectedMatchId={selectedMatchId}
+                  onSelectMatch={setSelectedMatchId}
+                  allPredictions={allPredictions}
+                  leaderboard={leaderboard}
+                  onRefresh={refreshAllData}
+                />
              </div>
            )}
 
            {activeTab === 'match-view' && (
              <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
-               <MatchView 
-                 matches={matches}
-                 allPredictions={allPredictions}
-                 leaderboard={leaderboard}
-                 activeParticipantId={activeParticipantId}
-                 selectedMatchId={selectedMatchId}
-                 onClearSelectedMatch={() => setSelectedMatchId(null)}
-               />
+                <MatchView 
+                  matches={matches}
+                  allPredictions={allPredictions}
+                  leaderboard={leaderboard}
+                  activeParticipantId={activeParticipantId}
+                  selectedMatchId={selectedMatchId}
+                  onClearSelectedMatch={() => setSelectedMatchId(null)}
+                  onRefresh={refreshAllData}
+                />
              </div>
            )}
 
