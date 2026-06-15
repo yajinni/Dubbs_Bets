@@ -363,27 +363,29 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             };
           });
 
-          // Count play-based stats: inside/outside box attempts & woodwork
-          const rawPlays = data.plays || [];
+          // Count play-based stats from commentary: inside/outside box attempts & woodwork
+          const rawCommentary = data.commentary || [];
           const competitions = data.header?.competitions || [];
-          let homeTeamId = null, awayTeamId = null;
+          let homeTeamName = null, awayTeamName = null;
           if (competitions.length > 0) {
             const comp = competitions[0];
             const hTeam = comp.competitors?.find(c => c.homeAway === 'home');
             const aTeam = comp.competitors?.find(c => c.homeAway === 'away');
-            if (hTeam) homeTeamId = hTeam.id || hTeam.team?.id;
-            if (aTeam) awayTeamId = aTeam.id || aTeam.team?.id;
+            if (hTeam) homeTeamName = hTeam.team?.displayName;
+            if (aTeam) awayTeamName = aTeam.team?.displayName;
           }
           let homeInside = 0, awayInside = 0;
           let homeOutside = 0, awayOutside = 0;
           let homeWoodwork = 0, awayWoodwork = 0;
           const shotTypes = ['goal', 'shot-on-target', 'shot-off-target', 'shot-blocked', 'shot-hit-woodwork'];
-          for (const play of rawPlays) {
+          for (const entry of rawCommentary) {
+            const play = entry.play;
+            if (!play || play.fieldPositionX == null) continue;
             const type = play.type?.type;
-            if (!shotTypes.includes(type) || play.fieldPositionX == null) continue;
-            const teamId = play.team?.id;
-            const isHome = homeTeamId && String(teamId) === String(homeTeamId);
-            const isAway = awayTeamId && String(teamId) === String(awayTeamId);
+            if (!shotTypes.includes(type)) continue;
+            const teamName = play.team?.displayName;
+            const isHome = homeTeamName && teamName === homeTeamName;
+            const isAway = awayTeamName && teamName === awayTeamName;
             if (!isHome && !isAway) continue;
             const x = parseFloat(play.fieldPositionX);
             if (x >= 84) { if (isHome) homeInside++; else awayInside++; }
