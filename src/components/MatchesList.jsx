@@ -755,7 +755,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
               }}
             >
               <Radio size={12} className={m.status === 'live' ? 'pulse-icon' : ''} />
-              Live Commentary
+              {feedTab === 'commentary' ? 'Click To Close' : 'Live Commentary'}
             </button>
             <button 
               type="button"
@@ -775,7 +775,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
                 color: feedTab === 'stats' ? 'var(--primary)' : undefined,
               }}
             >
-              Match Stats
+              {feedTab === 'stats' ? 'Click To Close' : 'Match Stats'}
             </button>
           </div>
         )}
