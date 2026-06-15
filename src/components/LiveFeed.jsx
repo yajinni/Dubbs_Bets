@@ -357,7 +357,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             const opposingStat = awayTeam.statistics.find(os => os.name === s.name) || {};
             return {
               name: s.name,
-              label: s.name === 'saves' ? 'Keeper Saves' : s.label,
+              label: s.name === 'saves' ? 'Keeper Saves' : s.name === 'blockedShots' ? 'Blocked Shots (By Def)' : s.label,
               homeVal: s.displayValue || '0',
               awayVal: opposingStat.displayValue || '0',
             };
