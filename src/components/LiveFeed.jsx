@@ -594,10 +594,12 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                 fontSize: '11px',
                 fontWeight: '600',
                 color: '#ffffff',
+                display: 'inline-flex',
+                alignItems: 'center',
               };
               return (
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
-                  <span style={boxStyle}>O/U: <span style={{ color: ouColor, fontSize: '15px', lineHeight: 1, verticalAlign: 'middle' }}>{ouArrow}</span></span>
+                  <span style={boxStyle}>O/U: <span style={{ color: ouColor, fontSize: '15px' }}>{ouArrow}</span></span>
                   <span style={boxStyle}>H1 Goals: {firstHalfGoals}</span>
                   <span style={boxStyle}>H2 Goals: {secondHalfGoals}</span>
                   <span style={boxStyle}>SF: {firstScorerCode}</span>
