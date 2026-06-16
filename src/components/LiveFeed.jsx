@@ -600,7 +600,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                 color: '#ffffff',
               };
               return (
-                <div style={{ marginBottom: '16px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <div style={{ marginBottom: '16px', display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
                   {items.map(item => (
                     <span key={item.label} style={boxStyle}>
                       {item.label} {item.value}
