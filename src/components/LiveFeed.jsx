@@ -560,17 +560,17 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
           <>
             {/* Team Names Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '12px', fontWeight: '800', fontSize: '14px', letterSpacing: '0.03em' }}>
-              <span style={{ color: 'var(--primary)' }}>{homeCode}</span>
+              <span style={{ color: 'var(--primary)' }}>{homeCode} {effectiveHomeScore}</span>
               <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '11px', alignSelf: 'center' }}>VS</span>
-              <span style={{ color: 'var(--accent)', textAlign: 'right' }}>{awayCode}</span>
+              <span style={{ color: 'var(--accent)', textAlign: 'right' }}>{effectiveAwayScore} {awayCode}</span>
             </div>
 
             {/* Goals by Half */}
             <div style={{ marginBottom: '16px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>Goals</span>
+                <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>1st|2nd|TC</span>
                 <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                  {goalsByHalf.homeFirst + goalsByHalf.awayFirst} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>|</span> {goalsByHalf.homeSecond + goalsByHalf.awaySecond}
+                  {goalsByHalf.homeFirst + goalsByHalf.awayFirst} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>|</span> {goalsByHalf.homeSecond + goalsByHalf.awaySecond} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>|</span> {liveStats.totalCards}
                 </span>
               </div>
             </div>
