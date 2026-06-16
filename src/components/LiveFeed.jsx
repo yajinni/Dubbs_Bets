@@ -560,9 +560,15 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
           <>
             {/* Team Names Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '12px', fontWeight: '800', fontSize: '14px', letterSpacing: '0.03em' }}>
-              <span style={{ color: '#ffffff' }}>{homeCode} {effectiveHomeScore}</span>
+              <span style={{ color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {match?.home_flag && <img src={match.home_flag} alt="" style={{ width: 24, height: 16, borderRadius: 2, objectFit: 'cover' }} />}
+                {homeCode} {effectiveHomeScore}
+              </span>
               <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '11px', alignSelf: 'center' }}>VS</span>
-              <span style={{ color: '#ffffff', textAlign: 'right' }}>{effectiveAwayScore} {awayCode}</span>
+              <span style={{ color: '#ffffff', textAlign: 'right', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                {effectiveAwayScore} {awayCode}
+                {match?.away_flag && <img src={match.away_flag} alt="" style={{ width: 24, height: 16, borderRadius: 2, objectFit: 'cover' }} />}
+              </span>
             </div>
 
             {/* Match Summary Stats */}
