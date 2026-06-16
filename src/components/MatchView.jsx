@@ -190,9 +190,14 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                         {homeName} vs {awayName}
                       </span>
                       {m.status !== 'scheduled' && (
-                        <span style={{ fontSize: '16px', fontWeight: '800', fontFamily: 'var(--font-heading)', color: '#ffffff' }}>
-                          {m.home_score}-{m.away_score} {m.status === 'live' ? 'LIVE' : 'FT'}
-                        </span>
+                        <>
+                          <span style={{ fontSize: '16px', fontWeight: '800', fontFamily: 'var(--font-heading)', color: '#ffffff' }}>
+                            {m.home_score}-{m.away_score}
+                          </span>
+                          <span className={`match-badge ${m.status === 'live' ? 'live' : 'finished'}`} style={{ marginTop: 0 }}>
+                            {m.status === 'live' ? 'Live' : 'FT'}
+                          </span>
+                        </>
                       )}
                     </div>
                   </div>
