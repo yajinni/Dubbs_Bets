@@ -421,7 +421,7 @@ export default function App() {
     };
 
     performSync();
-    const intervalId = setInterval(performSync, 60000);
+    const intervalId = setInterval(performSync, 30000);
     return () => clearInterval(intervalId);
   }, [hasLiveMatches]);
 
