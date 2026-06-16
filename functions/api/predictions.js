@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve and submit predictions (GET, POST)
-import { checkAndInitDb, logChange } from './db_helper.js';
+import { checkAndInitDb, logChange, emitEvent } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -283,6 +283,7 @@ export async function onRequest(context) {
 
       // ── Signal Group Notification (fire-and-forget) ──
       // Never blocks or fails the save — if Signal is down, we just log and move on
+      emitEvent(env.db, 'predictions_updated');
       if (env.SIGNAL_API_URL && env.SIGNAL_SENDER && env.SIGNAL_GROUP_ID) {
         try {
           // Look up participant name and match details

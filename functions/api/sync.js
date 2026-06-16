@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to sync matches, scores, and odds from API-Football
-import { checkAndInitDb, logChange, formatOuPct } from './db_helper.js';
+import { checkAndInitDb, logChange, formatOuPct, emitEvent } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve and update matches (GET, POST)
-import { checkAndInitDb, logChange, formatOuPct } from './db_helper.js';
+import { checkAndInitDb, logChange, formatOuPct, emitEvent } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -176,6 +176,7 @@ export async function onRequest(context) {
       }
 
       const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
+      emitEvent(env.db, 'matches_updated');
       return new Response(JSON.stringify({ success: true, match: updatedMatch }), { status: 200, headers });
     }
 

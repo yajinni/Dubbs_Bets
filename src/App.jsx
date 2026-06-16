@@ -425,6 +425,33 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasLiveMatches, activeParticipantId]);
 
+  // SSE: real-time update events from server
+  const refreshRef = useRef(refreshAllData);
+  refreshRef.current = refreshAllData;
+
+  useEffect(() => {
+    const evtSource = new EventSource('/api/events');
+
+    evtSource.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type !== 'done' && data.type !== 'heartbeat') {
+          refreshRef.current();
+        }
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+
+    evtSource.onerror = () => {
+      // EventSource auto-reconnects
+    };
+
+    return () => {
+      evtSource.close();
+    };
+  }, []);
+
   const forceSync = async () => {
     setSyncing(true);
     try {

@@ -46,6 +46,18 @@ export async function checkAndInitDb(db) {
     } catch(e){}
 
 
+    // Events table for SSE real-time notifications
+    try {
+      await db.prepare(`
+        CREATE TABLE IF NOT EXISTS events (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          type TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now'))
+        )
+      `).run();
+    } catch(e){}
+
+
     // 1. Check if matches table exists
     const checkTable = await db.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='matches'"
@@ -107,6 +119,15 @@ export async function logChange(db, category, matchId, participantId, descriptio
     ).run();
   } catch (err) {
     console.error('Failed to write log:', err);
+  }
+}
+
+export async function emitEvent(db, type) {
+  try {
+    await db.prepare("INSERT INTO events (type, created_at) VALUES (?, ?)")
+      .bind(type, new Date().toISOString()).run();
+  } catch (err) {
+    console.error('Failed to emit event:', err);
   }
 }
 
