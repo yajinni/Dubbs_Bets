@@ -560,9 +560,9 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
           <>
             {/* Team Names Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '10px', marginBottom: '12px', fontWeight: '800', fontSize: '14px', letterSpacing: '0.03em' }}>
-              <span style={{ color: 'var(--primary)' }}>{homeCode} {effectiveHomeScore}</span>
+              <span style={{ color: '#ffffff' }}>{homeCode} {effectiveHomeScore}</span>
               <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '11px', alignSelf: 'center' }}>VS</span>
-              <span style={{ color: 'var(--accent)', textAlign: 'right' }}>{effectiveAwayScore} {awayCode}</span>
+              <span style={{ color: '#ffffff', textAlign: 'right' }}>{effectiveAwayScore} {awayCode}</span>
             </div>
 
             {/* Match Summary Stats */}
