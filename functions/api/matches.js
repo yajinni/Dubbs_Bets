@@ -175,8 +175,8 @@ export async function onRequest(context) {
         await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards, actFirstScorer, hPct, aPct, dPct, hHtScore, aHtScore);
       }
 
+      await emitEvent(env.db, 'matches_updated');
       const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
-      emitEvent(env.db, 'matches_updated');
       return new Response(JSON.stringify({ success: true, match: updatedMatch }), { status: 200, headers });
     }
 

@@ -281,9 +281,8 @@ export async function onRequest(context) {
         .bind(participantId, matchId)
         .first();
 
+      await emitEvent(env.db, 'predictions_updated');
       // ── Signal Group Notification (fire-and-forget) ──
-      // Never blocks or fails the save — if Signal is down, we just log and move on
-      emitEvent(env.db, 'predictions_updated');
       if (env.SIGNAL_API_URL && env.SIGNAL_SENDER && env.SIGNAL_GROUP_ID) {
         try {
           // Look up participant name and match details

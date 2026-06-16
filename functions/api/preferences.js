@@ -67,7 +67,7 @@ export async function onRequest(context) {
         .prepare('UPDATE participants SET nav_layout = ? WHERE id = ?')
         .bind(serialized, parseInt(participantId))
         .run();
-      emitEvent(env.db, 'preferences_updated');
+      await emitEvent(env.db, 'preferences_updated');
       return new Response(JSON.stringify({ success: true }), { status: 200, headers });
     }
 

@@ -399,7 +399,17 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handler);
   }, []);
 
-  // Live polling effect: every 60 seconds if there are live matches
+  // Ref to always have the latest refreshAllData for use in effects
+  const refreshAllDataRef = useRef(refreshAllData);
+  refreshAllDataRef.current = refreshAllData;
+
+  // Polling fallback: refresh data every 15 seconds
+  useEffect(() => {
+    const intervalId = setInterval(() => refreshAllDataRef.current(), 15000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Live sync: pull scores from ESPN every 60 seconds if there are live matches
   useEffect(() => {
     if (!hasLiveMatches) return;
 
@@ -413,22 +423,15 @@ export default function App() {
       } catch (err) {
         console.error('Interval sync failed:', err);
       }
-      await refreshAllData();
+      refreshAllDataRef.current();
     };
 
-    // Run immediately
     performSync();
-
     const intervalId = setInterval(performSync, 60000);
-
     return () => clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasLiveMatches, activeParticipantId]);
+  }, [hasLiveMatches]);
 
   // SSE: real-time update events from server
-  const refreshRef = useRef(refreshAllData);
-  refreshRef.current = refreshAllData;
-
   useEffect(() => {
     const evtSource = new EventSource('/api/events');
 
@@ -436,16 +439,14 @@ export default function App() {
       try {
         const data = JSON.parse(e.data);
         if (data.type !== 'done' && data.type !== 'heartbeat') {
-          refreshRef.current();
+          refreshAllDataRef.current();
         }
       } catch (err) {
         console.error('SSE parse error:', err);
       }
     };
 
-    evtSource.onerror = () => {
-      // EventSource auto-reconnects
-    };
+    evtSource.onerror = () => {};
 
     return () => {
       evtSource.close();
