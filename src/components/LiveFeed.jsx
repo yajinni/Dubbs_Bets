@@ -565,15 +565,39 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
               <span style={{ color: 'var(--accent)', textAlign: 'right' }}>{effectiveAwayScore} {awayCode}</span>
             </div>
 
-            {/* Goals by Half */}
-            <div style={{ marginBottom: '16px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>1st|2nd|TC</span>
-                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                  {goalsByHalf.homeFirst + goalsByHalf.awayFirst} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>|</span> {goalsByHalf.homeSecond + goalsByHalf.awaySecond} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>|</span> {liveStats.totalCards}
-                </span>
-              </div>
-            </div>
+            {/* Match Summary Stats */}
+            {(() => {
+              const totalGoals = goalsByHalf.homeFirst + goalsByHalf.homeSecond + goalsByHalf.awayFirst + goalsByHalf.awaySecond;
+              const firstHalfGoals = goalsByHalf.homeFirst + goalsByHalf.awayFirst;
+              const secondHalfGoals = goalsByHalf.homeSecond + goalsByHalf.awaySecond;
+              const shotsOnTargetStat = stats.find(st => st.name === 'shotsOnTarget');
+              const totalSOT = shotsOnTargetStat ? (parseFloat(shotsOnTargetStat.homeVal) || 0) + (parseFloat(shotsOnTargetStat.awayVal) || 0) : 0;
+              const items = [
+                { label: 'O/U:', value: totalGoals },
+                { label: 'SF:', value: totalSOT },
+                { label: 'H1 Goals:', value: firstHalfGoals },
+                { label: 'H2 Goals:', value: secondHalfGoals },
+                { label: 'Cards:', value: liveStats.totalCards },
+              ];
+              const boxStyle = {
+                background: 'rgba(168, 85, 247, 0.15)',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+                borderRadius: '6px',
+                padding: '4px 10px',
+                fontSize: '12px',
+                fontWeight: '700',
+                color: '#d8b4fe',
+              };
+              return (
+                <div style={{ marginBottom: '16px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {items.map(item => (
+                    <span key={item.label} style={boxStyle}>
+                      {item.label} {item.value}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
             {(() => {
               let lastSection = null;
               const totalShotsStat = stats.find(st => st.name === 'totalShots');
