@@ -124,8 +124,7 @@ export async function logChange(db, category, matchId, participantId, descriptio
 
 export async function emitEvent(db, type) {
   try {
-    await db.prepare("INSERT INTO events (type, created_at) VALUES (?, ?)")
-      .bind(type, new Date().toISOString()).run();
+    await db.prepare("INSERT INTO events (type) VALUES (?)").bind(type).run();
   } catch (err) {
     console.error('Failed to emit event:', err);
   }

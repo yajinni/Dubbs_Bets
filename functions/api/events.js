@@ -58,8 +58,8 @@ export async function onRequest(context) {
             send({ type: row.type, created_at: row.created_at }, row.id);
             cursor = Math.max(cursor, row.id);
           }
-          // Clean up delivered events
-          env.db.prepare("DELETE FROM events WHERE id <= ?").bind(cursor).run().catch(() => {});
+          // Clean up events older than 1 hour
+          env.db.prepare("DELETE FROM events WHERE created_at < datetime('now', '-1 hours')").run().catch(() => {});
         }
       } catch (e) {
         console.error('SSE poll error:', e);
