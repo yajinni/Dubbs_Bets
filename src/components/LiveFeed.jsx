@@ -584,10 +584,10 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
               const totalSOT = shotsOnTargetStat ? (parseFloat(shotsOnTargetStat.homeVal) || 0) + (parseFloat(shotsOnTargetStat.awayVal) || 0) : 0;
               const firstScorerCode = liveStats.firstScorer === 'home' ? homeCode : liveStats.firstScorer === 'away' ? awayCode : '-';
               const items = [
-                { label: 'O/U:', value: totalGoals },
-                { label: 'SF:', value: firstScorerCode },
+                { label: 'O/U:', value: '' },
                 { label: 'H1 Goals:', value: firstHalfGoals },
                 { label: 'H2 Goals:', value: secondHalfGoals },
+                { label: 'SF:', value: firstScorerCode },
                 { label: 'TC:', value: liveStats.totalCards },
               ];
               const boxStyle = {
@@ -599,11 +599,17 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                 fontWeight: '600',
                 color: '#ffffff',
               };
+              const ouArrow = totalGoals > ouLine ? '↑' : totalGoals < ouLine ? '↓' : '=';
+              const ouColor = totalGoals > ouLine ? '#22c55e' : totalGoals < ouLine ? '#ef4444' : '#ffffff';
               return (
                 <div style={{ marginBottom: '16px', display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
                   {items.map(item => (
                     <span key={item.label} style={boxStyle}>
-                      {item.label} {item.value}
+                      {item.label === 'O/U:' ? (
+                        <>{item.label} <span style={{ color: ouColor }}>{ouArrow}</span></>
+                      ) : (
+                        <>{item.label} {item.value}</>
+                      )}
                     </span>
                   ))}
                 </div>
