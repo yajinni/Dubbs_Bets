@@ -403,7 +403,7 @@ export default function App() {
   const refreshAllDataRef = useRef(refreshAllData);
   refreshAllDataRef.current = refreshAllData;
 
-  // Auto-switch to Live tab 30 seconds before a match starts
+  // Auto-switch to Live tab 30 minutes before a match starts
   useEffect(() => {
     const upcoming = matches
       .filter(m => m.status === 'scheduled' && m.finished === 0)
@@ -415,7 +415,7 @@ export default function App() {
 
     const next = upcoming[0];
     const msUntilKickoff = next.kickOffMs - Date.now();
-    const msToSwitch = msUntilKickoff - 30000;
+    const msToSwitch = msUntilKickoff - 1800000;
 
     if (msToSwitch <= 0 && activeTab !== 'live') {
       setActiveTab('live');
