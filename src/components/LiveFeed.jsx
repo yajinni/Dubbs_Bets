@@ -477,7 +477,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
   }
 
   // ---- No events yet ----
-  if (commentary.length === 0) {
+  if (subTab === 'commentary' && commentary.length === 0) {
     return (
       <div className="live-feed-panel live-feed-empty">
         <Clock size={16} style={{ opacity: 0.4 }} />
