@@ -583,6 +583,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
               const shotsOnTargetStat = stats.find(st => st.name === 'shotsOnTarget');
               const totalSOT = shotsOnTargetStat ? (parseFloat(shotsOnTargetStat.homeVal) || 0) + (parseFloat(shotsOnTargetStat.awayVal) || 0) : 0;
               const firstScorerCode = liveStats.firstScorer === 'home' ? homeCode : liveStats.firstScorer === 'away' ? awayCode : '-';
+              const ouLine = match?.over_under_line ?? 2.5;
               const ouArrow = totalGoals > ouLine ? '↑' : totalGoals < ouLine ? '↓' : '=';
               const ouColor = totalGoals > ouLine ? '#22c55e' : totalGoals < ouLine ? '#ef4444' : '#ffffff';
               const boxStyle = {
