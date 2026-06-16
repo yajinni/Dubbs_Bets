@@ -403,6 +403,34 @@ export default function App() {
   const refreshAllDataRef = useRef(refreshAllData);
   refreshAllDataRef.current = refreshAllData;
 
+  // Auto-switch to Live tab 30 seconds before a match starts
+  useEffect(() => {
+    const upcoming = matches
+      .filter(m => m.status === 'scheduled' && m.finished === 0)
+      .map(m => ({ match: m, kickOffMs: new Date((m.local_date || '').replace(' ', 'T')).getTime() }))
+      .filter(m => m.kickOffMs > Date.now() && !isNaN(m.kickOffMs))
+      .sort((a, b) => a.kickOffMs - b.kickOffMs);
+
+    if (upcoming.length === 0) return;
+
+    const next = upcoming[0];
+    const msUntilKickoff = next.kickOffMs - Date.now();
+    const msToSwitch = msUntilKickoff - 30000;
+
+    if (msToSwitch <= 0 && activeTab !== 'live') {
+      setActiveTab('live');
+      setSelectedMatchId(next.match.id);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (activeTab !== 'live') setActiveTab('live');
+      setSelectedMatchId(next.match.id);
+    }, msToSwitch);
+
+    return () => clearTimeout(timer);
+  }, [matches, activeTab]);
+
   // Live sync: pull scores from ESPN every 60 seconds if there are live matches
   useEffect(() => {
     if (!hasLiveMatches) return;
