@@ -403,12 +403,6 @@ export default function App() {
   const refreshAllDataRef = useRef(refreshAllData);
   refreshAllDataRef.current = refreshAllData;
 
-  // Polling fallback: refresh data every 15 seconds
-  useEffect(() => {
-    const intervalId = setInterval(() => refreshAllDataRef.current(), 15000);
-    return () => clearInterval(intervalId);
-  }, []);
-
   // Live sync: pull scores from ESPN every 60 seconds if there are live matches
   useEffect(() => {
     if (!hasLiveMatches) return;
