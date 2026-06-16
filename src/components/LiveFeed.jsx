@@ -585,7 +585,7 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
                 border: '1px solid rgba(168, 85, 247, 0.3)',
                 borderRadius: '6px',
                 padding: '4px 10px',
-                fontSize: '12px',
+                fontSize: '10px',
                 fontWeight: '700',
                 color: '#d8b4fe',
               };
