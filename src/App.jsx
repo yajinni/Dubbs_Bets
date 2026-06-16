@@ -248,6 +248,14 @@ export default function App() {
     return [];
   }, [matches]);
 
+  const liveTabCode = useMemo(() => {
+    if (liveTabMatches.length === 0) return 'Live';
+    const m = liveTabMatches[0];
+    const home = m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase();
+    const away = m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase();
+    return `${home}|${away}`;
+  }, [liveTabMatches]);
+
   const fetchPredictions = async (pId) => {
     try {
       const res = await fetch(`/api/predictions?participantId=${pId}`);
@@ -568,6 +576,7 @@ export default function App() {
         setActiveTab={handleTabChange} 
         hasLiveMatches={hasLiveMatches}
         navLayout={navLayout}
+        liveTabCode={liveTabCode}
       />
 
       {loading ? (
