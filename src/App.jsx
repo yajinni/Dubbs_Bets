@@ -208,7 +208,7 @@ export default function App() {
   const liveTabMatches = useMemo(() => {
     // eslint-disable-next-line react-hooks/purity
     const nowMs = Date.now();
-    const fifteenMinsMs = 15 * 60 * 1000;
+      const thirtyMinsMs = 30 * 60 * 1000;
 
     const isMatchLive = (m) => {
       if (m.status === 'live') return true;
@@ -221,10 +221,10 @@ export default function App() {
       if (m.finished === 1 || m.status === 'finished' || m.status === 'live') return false;
       const kickOffMs = new Date((m.local_date || '').replace(' ', 'T')).getTime();
       const diff = kickOffMs - nowMs;
-      return diff > 0 && diff <= fifteenMinsMs;
+      return diff > 0 && diff <= thirtyMinsMs;
     };
 
-    // 1. Swap to next live match 15 min before it starts
+    // 1. Swap to next live match 30 min before it starts
     const upcomingClose = matches.filter(isMatchStartingSoon);
     if (upcomingClose.length > 0) {
       return upcomingClose.sort((a, b) => new Date((a.local_date || '').replace(' ', 'T')) - new Date((b.local_date || '').replace(' ', 'T')));
@@ -402,34 +402,6 @@ export default function App() {
   // Ref to always have the latest refreshAllData for use in effects
   const refreshAllDataRef = useRef(refreshAllData);
   refreshAllDataRef.current = refreshAllData;
-
-  // Auto-switch to Live tab 30 minutes before a match starts
-  useEffect(() => {
-    const upcoming = matches
-      .filter(m => m.status === 'scheduled' && m.finished === 0)
-      .map(m => ({ match: m, kickOffMs: new Date((m.local_date || '').replace(' ', 'T')).getTime() }))
-      .filter(m => m.kickOffMs > Date.now() && !isNaN(m.kickOffMs))
-      .sort((a, b) => a.kickOffMs - b.kickOffMs);
-
-    if (upcoming.length === 0) return;
-
-    const next = upcoming[0];
-    const msUntilKickoff = next.kickOffMs - Date.now();
-    const msToSwitch = msUntilKickoff - 1800000;
-
-    if (msToSwitch <= 0 && activeTab !== 'live') {
-      setActiveTab('live');
-      setSelectedMatchId(next.match.id);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      if (activeTab !== 'live') setActiveTab('live');
-      setSelectedMatchId(next.match.id);
-    }, msToSwitch);
-
-    return () => clearTimeout(timer);
-  }, [matches, activeTab]);
 
   // Live sync: pull scores from ESPN every 60 seconds if there are live matches
   useEffect(() => {
