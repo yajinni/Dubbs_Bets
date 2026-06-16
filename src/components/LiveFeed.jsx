@@ -572,12 +572,13 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
               const secondHalfGoals = goalsByHalf.homeSecond + goalsByHalf.awaySecond;
               const shotsOnTargetStat = stats.find(st => st.name === 'shotsOnTarget');
               const totalSOT = shotsOnTargetStat ? (parseFloat(shotsOnTargetStat.homeVal) || 0) + (parseFloat(shotsOnTargetStat.awayVal) || 0) : 0;
+              const firstScorerCode = liveStats.firstScorer === 'home' ? homeCode : liveStats.firstScorer === 'away' ? awayCode : '-';
               const items = [
                 { label: 'O/U:', value: totalGoals },
-                { label: 'SF:', value: totalSOT },
+                { label: 'SF:', value: firstScorerCode },
                 { label: 'H1 Goals:', value: firstHalfGoals },
                 { label: 'H2 Goals:', value: secondHalfGoals },
-                { label: 'Cards:', value: liveStats.totalCards },
+                { label: 'TC:', value: liveStats.totalCards },
               ];
               const boxStyle = {
                 background: 'rgba(168, 85, 247, 0.15)',
