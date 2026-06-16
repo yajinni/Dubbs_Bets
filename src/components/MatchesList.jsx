@@ -38,6 +38,9 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
   // Auto-open feed for live matches
   const [feedTab, setFeedTab] = useState(isLive ? 'commentary' : null);
   const [isCollapsed, setIsCollapsed] = useState(m.finished === 1);
+  const [liveScores, setLiveScores] = useState(null);
+  const displayHome = liveScores ? liveScores.home : m.home_score;
+  const displayAway = liveScores ? liveScores.away : m.away_score;
 
   // Auto-expand if this match is selected from another view (e.g. Dashboard)
   useEffect(() => {
@@ -279,9 +282,9 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
             <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-muted)' }}>VS</span>
           ) : (
             <div className="score-display">
-              <span>{m.home_score}</span>
+              <span>{displayHome}</span>
               <span className="score-divider">-</span>
-              <span>{m.away_score}</span>
+              <span>{displayAway}</span>
             </div>
           )}
           <span className={`match-badge ${m.status}`}>
@@ -425,7 +428,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Winner</span>
                 <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                  {m.home_score > m.away_score ? homeName : m.away_score > m.home_score ? awayName : 'Draw'}
+                  {displayHome > displayAway ? homeName : displayAway > displayHome ? awayName : 'Draw'}
                 </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -437,7 +440,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Goals O/U</span>
                 <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                  {(m.home_score + m.away_score) > m.over_under_line ? 'Over' : 'Under'} {m.over_under_line}
+                  {(displayHome + displayAway) > m.over_under_line ? 'Over' : 'Under'} {m.over_under_line}
                 </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -448,7 +451,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
                       return 'TBD';
                     }
                     const firstHalfGoals = m.home_ht_score + m.away_ht_score;
-                    const secondHalfGoals = (m.home_score + m.away_score) - firstHalfGoals;
+                    const secondHalfGoals = (displayHome + displayAway) - firstHalfGoals;
                     return firstHalfGoals > secondHalfGoals ? '1st Half' : secondHalfGoals > firstHalfGoals ? '2nd Half' : 'Equal';
                   })()}
                 </span>
@@ -456,7 +459,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Clean Sheet</span>
                 <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-                  {m.home_score === 0 || m.away_score === 0 ? 'Yes' : 'No'}
+                  {displayHome === 0 || displayAway === 0 ? 'Yes' : 'No'}
                 </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -792,6 +795,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
           allPredictions={allPredictions}
           leaderboard={leaderboard}
           tab={feedTab}
+          onScoreUpdate={(h, a) => setLiveScores({ home: h, away: a })}
         />
       )}
 
