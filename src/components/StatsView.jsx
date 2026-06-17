@@ -233,7 +233,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       const m = matches.find(mt => mt.id === p.match_id);
       if (m && m.local_date) { const ds = toDateStr(m.local_date); dayMap[ds] = (dayMap[ds] || 0) + (p.total_points || 0); }
     });
-    return { ...s, medianPerMatch: calcMedian(perMatch), medianPerDay: calcMedian(Object.values(dayMap)) };
+    return { ...s, medianPerMatch: calcMedian(perMatch), maxPerMatch: perMatch.length > 0 ? Math.max(...perMatch) : 0, medianPerDay: calcMedian(Object.values(dayMap)), maxPerDay: Object.values(dayMap).length > 0 ? Math.max(...Object.values(dayMap)) : 0 };
   });
 
   const allFP = allPredictions.filter(p => finishedMatchIds.has(p.match_id));
@@ -268,7 +268,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   const allRow = {
     name: 'ALL',
     medianPerMatch: allMedianMatch,
+    maxPerMatch: allPerMatch.length > 0 ? Math.max(...allPerMatch) : 0,
     medianPerDay: allMedianDay,
+    maxPerDay: Object.values(allDayMap).length > 0 ? Math.max(...Object.values(allDayMap)) : 0,
     winnerPct: totalAll > 0 ? Math.round((allCorrectWinners / totalAll) * 100) : 0,
     ouPct: totalAll > 0 ? Math.round((allCorrectOu / totalAll) * 100) : 0,
     underdogPct: allUnderdogAttempts > 0 ? Math.round((allUnderdogCorrect / allUnderdogAttempts) * 100) : 0,
@@ -727,14 +729,14 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       {/* Median Points Table */}
       <div className="glass-panel desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowX: 'auto' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0, borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px' }}>
-          Median Points
+          Median Points | Most Points
         </h3>
         <table className="match-view-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '400px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⌀ Per Match</th>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⌀ Per Day</th>
+              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Per Match</th>
+              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Per Day</th>
             </tr>
           </thead>
           <tbody>
@@ -743,8 +745,8 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               return (
               <tr key={isAll ? 'all' : row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: isAll ? 'rgba(168,85,247,0.08)' : 'transparent' }}>
                 <td style={{ padding: '16px', fontWeight: '700', color: isAll ? '#a855f7' : 'var(--text-primary)' }}>{isAll ? '👥 ALL' : row.name}</td>
-                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerMatch}</td>
-                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerDay}</td>
+                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerMatch} | {row.maxPerMatch}</td>
+                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerDay} | {row.maxPerDay}</td>
               </tr>
             );})}
           </tbody>
