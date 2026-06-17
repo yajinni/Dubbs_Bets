@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio, ChevronDown, ChevronUp } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
@@ -843,7 +843,16 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
 export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, matchPredictionsCache = {}, getMatchPredictions, leaderboard = [], onRefresh }) {
   const [filterStage, setFilterStage] = useState('all');
   const [showPast, setShowPast] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(3);
+  const sentinelRef = useRef(null);
 
+  // Reset pagination on filter change
+  useEffect(() => {
+    setVisibleCount(3);
+    setShowPast(false);
+  }, [filterStage]);
+
+  // Scroll-to-match logic
   useEffect(() => {
     if (selectedMatchId) {
       const match = matches.find(m => m.id === selectedMatchId);
@@ -866,6 +875,19 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
       }
     }
   }, [selectedMatchId, matches, onSelectMatch]);
+
+  // Infinite scroll: load 3 more when sentinel enters viewport
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const el = sentinelRef.current;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisibleCount(prev => prev + 3);
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visibleCount]);
 
   const stages = [
     { id: 'all', label: 'All Matches' },
@@ -894,7 +916,16 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
     return predictions.find(p => p.match_id === matchId);
   };
 
-  const currentMatches = filteredMatches.filter(m => m.finished !== 1);
+  // Sort current matches chronologically (soonest first), then slice by visibleCount
+  const currentMatches = [...filteredMatches.filter(m => m.finished !== 1)]
+    .sort((a, b) => {
+      const dateA = new Date((a.local_date || '').replace(' ', 'T'));
+      const dateB = new Date((b.local_date || '').replace(' ', 'T'));
+      return dateA - dateB;
+    });
+  const visibleMatches = currentMatches.slice(0, visibleCount);
+  const hasMore = visibleMatches.length < currentMatches.length;
+
   const pastMatches = filteredMatches.filter(m => m.finished === 1);
   const hidePast = filterStage !== 'live' && pastMatches.length > 0 && !showPast;
 
@@ -913,13 +944,13 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
       </div>
 
       <div className="matches-list">
-        {currentMatches.length === 0 && hidePast ? (
+        {visibleMatches.length === 0 && hidePast ? (
           <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
             No upcoming matches for this stage.
           </div>
         ) : null}
 
-        {currentMatches.map(m => (
+        {visibleMatches.map(m => (
           <MatchCard
             key={m.id}
             m={m}
@@ -933,6 +964,35 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             onRefresh={onRefresh}
           />
         ))}
+
+        {/* Sentinel for infinite scroll */}
+        {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setVisibleCount(prev => prev + 6)}
+            className="btn-secondary"
+            style={{
+              width: '100%',
+              padding: '12px',
+              fontSize: '13px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              border: '1px dashed var(--glass-border)',
+              borderRadius: '8px',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              background: 'rgba(255,255,255,0.02)',
+            }}
+          >
+            <ChevronDown size={16} />
+            Load More ({currentMatches.length - visibleMatches.length} remaining)
+          </button>
+        )}
 
         {hidePast && (
           <button
@@ -953,7 +1013,6 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
               color: 'var(--text-secondary)',
               cursor: 'pointer',
               background: 'rgba(255,255,255,0.02)',
-              transition: 'all 0.2s',
             }}
           >
             <ChevronDown size={18} />
@@ -961,7 +1020,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
           </button>
         )}
 
-        {!hidePast && pastMatches.length > 0 && pastMatches.map(m => (
+        {!hidePast && pastMatches.map(m => (
           <MatchCard
             key={m.id}
             m={m}
