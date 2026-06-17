@@ -727,7 +727,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       {statsPageTab === 'stats' && (<>
 
       {/* Median Points Table */}
-      <div className="glass-panel desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowX: 'auto' }}>
+      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowX: 'auto' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0, borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px' }}>
           Median Points | Most Points
         </h3>
