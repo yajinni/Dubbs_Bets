@@ -841,13 +841,15 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
 }
 
 export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, matchPredictionsCache = {}, getMatchPredictions, leaderboard = [], onRefresh }) {
-  const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
+  const [filterStage, setFilterStage] = useState('all');
+  const [showPast, setShowPast] = useState(false);
 
   useEffect(() => {
     if (selectedMatchId) {
       const match = matches.find(m => m.id === selectedMatchId);
       if (match) {
         setFilterStage('all');
+        if (match.finished === 1) setShowPast(true);
         setTimeout(() => {
           const element = document.getElementById(`match-card-${selectedMatchId}`);
           if (element) {
@@ -872,7 +874,6 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
     { id: 'live', label: 'Live & Finished' }
   ];
 
-  // Helper to categorize rounds
   const getMatchCategory = (match) => {
     const type = match.type || 'group';
     if (['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(type.toLowerCase())) {
@@ -881,7 +882,6 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
     return 'group';
   };
 
-  // Filter logic
   const filteredMatches = matches.filter(m => {
     if (filterStage === 'all') return true;
     if (filterStage === 'group') return getMatchCategory(m) === 'group';
@@ -890,14 +890,16 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
     return true;
   });
 
-  // Helper to find prediction for a match
   const getPredictionForMatch = (matchId) => {
     return predictions.find(p => p.match_id === matchId);
   };
 
+  const currentMatches = filteredMatches.filter(m => m.finished !== 1);
+  const pastMatches = filteredMatches.filter(m => m.finished === 1);
+  const hidePast = filterStage !== 'live' && pastMatches.length > 0 && !showPast;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Tabs */}
       <div className="stage-tabs">
         {stages.map(s => (
           <button
@@ -910,28 +912,69 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
         ))}
       </div>
 
-      {/* Match List */}
       <div className="matches-list">
-        {filteredMatches.length === 0 ? (
+        {currentMatches.length === 0 && hidePast ? (
           <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            No matches found for this stage.
+            No upcoming matches for this stage.
           </div>
-        ) : (
-          filteredMatches.map(m => (
-            <MatchCard
-              key={m.id}
-              m={m}
-              pred={getPredictionForMatch(m.id)}
-              activeParticipantId={activeParticipantId}
-              onSave={onSave}
-              matchPredictions={matchPredictionsCache[m.id]}
-              getMatchPredictions={getMatchPredictions}
-              leaderboard={leaderboard}
-              selectedMatchId={selectedMatchId}
-              onRefresh={onRefresh}
-            />
-          ))
+        ) : null}
+
+        {currentMatches.map(m => (
+          <MatchCard
+            key={m.id}
+            m={m}
+            pred={getPredictionForMatch(m.id)}
+            activeParticipantId={activeParticipantId}
+            onSave={onSave}
+            matchPredictions={matchPredictionsCache[m.id]}
+            getMatchPredictions={getMatchPredictions}
+            leaderboard={leaderboard}
+            selectedMatchId={selectedMatchId}
+            onRefresh={onRefresh}
+          />
+        ))}
+
+        {hidePast && (
+          <button
+            type="button"
+            onClick={() => setShowPast(true)}
+            className="btn-secondary"
+            style={{
+              width: '100%',
+              padding: '16px',
+              fontSize: '14px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              border: '2px dashed var(--glass-border)',
+              borderRadius: '12px',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              background: 'rgba(255,255,255,0.02)',
+              transition: 'all 0.2s',
+            }}
+          >
+            <ChevronDown size={18} />
+            Expand to See Previous Matches ({pastMatches.length})
+          </button>
         )}
+
+        {!hidePast && pastMatches.length > 0 && pastMatches.map(m => (
+          <MatchCard
+            key={m.id}
+            m={m}
+            pred={getPredictionForMatch(m.id)}
+            activeParticipantId={activeParticipantId}
+            onSave={onSave}
+            matchPredictions={matchPredictionsCache[m.id]}
+            getMatchPredictions={getMatchPredictions}
+            leaderboard={leaderboard}
+            selectedMatchId={selectedMatchId}
+            onRefresh={onRefresh}
+          />
+        ))}
       </div>
     </div>
   );
