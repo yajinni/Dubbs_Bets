@@ -944,7 +944,7 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
       </div>
 
       <div className="matches-list">
-        {hidePast && (
+        {hidePast ? (
           <button
             type="button"
             onClick={() => setShowPast(true)}
@@ -968,6 +968,21 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             <ChevronDown size={18} />
             Expand to See Previous Matches ({pastMatches.length})
           </button>
+        ) : (
+          pastMatches.map(m => (
+            <MatchCard
+              key={m.id}
+              m={m}
+              pred={getPredictionForMatch(m.id)}
+              activeParticipantId={activeParticipantId}
+              onSave={onSave}
+              matchPredictions={matchPredictionsCache[m.id]}
+              getMatchPredictions={getMatchPredictions}
+              leaderboard={leaderboard}
+              selectedMatchId={selectedMatchId}
+              onRefresh={onRefresh}
+            />
+          ))
         )}
 
         {visibleMatches.length === 0 && hidePast ? (
@@ -993,21 +1008,6 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
 
         {/* Sentinel for infinite scroll */}
         {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
-
-        {!hidePast && pastMatches.map(m => (
-          <MatchCard
-            key={m.id}
-            m={m}
-            pred={getPredictionForMatch(m.id)}
-            activeParticipantId={activeParticipantId}
-            onSave={onSave}
-            matchPredictions={matchPredictionsCache[m.id]}
-            getMatchPredictions={getMatchPredictions}
-            leaderboard={leaderboard}
-            selectedMatchId={selectedMatchId}
-            onRefresh={onRefresh}
-          />
-        ))}
       </div>
     </div>
   );
