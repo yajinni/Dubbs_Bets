@@ -555,14 +555,18 @@ export default function StatsView({ statsData, fetchStats }) {
           const skewColor = (v) => v > 1 ? '#ef4444' : v < 0.2 ? '#22c55e' : 'var(--text-primary)';
           const cmpColor = (v, max) => max > 0 && v === max ? '#22c55e' : 'var(--text-primary)';
           return (
-          <table className="match-view-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <style>{`
+            .super-stats-header th { cursor: pointer; border-bottom: 1px dashed var(--text-muted); transition: background 0.15s; }
+            .super-stats-header th:hover { background: rgba(168,85,247,0.12); }
+          `}</style>
+          <table className="match-view-table super-stats-header" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
-                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'CV', player: null })}>CV</th>
-                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'Skew', player: null })}>Skew</th>
-                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'Floor', player: null })}>Floor</th>
-                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'SR', player: null })}>SR</th>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', borderBottom: 'none', cursor: 'default' }}>Player</th>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }} onClick={() => setMetricModal({ metric: 'CV', player: null })}>CV ⓘ</th>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }} onClick={() => setMetricModal({ metric: 'Skew', player: null })}>Skew ⓘ</th>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }} onClick={() => setMetricModal({ metric: 'Floor', player: null })}>Floor ⓘ</th>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }} onClick={() => setMetricModal({ metric: 'SR', player: null })}>SR ⓘ</th>
               </tr>
             </thead>
             <tbody>
@@ -663,6 +667,8 @@ export default function StatsView({ statsData, fetchStats }) {
           <div className="glass-panel" style={{
             maxWidth: '500px', width: '100%', padding: '24px',
             border: '1px solid var(--glass-border)',
+            background: '#1a1a2e',
+            backdropFilter: 'none',
           }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 12px 0' }}>
               {title}
