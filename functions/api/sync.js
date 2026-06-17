@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to sync matches, scores, and odds from API-Football
-import { checkAndInitDb, logChange, formatOuPct, emitEvent, recomputeLeaderboardCache, recomputeStatsCache, clearMatchesCache } from './db_helper.js';
+import { checkAndInitDb, logChange, formatOuPct, emitEvent, recomputeLeaderboardCache, recomputeStatsCache, clearMatchesCache, scoreAllPredictionsForMatch, flushLogs } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -56,6 +56,7 @@ export async function onRequest(context) {
       }
       await logChange(env.db, 'system', parseInt(lockMatchId), null, 'QStash Webhook Received: Lock Match Odds', null, `Match ID: ${lockMatchId}`);
       await handleLockMatchTask(env.db, parseInt(lockMatchId), apiKeyOdds);
+      await flushLogs(env.db);
       return new Response(JSON.stringify({ success: true, message: `Match ${lockMatchId} odds locked.` }), { status: 200, headers });
     }
 
@@ -64,6 +65,7 @@ export async function onRequest(context) {
       const pagesUrl = env.PAGES_URL || "https://dubbs-bets.pages.dev";
       await logChange(env.db, 'system', parseInt(scoreMatchId), null, 'QStash Webhook Received: Score Match & Recalculate Predictions', null, `Match ID: ${scoreMatchId}`);
       await handleScoreMatchTask(env.db, parseInt(scoreMatchId), env.QSTASH_TOKEN, pagesUrl, env.SYNC_SECRET, env.QSTASH_URL);
+      await flushLogs(env.db);
       return new Response(JSON.stringify({ success: true, message: `Match ${scoreMatchId} scores synced and predictions scored.` }), { status: 200, headers });
     }
     if (rescheduleQStash) {
@@ -101,7 +103,7 @@ export async function onRequest(context) {
       await checkAndScheduleQStashJobs(env.db, qstashToken, pagesUrl, env.SYNC_SECRET, env.QSTASH_URL);
       
       await logChange(env.db, 'system', null, null, 'QStash Jobs Rescheduled', null, `Cancelled: ${cancelledLocks} locks, ${cancelledScores} scores. Rescheduled future matches.`);
-      
+      await flushLogs(env.db);
       return new Response(JSON.stringify({ 
         success: true, 
         message: `Cancelled ${cancelledLocks} locks, ${cancelledScores} scores. Reset scheduling state and rescheduled future matches.`
@@ -200,6 +202,7 @@ export async function onRequest(context) {
 
     const logDetails = `Started: ${startTime} | Updated: ${syncResults.matchesUpdated} matches, ${syncResults.oddsUpdated} odds.` + (syncResults.oddsError ? ` Odds Error: ${syncResults.oddsError}` : '');
     await logChange(env.db, 'system', null, null, '✅ ESPN Live MatchPulse', null, logDetails);
+    await flushLogs(env.db);
 
     return new Response(JSON.stringify({
       success: true,
@@ -212,6 +215,7 @@ export async function onRequest(context) {
     const logDetails = `Started: ${startTime} | Error: ${error.message}`;
     try {
       await logChange(env.db, 'system', null, null, '❌ ESPN Live MatchPulse', null, logDetails);
+      await flushLogs(env.db);
     } catch (logErr) {
       console.error('Failed to log sync error:', logErr);
     }
@@ -445,37 +449,18 @@ async function syncFromESPN(db, qstashToken = null, qstashUrl = null) {
       
       if (finished === 1 && dbMatch.finished !== 1) {
         finishedDuringSync++;
-        await recalculateMatchPredictionsInSync(
-          db, 
-          dbMatch.id, 
-          homeScore, 
-          awayScore, 
-          dbMatch.over_under_line,
-          dbMatch.cards_line || 3.5,
-          actualCards,
-          actualFirstScorer,
-          dbMatch.home_win_pct,
-          dbMatch.away_win_pct,
-          dbMatch.draw_pct,
-          homeHtScore,
-          awayHtScore
-        );
-      } else {
-        // Reset prediction points to 0 since match is not finished
-        await db.prepare(`
-          UPDATE predictions
-          SET
-            points_winner = 0,
-            points_ou = 0,
-            points_score = 0,
-            points_cards_ou = 0,
-            points_total_cards = 0,
-            points_first_scorer = 0,
-            points_highest_scoring_half = 0,
-            points_clean_sheet = 0,
-            total_points = 0
-          WHERE match_id = ?
-        `).bind(dbMatch.id).run();
+        await scoreAllPredictionsForMatch(db, dbMatch.id, {
+          home_score: homeScore,
+          away_score: awayScore,
+          over_under_line: dbMatch.over_under_line,
+          home_win_pct: dbMatch.home_win_pct,
+          away_win_pct: dbMatch.away_win_pct,
+          draw_pct: dbMatch.draw_pct,
+          actual_cards: actualCards,
+          actual_first_scorer: actualFirstScorer,
+          home_ht_score: homeHtScore,
+          away_ht_score: awayHtScore,
+        });
       }
       
       matchesUpdated++;
@@ -494,97 +479,6 @@ async function syncFromESPN(db, qstashToken = null, qstashUrl = null) {
   return { source: 'espn', matchesUpdated, oddsUpdated: 0 };
 }
 
-
-// --------------------------------------------------------
-// Prediction Point Distribution
-// --------------------------------------------------------
-async function recalculateMatchPredictionsInSync(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct, drawWinPct, homeHtScore, awayHtScore) {
-  let winner = 'draw';
-  if (homeScore > awayScore) winner = 'home';
-  else if (awayScore > homeScore) winner = 'away';
-
-  const totalGoals = homeScore + awayScore;
-  const ouResult = totalGoals > ouLine ? 'over' : 'under';
-
-  // Calculate highest scoring half
-  let winnerHalf = null;
-  if (homeHtScore !== null && homeHtScore !== undefined && awayHtScore !== null && awayHtScore !== undefined) {
-    const firstHalfGoals = homeHtScore + awayHtScore;
-    const secondHalfGoals = totalGoals - firstHalfGoals;
-    if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
-    else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
-    else winnerHalf = 'equal';
-  }
-
-  // Calculate clean sheet
-  const cleanSheetHappened = (homeScore === 0 || awayScore === 0) ? 'yes' : 'no';
-
-  const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
-
-  for (const pred of predictions) {
-    const pWinner = pred.predicted_winner === winner ? 3 : 0;
-    const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
-    const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
-
-    // Underdog Bonus: +1 if player picked the option and that outcome occurred, provided it was not the option with the highest win probability (favorite)
-    let pUnderdog = 0;
-    if (pWinner > 0 && homeWinPct != null && awayWinPct != null && drawWinPct != null) {
-      const maxPct = Math.max(homeWinPct, awayWinPct, drawWinPct);
-      if (winner === 'home' && homeWinPct < maxPct) pUnderdog = 1;
-      else if (winner === 'away' && awayWinPct < maxPct) pUnderdog = 1;
-      else if (winner === 'draw' && drawWinPct < maxPct) pUnderdog = 1;
-    }
-
-    let pTotalCardsEarned = 0;
-    if (actualCards !== null && pred.predicted_total_cards !== null) {
-      pTotalCardsEarned = pred.predicted_total_cards === actualCards ? 3 : 0;
-    }
-
-    let pFirstScorerEarned = 0;
-    if (actualFirstScorer !== null && pred.predicted_first_scorer !== null) {
-      pFirstScorerEarned = pred.predicted_first_scorer === actualFirstScorer ? 2 : 0;
-    }
-
-    let pHalf = 0;
-    if (pred.predicted_highest_scoring_half !== null) {
-      pHalf = pred.predicted_highest_scoring_half === winnerHalf ? 2 : 0;
-    }
-
-    let pCleanSheet = 0;
-    if (pred.predicted_clean_sheet !== null) {
-      pCleanSheet = pred.predicted_clean_sheet === cleanSheetHappened ? 1 : 0;
-    }
-
-    const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 4) + pHalf + pCleanSheet;
-
-    await db.prepare(`
-      UPDATE predictions 
-      SET 
-        points_winner = ?,
-        points_ou = ?,
-        points_score = ?,
-        points_cards_ou = ?,
-        points_total_cards = ?,
-        points_first_scorer = ?,
-        points_highest_scoring_half = ?,
-        points_clean_sheet = ?,
-        total_points = ?
-      WHERE participant_id = ? AND match_id = ?
-    `).bind(
-      pWinner, 
-      pOu, 
-      pScore, 
-      pUnderdog, 
-      pTotalCardsEarned, 
-      pFirstScorerEarned, 
-      pHalf,
-      pCleanSheet,
-      totalPoints, 
-      pred.participant_id, 
-      matchId
-    ).run();
-  }
-}
 
 // --------------------------------------------------------
 // The Odds API Sync Implementation
@@ -972,21 +866,18 @@ async function handleScoreMatchTask(db, matchId, qstashToken, pagesUrl, secret, 
       ).run();
       
       if (finished === 1) {
-        await recalculateMatchPredictionsInSync(
-          db, 
-          matchId, 
-          homeScore, 
-          awayScore, 
-          match.over_under_line,
-          match.cards_line || 3.5,
-          actualCards,
-          actualFirstScorer,
-          match.home_win_pct,
-          match.away_win_pct,
-          match.draw_pct,
-          homeHtScore,
-          awayHtScore
-        );
+        await scoreAllPredictionsForMatch(db, matchId, {
+          home_score: homeScore,
+          away_score: awayScore,
+          over_under_line: match.over_under_line,
+          home_win_pct: match.home_win_pct,
+          away_win_pct: match.away_win_pct,
+          draw_pct: match.draw_pct,
+          actual_cards: actualCards,
+          actual_first_scorer: actualFirstScorer,
+          home_ht_score: homeHtScore,
+          away_ht_score: awayHtScore,
+        });
       }
       break;
     }

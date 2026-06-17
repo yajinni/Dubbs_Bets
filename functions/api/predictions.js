@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve and submit predictions (GET, POST)
-import { checkAndInitDb, logChange, emitEvent, recomputeLeaderboardCache, recomputeStatsCache } from './db_helper.js';
+import { checkAndInitDb, logChange, emitEvent, recomputeLeaderboardCache, recomputeStatsCache, calculatePointsFromPrediction, flushLogs } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -215,78 +215,31 @@ export async function onRequest(context) {
 
       // 4. Immediately calculate points for this prediction if the match is already finished
       if (match.finished === 1) {
-        const homeScore = match.home_score;
-        const awayScore = match.away_score;
-        const ouLine = match.over_under_line;
-        
-        let winnerResult = 'draw';
-        if (homeScore > awayScore) winnerResult = 'home';
-        else if (awayScore > homeScore) winnerResult = 'away';
-        
-        const totalGoals = homeScore + awayScore;
-        const ouResult = totalGoals > ouLine ? 'over' : 'under';
-        
-        const pWinner = predictedWinner === winnerResult ? 3 : 0;
-        const pOu = predictedOverUnder === ouResult ? 1 : 0;
-        const pScore = (pHomeScore === homeScore && pAwayScore === awayScore) ? 1 : 0;
+        const pts = calculatePointsFromPrediction({
+          predicted_winner: predictedWinner,
+          predicted_over_under: predictedOverUnder,
+          predicted_home_score: pHomeScore,
+          predicted_away_score: pAwayScore,
+          predicted_total_cards: pTotalCards,
+          predicted_first_scorer: pFirstScorer,
+          predicted_highest_scoring_half: pHalfPick,
+          predicted_clean_sheet: pCleanPick,
+        }, match);
 
-        // Underdog Bonus: +1 if player picked the option and that outcome occurred, provided it was not the option with the highest win probability (favorite)
-        let pUnderdog = 0;
-        if (pWinner > 0 && match.home_win_pct != null && match.away_win_pct != null && match.draw_pct != null) {
-          const maxPct = Math.max(match.home_win_pct, match.away_win_pct, match.draw_pct);
-          if (winnerResult === 'home' && match.home_win_pct < maxPct) pUnderdog = 1;
-          else if (winnerResult === 'away' && match.away_win_pct < maxPct) pUnderdog = 1;
-          else if (winnerResult === 'draw' && match.draw_pct < maxPct) pUnderdog = 1;
-        }
-
-        let pTotalCardsEarned = 0;
-        if (match.actual_cards !== null && pTotalCards !== null) {
-          pTotalCardsEarned = pTotalCards === match.actual_cards ? 3 : 0;
-        }
-
-        let pFirstScorerEarned = 0;
-        if (match.actual_first_scorer !== null && pFirstScorer !== null) {
-          pFirstScorerEarned = pFirstScorer === match.actual_first_scorer ? 2 : 0;
-        }
-
-        // Halftime scorer calculations
-        let winnerHalf = null;
-        if (match.home_ht_score !== null && match.home_ht_score !== undefined && match.away_ht_score !== null && match.away_ht_score !== undefined) {
-          const firstHalfGoals = match.home_ht_score + match.away_ht_score;
-          const secondHalfGoals = totalGoals - firstHalfGoals;
-          if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
-          else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
-          else winnerHalf = 'equal';
-        }
-
-        let pHalf = 0;
-        if (pHalfPick !== null) {
-          pHalf = pHalfPick === winnerHalf ? 2 : 0;
-        }
-
-        // Clean sheet calculations
-        const cleanSheetHappened = (homeScore === 0 || awayScore === 0) ? 'yes' : 'no';
-        let pCleanSheet = 0;
-        if (pCleanPick !== null) {
-          pCleanSheet = pCleanPick === cleanSheetHappened ? 1 : 0;
-        }
-
-        const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 4) + pHalf + pCleanSheet;
-        
         await env.db.prepare(`
-          UPDATE predictions 
-          SET 
-            points_winner = ?,
-            points_ou = ?,
-            points_score = ?,
-            points_cards_ou = ?,
-            points_total_cards = ?,
-            points_first_scorer = ?,
-            points_highest_scoring_half = ?,
-            points_clean_sheet = ?,
-            total_points = ?
+          UPDATE predictions
+          SET
+            points_winner = ?, points_ou = ?, points_score = ?, points_cards_ou = ?,
+            points_total_cards = ?, points_first_scorer = ?, points_highest_scoring_half = ?,
+            points_clean_sheet = ?, total_points = ?
           WHERE participant_id = ? AND match_id = ?
-        `).bind(pWinner, pOu, pScore, pUnderdog, pTotalCardsEarned, pFirstScorerEarned, pHalf, pCleanSheet, totalPoints, participantId, matchId).run();
+        `).bind(
+          pts.points_winner, pts.points_ou, pts.points_score, pts.points_cards_ou,
+          pts.points_total_cards, pts.points_first_scorer, pts.points_highest_scoring_half,
+          pts.points_clean_sheet, pts.total_points,
+          participantId, matchId
+        ).run();
+
         await recomputeLeaderboardCache(env.db);
         await recomputeStatsCache(env.db);
       }
@@ -346,6 +299,7 @@ export async function onRequest(context) {
         }
       }
 
+      await flushLogs(env.db);
       return new Response(JSON.stringify({
         success: true,
         prediction: {
@@ -369,6 +323,7 @@ export async function onRequest(context) {
 
     return new Response(JSON.stringify({ error: `Method ${method} not allowed` }), { status: 405, headers });
   } catch (error) {
+    await flushLogs(env.db);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
   }
 }

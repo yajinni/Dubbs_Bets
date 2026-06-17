@@ -1,5 +1,7 @@
 import { checkAndInitDb } from './db_helper.js';
 
+let _lastEventCleanup = 0;
+
 const headers = {
   'Content-Type': 'text/event-stream',
   'Cache-Control': 'no-cache',
@@ -58,8 +60,11 @@ export async function onRequest(context) {
             send({ type: row.type, created_at: row.created_at }, row.id);
             cursor = Math.max(cursor, row.id);
           }
-          // Clean up events older than 1 hour
-          env.db.prepare("DELETE FROM events WHERE created_at < datetime('now', '-1 hours')").run().catch(() => {});
+          // Clean up events older than 1 hour (at most once per 60s)
+          if (Date.now() - _lastEventCleanup > 60000) {
+            _lastEventCleanup = Date.now();
+            env.db.prepare("DELETE FROM events WHERE created_at < datetime('now', '-1 hours')").run().catch(() => {});
+          }
         }
       } catch (e) {
         console.error('SSE poll error:', e);

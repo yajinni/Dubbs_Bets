@@ -25,6 +25,8 @@ export function clearMatchesCache() {
 
 export async function checkAndInitDb(db) {
   try {
+    // Clear any stale log buffer from previous requests
+    _logBuffer = [];
     // Fast path: skip migrations/consolidation if already initialized
     if (_dbInitialized) return;
     try {
@@ -35,31 +37,52 @@ export async function checkAndInitDb(db) {
       }
     } catch(e) {}
 
-    // Dynamic Schema Migrations for Cards Prop Bets
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN cards_line REAL DEFAULT 3.5").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN cards_over_odds REAL DEFAULT 1.9").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN cards_under_odds REAL DEFAULT 1.9").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN actual_cards INTEGER DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN actual_first_scorer TEXT DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_cards_over_under TEXT DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_cards_ou INTEGER DEFAULT 0").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_total_cards INTEGER DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_total_cards INTEGER DEFAULT 0").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_first_scorer TEXT DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_first_scorer INTEGER DEFAULT 0").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN home_ht_score INTEGER DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN away_ht_score INTEGER DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_highest_scoring_half TEXT DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN predicted_clean_sheet TEXT DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_highest_scoring_half INTEGER DEFAULT 0").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE predictions ADD COLUMN points_clean_sheet INTEGER DEFAULT 0").run(); } catch(e){}
-    // ESPN event ID for live feed
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN espn_event_id TEXT DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN odds_locked INTEGER DEFAULT 0").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN qstash_scheduled INTEGER DEFAULT 0").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN qstash_lock_msg_id TEXT DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN qstash_score_msg_id TEXT DEFAULT NULL").run(); } catch(e){}
-    try { await db.prepare("ALTER TABLE matches ADD COLUMN odds_updated_at TEXT DEFAULT NULL").run(); } catch(e){}
+    // Schema migrations: only ALTER columns that don't exist yet
+    const [matchCols, predCols] = await Promise.all([
+      db.prepare("PRAGMA table_info(matches)").all(),
+      db.prepare("PRAGMA table_info(predictions)").all(),
+    ]);
+    const existingMatchCols = new Set((matchCols.results || []).map(c => c.name));
+    const existingPredCols = new Set((predCols.results || []).map(c => c.name));
+
+    const matchMigrations = [
+      ['cards_line', 'REAL DEFAULT 3.5'],
+      ['cards_over_odds', 'REAL DEFAULT 1.9'],
+      ['cards_under_odds', 'REAL DEFAULT 1.9'],
+      ['actual_cards', 'INTEGER DEFAULT NULL'],
+      ['actual_first_scorer', 'TEXT DEFAULT NULL'],
+      ['home_ht_score', 'INTEGER DEFAULT NULL'],
+      ['away_ht_score', 'INTEGER DEFAULT NULL'],
+      ['espn_event_id', 'TEXT DEFAULT NULL'],
+      ['odds_locked', 'INTEGER DEFAULT 0'],
+      ['qstash_scheduled', 'INTEGER DEFAULT 0'],
+      ['qstash_lock_msg_id', 'TEXT DEFAULT NULL'],
+      ['qstash_score_msg_id', 'TEXT DEFAULT NULL'],
+      ['odds_updated_at', 'TEXT DEFAULT NULL'],
+    ];
+    const predMigrations = [
+      ['predicted_cards_over_under', 'TEXT DEFAULT NULL'],
+      ['points_cards_ou', 'INTEGER DEFAULT 0'],
+      ['predicted_total_cards', 'INTEGER DEFAULT NULL'],
+      ['points_total_cards', 'INTEGER DEFAULT 0'],
+      ['predicted_first_scorer', 'TEXT DEFAULT NULL'],
+      ['points_first_scorer', 'INTEGER DEFAULT 0'],
+      ['predicted_highest_scoring_half', 'TEXT DEFAULT NULL'],
+      ['predicted_clean_sheet', 'TEXT DEFAULT NULL'],
+      ['points_highest_scoring_half', 'INTEGER DEFAULT 0'],
+      ['points_clean_sheet', 'INTEGER DEFAULT 0'],
+    ];
+
+    for (const [col, type] of matchMigrations) {
+      if (!existingMatchCols.has(col)) {
+        await db.prepare(`ALTER TABLE matches ADD COLUMN ${col} ${type}`).run();
+      }
+    }
+    for (const [col, type] of predMigrations) {
+      if (!existingPredCols.has(col)) {
+        await db.prepare(`ALTER TABLE predictions ADD COLUMN ${col} ${type}`).run();
+      }
+    }
 
     // Logs table for changes
     try {
@@ -209,23 +232,33 @@ export async function checkAndInitDb(db) {
   }
 }
 
+let _logBuffer = [];
+
 export async function logChange(db, category, matchId, participantId, description, oldValue, newValue) {
+  _logBuffer.push({
+    timestamp: new Date().toISOString(),
+    category,
+    matchId: matchId || null,
+    participantId: participantId || null,
+    description,
+    oldValue: oldValue !== undefined && oldValue !== null ? String(oldValue) : null,
+    newValue: newValue !== undefined && newValue !== null ? String(newValue) : null,
+  });
+  if (_logBuffer.length >= 20) {
+    await flushLogs(db);
+  }
+}
+
+export async function flushLogs(db) {
+  if (_logBuffer.length === 0) return;
+  const batch = _logBuffer.splice(0);
   try {
-    const isoString = new Date().toISOString();
-    await db.prepare(`
-      INSERT INTO logs (timestamp, category, match_id, participant_id, description, old_value, new_value)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      isoString,
-      category,
-      matchId || null,
-      participantId || null,
-      description,
-      oldValue !== undefined && oldValue !== null ? String(oldValue) : null,
-      newValue !== undefined && newValue !== null ? String(newValue) : null
-    ).run();
+    await db.batch(batch.map(entry =>
+      db.prepare(`INSERT INTO logs (timestamp, category, match_id, participant_id, description, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+        .bind(entry.timestamp, entry.category, entry.matchId, entry.participantId, entry.description, entry.oldValue, entry.newValue)
+    ));
   } catch (err) {
-    console.error('Failed to write log:', err);
+    console.error('Failed to flush log batch:', err);
   }
 }
 
@@ -418,36 +451,22 @@ export async function recomputeLeaderboardCache(db) {
 
 export async function recomputeStatsCache(db) {
   try {
-    // 1. Recompute running_points_cache: cumulative total before each match for each participant
+    // 1. Recompute running_points_cache in a single query using window function
     await db.prepare(`DELETE FROM running_points_cache`).run();
-    const { results: allPredictionsForRP } = await db.prepare(`
-      SELECT pr.participant_id, pr.match_id, pr.total_points, m.local_date, m.finished
+    await db.prepare(`
+      INSERT OR REPLACE INTO running_points_cache (participant_id, match_id, total_points)
+      SELECT
+        pr.participant_id,
+        pr.match_id,
+        COALESCE(SUM(pr.total_points) OVER (
+          PARTITION BY pr.participant_id
+          ORDER BY m.local_date ASC, m.id ASC
+          ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+        ), 0)
       FROM predictions pr
       INNER JOIN matches m ON pr.match_id = m.id
       WHERE m.finished = 1
-      ORDER BY m.local_date ASC, m.id ASC
-    `).all();
-
-    if (allPredictionsForRP && allPredictionsForRP.length > 0) {
-      const runningTotals = {};
-      for (const pred of allPredictionsForRP) {
-        const key = `${pred.participant_id}_${pred.match_id}`;
-        const prev = runningTotals[`${pred.participant_id}_prev`] || 0;
-        // running_total = points from all previous finished matches (excludes current)
-        runningTotals[key] = prev;
-        runningTotals[`${pred.participant_id}_prev`] = prev + (pred.total_points || 0);
-      }
-
-      const insertRP = db.prepare(`
-        INSERT OR REPLACE INTO running_points_cache (participant_id, match_id, total_points)
-        VALUES (?, ?, ?)
-      `);
-      for (const [key, total_points] of Object.entries(runningTotals)) {
-        if (key.includes('_prev')) continue;
-        const [pId, mId] = key.split('_');
-        await insertRP.bind(parseInt(pId), parseInt(mId), total_points).run();
-      }
-    }
+    `).run();
 
     // 2. Recompute per-participant stats (matching StatsView.jsx logic)
     const { results: participants } = await db.prepare('SELECT id, name FROM participants').all();
@@ -556,4 +575,90 @@ export async function recomputeStatsCache(db) {
   } catch (err) {
     console.error('[StatsCache] Failed to recompute:', err.message);
   }
+}
+
+// ── Shared Scoring Engine ────────────────────────────────────────────────────
+
+export function calculatePointsFromPrediction(pred, match) {
+  let winner = 'draw';
+  if (match.home_score > match.away_score) winner = 'home';
+  else if (match.away_score > match.home_score) winner = 'away';
+
+  const totalGoals = match.home_score + match.away_score;
+  const ouResult = totalGoals > match.over_under_line ? 'over' : 'under';
+
+  let winnerHalf = null;
+  if (match.home_ht_score != null && match.away_ht_score != null) {
+    const fh = match.home_ht_score + match.away_ht_score;
+    const sh = totalGoals - fh;
+    if (fh > sh) winnerHalf = 'first';
+    else if (sh > fh) winnerHalf = 'second';
+    else winnerHalf = 'equal';
+  }
+
+  const cleanSheetHappened = (match.home_score === 0 || match.away_score === 0) ? 'yes' : 'no';
+
+  const points_winner = pred.predicted_winner === winner ? 3 : 0;
+  const points_ou = pred.predicted_over_under === ouResult ? 1 : 0;
+  const points_score = (pred.predicted_home_score === match.home_score && pred.predicted_away_score === match.away_score) ? 1 : 0;
+
+  let points_cards_ou = 0;
+  if (points_winner > 0 && match.home_win_pct != null && match.away_win_pct != null && match.draw_pct != null) {
+    const maxPct = Math.max(match.home_win_pct, match.away_win_pct, match.draw_pct);
+    if (winner === 'home' && match.home_win_pct < maxPct) points_cards_ou = 1;
+    else if (winner === 'away' && match.away_win_pct < maxPct) points_cards_ou = 1;
+    else if (winner === 'draw' && match.draw_pct < maxPct) points_cards_ou = 1;
+  }
+
+  let points_total_cards = 0;
+  if (match.actual_cards != null && pred.predicted_total_cards != null) {
+    points_total_cards = pred.predicted_total_cards === match.actual_cards ? 3 : 0;
+  }
+
+  let points_first_scorer = 0;
+  if (match.actual_first_scorer != null && pred.predicted_first_scorer != null) {
+    points_first_scorer = pred.predicted_first_scorer === match.actual_first_scorer ? 2 : 0;
+  }
+
+  let points_highest_scoring_half = 0;
+  if (pred.predicted_highest_scoring_half != null && winnerHalf != null) {
+    points_highest_scoring_half = pred.predicted_highest_scoring_half === winnerHalf ? 2 : 0;
+  }
+
+  let points_clean_sheet = 0;
+  if (pred.predicted_clean_sheet != null) {
+    points_clean_sheet = pred.predicted_clean_sheet === cleanSheetHappened ? 1 : 0;
+  }
+
+  const total_points = points_winner + points_ou + points_score + points_cards_ou +
+    points_total_cards + points_first_scorer + points_highest_scoring_half + points_clean_sheet;
+
+  return { points_winner, points_ou, points_score, points_cards_ou,
+    points_total_cards, points_first_scorer, points_highest_scoring_half,
+    points_clean_sheet, total_points };
+}
+
+export async function scoreAllPredictionsForMatch(db, matchId, match) {
+  const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
+  if (!predictions || predictions.length === 0) return 0;
+
+  const stmt = db.prepare(`
+    UPDATE predictions SET
+      points_winner = ?, points_ou = ?, points_score = ?, points_cards_ou = ?,
+      points_total_cards = ?, points_first_scorer = ?, points_highest_scoring_half = ?,
+      points_clean_sheet = ?, total_points = ?
+    WHERE participant_id = ? AND match_id = ?
+  `);
+
+  for (const pred of predictions) {
+    const pts = calculatePointsFromPrediction(pred, match);
+    await stmt.bind(
+      pts.points_winner, pts.points_ou, pts.points_score, pts.points_cards_ou,
+      pts.points_total_cards, pts.points_first_scorer, pts.points_highest_scoring_half,
+      pts.points_clean_sheet, pts.total_points,
+      pred.participant_id, matchId
+    ).run();
+  }
+
+  return predictions.length;
 }

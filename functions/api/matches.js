@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve and update matches (GET, POST)
-import { checkAndInitDb, logChange, formatOuPct, emitEvent, recomputeLeaderboardCache, recomputeStatsCache, getMatchesCache, setMatchesCache, clearMatchesCache } from './db_helper.js';
+import { checkAndInitDb, logChange, formatOuPct, emitEvent, recomputeLeaderboardCache, recomputeStatsCache, getMatchesCache, setMatchesCache, clearMatchesCache, scoreAllPredictionsForMatch, flushLogs } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -189,109 +189,32 @@ export async function onRequest(context) {
 
       // If finished, we want to recalculate predictions/points for this match
       if (finishedVal === 1) {
-        await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards, actFirstScorer, hPct, aPct, dPct, hHtScore, aHtScore);
+        await scoreAllPredictionsForMatch(env.db, matchId, {
+          home_score: hScore,
+          away_score: aScore,
+          over_under_line: ouLine,
+          home_win_pct: hPct,
+          away_win_pct: aPct,
+          draw_pct: dPct,
+          actual_cards: actCards,
+          actual_first_scorer: actFirstScorer,
+          home_ht_score: hHtScore,
+          away_ht_score: aHtScore,
+        });
         await recomputeLeaderboardCache(env.db);
         await recomputeStatsCache(env.db);
       }
 
       await emitEvent(env.db, 'matches_updated');
+      await flushLogs(env.db);
       const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
       return new Response(JSON.stringify({ success: true, match: updatedMatch }), { status: 200, headers });
     }
 
     return new Response(JSON.stringify({ error: `Method ${method} not allowed` }), { status: 405, headers });
   } catch (error) {
+    await flushLogs(env.db);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
   }
 }
 
-async function recalculateMatchPredictions(db, matchId, homeScore, awayScore, ouLine, cardsLine, actualCards, actualFirstScorer, homeWinPct, awayWinPct, drawWinPct, homeHtScore, awayHtScore) {
-  // Determine winner: 'home', 'away', or 'draw'
-  let winner = 'draw';
-  if (homeScore > awayScore) winner = 'home';
-  else if (awayScore > homeScore) winner = 'away';
-
-  // Determine over/under: 'over' or 'under'
-  const totalGoals = homeScore + awayScore;
-  const ouResult = totalGoals > ouLine ? 'over' : 'under';
-
-  // Calculate highest scoring half
-  let winnerHalf = null;
-  if (homeHtScore !== null && homeHtScore !== undefined && awayHtScore !== null && awayHtScore !== undefined) {
-    const firstHalfGoals = homeHtScore + awayHtScore;
-    const secondHalfGoals = totalGoals - firstHalfGoals;
-    if (firstHalfGoals > secondHalfGoals) winnerHalf = 'first';
-    else if (secondHalfGoals > firstHalfGoals) winnerHalf = 'second';
-    else winnerHalf = 'equal';
-  }
-
-  // Calculate clean sheet
-  const cleanSheetHappened = (homeScore === 0 || awayScore === 0) ? 'yes' : 'no';
-
-  // Get all predictions for this match
-  const { results: predictions } = await db.prepare('SELECT * FROM predictions WHERE match_id = ?').bind(matchId).all();
-
-  for (const pred of predictions) {
-    const pWinner = pred.predicted_winner === winner ? 3 : 0;
-    const pOu = pred.predicted_over_under === ouResult ? 1 : 0;
-    const pScore = (pred.predicted_home_score === homeScore && pred.predicted_away_score === awayScore) ? 1 : 0;
-
-    // Underdog Bonus: +1 if player picked the option and that outcome occurred, provided it was not the option with the highest win probability (favorite)
-    let pUnderdog = 0;
-    if (pWinner > 0 && homeWinPct != null && awayWinPct != null && drawWinPct != null) {
-      const maxPct = Math.max(homeWinPct, awayWinPct, drawWinPct);
-      if (winner === 'home' && homeWinPct < maxPct) pUnderdog = 1;
-      else if (winner === 'away' && awayWinPct < maxPct) pUnderdog = 1;
-      else if (winner === 'draw' && drawWinPct < maxPct) pUnderdog = 1;
-    }
-
-    let pTotalCardsEarned = 0;
-    if (actualCards !== null && pred.predicted_total_cards !== null) {
-      pTotalCardsEarned = pred.predicted_total_cards === actualCards ? 3 : 0;
-    }
-
-    let pFirstScorerEarned = 0;
-    if (actualFirstScorer !== null && pred.predicted_first_scorer !== null) {
-      pFirstScorerEarned = pred.predicted_first_scorer === actualFirstScorer ? 2 : 0;
-    }
-
-    let pHalf = 0;
-    if (pred.predicted_highest_scoring_half !== null) {
-      pHalf = pred.predicted_highest_scoring_half === winnerHalf ? 2 : 0;
-    }
-
-    let pCleanSheet = 0;
-    if (pred.predicted_clean_sheet !== null) {
-      pCleanSheet = pred.predicted_clean_sheet === cleanSheetHappened ? 1 : 0;
-    }
-
-    const totalPoints = pWinner + pOu + pUnderdog + pTotalCardsEarned + pFirstScorerEarned + (pScore * 4) + pHalf + pCleanSheet;
-
-    await db.prepare(`
-      UPDATE predictions 
-      SET 
-        points_winner = ?,
-        points_ou = ?,
-        points_score = ?,
-        points_cards_ou = ?,
-        points_total_cards = ?,
-        points_first_scorer = ?,
-        points_highest_scoring_half = ?,
-        points_clean_sheet = ?,
-        total_points = ?
-      WHERE participant_id = ? AND match_id = ?
-    `).bind(
-      pWinner, 
-      pOu, 
-      pScore, 
-      pUnderdog, 
-      pTotalCardsEarned, 
-      pFirstScorerEarned, 
-      pHalf,
-      pCleanSheet,
-      totalPoints, 
-      pred.participant_id, 
-      matchId
-    ).run();
-  }
-}
