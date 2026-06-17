@@ -37,7 +37,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
   const isLive = m.status === 'live' || (m.finished === 0 && m.status === 'scheduled' && new Date(m.local_date).getTime() <= Date.now());
   const showLiveResults = propShowLiveResults || isLive;
   // Auto-open feed for live matches
-  const [feedTab, setFeedTab] = useState(isLive ? 'commentary' : null);
+  const [feedTab, setFeedTab] = useState(isLive ? 'stats' : null);
   const [isCollapsed, setIsCollapsed] = useState(m.finished === 1);
   const [liveScores, setLiveScores] = useState(null);
   const displayHome = liveScores ? liveScores.home : m.home_score;
@@ -742,6 +742,26 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
           <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
             <button 
               type="button"
+              onClick={() => setFeedTab(feedTab === 'stats' ? null : 'stats')}
+              className={feedTab === 'stats' ? '' : 'btn-secondary'}
+              style={{ 
+                flex: 1,
+                fontSize: '12px', 
+                padding: '6px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                justifyContent: 'center',
+                border: '1px solid var(--glass-border)',
+                borderRadius: '8px',
+                fontWeight: feedTab === 'stats' ? '700' : '500',
+                color: feedTab === 'stats' ? 'var(--primary)' : undefined,
+              }}
+            >
+              {feedTab === 'stats' ? 'Click To Close' : 'Match Stats'}
+            </button>
+            <button 
+              type="button"
               onClick={() => setFeedTab(feedTab === 'commentary' ? null : 'commentary')}
               className={feedTab === 'commentary' ? '' : 'btn-secondary'}
               style={{ 
@@ -760,26 +780,6 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
             >
               <Radio size={12} className={m.status === 'live' ? 'pulse-icon' : ''} />
               {feedTab === 'commentary' ? 'Click To Close' : 'Live Commentary'}
-            </button>
-            <button 
-              type="button"
-              onClick={() => setFeedTab(feedTab === 'stats' ? null : 'stats')}
-              className={feedTab === 'stats' ? '' : 'btn-secondary'}
-              style={{ 
-                flex: 1,
-                fontSize: '12px', 
-                padding: '6px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                justifyContent: 'center',
-                border: '1px solid var(--glass-border)',
-                borderRadius: '8px',
-                fontWeight: feedTab === 'stats' ? '700' : '500',
-                color: feedTab === 'stats' ? 'var(--primary)' : undefined,
-              }}
-            >
-              {feedTab === 'stats' ? 'Click To Close' : 'Match Stats'}
             </button>
           </div>
         )}
