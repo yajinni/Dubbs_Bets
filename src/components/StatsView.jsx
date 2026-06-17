@@ -724,18 +724,43 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       {/* Stats Tab */}
       {statsPageTab === 'stats' && (<>
 
-      {/* Combined Stats Table (median + accuracy) */}
+      {/* Median Points Table */}
       <div className="glass-panel desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowX: 'auto' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0, borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px' }}>
-          Player Stats &amp; Accuracy
+          Median Points
         </h3>
-        
-        <table className="match-view-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
+        <table className="match-view-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '400px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⌀ Match</th>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⌀ Day</th>
+              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⌀ Per Match</th>
+              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⌀ Per Day</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...statsWithMedians, allRow].map((row) => {
+              const isAll = row.name === 'ALL';
+              return (
+              <tr key={isAll ? 'all' : row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: isAll ? 'rgba(168,85,247,0.08)' : 'transparent' }}>
+                <td style={{ padding: '16px', fontWeight: '700', color: isAll ? '#a855f7' : 'var(--text-primary)' }}>{isAll ? '👥 ALL' : row.name}</td>
+                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerMatch}</td>
+                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerDay}</td>
+              </tr>
+            );})}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Main Stats Table */}
+      <div className="glass-panel desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowX: 'auto' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0, borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px' }}>
+          Player Accuracy Leaderboard
+        </h3>
+        
+        <table className="match-view-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
+              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Win</th>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>O/U</th>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Dog</th>
@@ -747,89 +772,109 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
             </tr>
           </thead>
           <tbody>
-            {[...statsWithMedians, allRow].map((row, idx) => {
-              const isAll = row.name === 'ALL';
-              return (
-              <tr key={isAll ? 'all' : row.id} style={{ borderBottom: isAll ? 'none' : '1px solid rgba(255,255,255,0.05)', background: isAll ? 'rgba(168,85,247,0.08)' : 'transparent', fontWeight: isAll ? '700' : '400' }}>
-                <td style={{ padding: '16px', fontWeight: isAll ? '700' : '700', color: isAll ? '#a855f7' : 'var(--text-primary)' }}>
-                  {isAll ? '👥 ALL' : row.name}
+            {stats.map((row) => (
+              <tr key={row.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <td style={{ padding: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                  {row.name}
                 </td>
-                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerMatch}</td>
-                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerDay}</td>
+                
+                {/* Winner Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.winnerPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctWinners}/{row.totalFinishedPreds}</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.winnerPct}%`, height: '100%', background: 'linear-gradient(90deg, #a855f7, #c084fc)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
+
+                {/* Over Under Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.ouPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctOu}/{row.totalFinishedPreds}</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.ouPct}%`, height: '100%', background: 'linear-gradient(90deg, #22c55e, #4ade80)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
+
+                {/* Underdog Bonus Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                       <span style={{ color: '#fbbf24', fontWeight: '700' }}>{row.underdogPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.underdogCorrect}/{row.underdogAttempts}</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.underdogPct}%`, height: '100%', background: 'linear-gradient(90deg, #fbbf24, #f59e0b)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
+
+                {/* First Scorer Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.firstScorerPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctFirstScorers}/{row.totalFinishedPreds}</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.firstScorerPct}%`, height: '100%', background: 'linear-gradient(90deg, #ec4899, #f472b6)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
+
+                {/* Highest Half Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.halfPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctHalf}/{row.totalFinishedPreds}</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.halfPct}%`, height: '100%', background: 'linear-gradient(90deg, #c084fc, #e879f9)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
+
+                {/* Clean Sheet Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.cleanPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctClean}/{row.totalFinishedPreds}</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.cleanPct}%`, height: '100%', background: 'linear-gradient(90deg, #38bdf8, #7dd3fc)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
+
+                {/* Exact Score Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.scorePct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctScores}/{row.totalFinishedPreds}</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.scorePct}%`, height: '100%', background: 'linear-gradient(90deg, #eab308, #fde047)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
+
+                {/* Exact Cards Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.exactCardsPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctExactCards}/{row.totalFinishedPreds}</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.exactCardsPct}%`, height: '100%', background: 'linear-gradient(90deg, #06b6d4, #67e8f9)', borderRadius: '3px' }}></div>
@@ -837,7 +882,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                   </div>
                 </td>
               </tr>
-            );})}
+            ))}
           </tbody>
         </table>
       </div>
@@ -845,12 +890,10 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
       {/* Mobile Stats Tabs */}
       <div className="mobile-stats-tabs">
         <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 10px 0' }}>
-          Player Stats &amp; Accuracy
+          Player Accuracy Leaderboard
         </h3>
         <div className="mobile-tab-bar">
           {[
-            { key: 'match', label: '⌀ M' },
-            { key: 'day', label: '⌀ D' },
             { key: 'win', label: 'Win' },
             { key: 'ou', label: 'O/U' },
             { key: 'dog', label: 'Dog' },
@@ -873,43 +916,29 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
         <div className="mobile-tab-content">
           {(() => {
             const tabConfig = {
-              match: { val: r => r.medianPerMatch, all: allRow.medianPerMatch, label: '⌀ Match Pts' },
-              day:   { val: r => r.medianPerDay, all: allRow.medianPerDay, label: '⌀ Day Pts' },
-              win:   { pct: r => r.winnerPct, val: r => `${r.winnerPct}%`, color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
-              ou:    { pct: r => r.ouPct, val: r => `${r.ouPct}%`, color: 'linear-gradient(90deg, #22c55e, #4ade80)' },
-              dog:   { pct: r => r.underdogPct, val: r => `${r.underdogPct}%`, color: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
-              sf:    { pct: r => r.firstScorerPct, val: r => `${r.firstScorerPct}%`, color: 'linear-gradient(90deg, #ec4899, #f472b6)' },
-              half:  { pct: r => r.halfPct, val: r => `${r.halfPct}%`, color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
-              cs:    { pct: r => r.cleanPct, val: r => `${r.cleanPct}%`, color: 'linear-gradient(90deg, #38bdf8, #7dd3fc)' },
-              score: { pct: r => r.scorePct, val: r => `${r.scorePct}%`, color: 'linear-gradient(90deg, #eab308, #fde047)' },
-              cards: { pct: r => r.exactCardsPct, val: r => `${r.exactCardsPct}%`, color: 'linear-gradient(90deg, #06b6d4, #67e8f9)' },
+              win:   { pct: r => r.winnerPct, val: r => `${r.winnerPct}%`, num: r => r.correctWinners, denom: r => r.totalFinishedPreds, label: 'Win', color: 'linear-gradient(90deg, #a855f7, #c084fc)' },
+              ou:    { pct: r => r.ouPct, val: r => `${r.ouPct}%`, num: r => r.correctOu, denom: r => r.totalFinishedPreds, label: 'O/U', color: 'linear-gradient(90deg, #22c55e, #4ade80)' },
+              dog:   { pct: r => r.underdogPct, val: r => `${r.underdogPct}%`, num: r => r.underdogCorrect, denom: r => r.underdogAttempts, label: 'Dog', color: 'linear-gradient(90deg, #fbbf24, #f59e0b)' },
+              sf:    { pct: r => r.firstScorerPct, val: r => `${r.firstScorerPct}%`, num: r => r.correctFirstScorers, denom: r => r.totalFinishedPreds, label: 'SF', color: 'linear-gradient(90deg, #ec4899, #f472b6)' },
+              half:  { pct: r => r.halfPct, val: r => `${r.halfPct}%`, num: r => r.correctHalf, denom: r => r.totalFinishedPreds, label: 'HH', color: 'linear-gradient(90deg, #c084fc, #e879f9)' },
+              cs:    { pct: r => r.cleanPct, val: r => `${r.cleanPct}%`, num: r => r.correctClean, denom: r => r.totalFinishedPreds, label: 'CS', color: 'linear-gradient(90deg, #38bdf8, #7dd3fc)' },
+              score: { pct: r => r.scorePct, val: r => `${r.scorePct}%`, num: r => r.correctScores, denom: r => r.totalFinishedPreds, label: '⚽', color: 'linear-gradient(90deg, #eab308, #fde047)' },
+              cards: { pct: r => r.exactCardsPct, val: r => `${r.exactCardsPct}%`, num: r => r.correctExactCards, denom: r => r.totalFinishedPreds, label: 'TC', color: 'linear-gradient(90deg, #06b6d4, #67e8f9)' },
             };
             const cfg = tabConfig[mobileStatTab];
             if (!cfg) return null;
-            const rows = [...statsWithMedians, allRow];
-            const sorted = cfg.pct ? [...rows].sort((a, b) => cfg.pct(b) - cfg.pct(a)) : rows;
-            return (
-              <>
-              {sorted.map((row, i) => {
-                const isAll = row.name === 'ALL';
-                return (
-                <div key={isAll ? 'all' : row.id} className="mobile-stat-row" style={{ background: isAll ? 'rgba(168,85,247,0.08)' : 'transparent', fontWeight: isAll ? '700' : '400' }}>
-                  <span className="mobile-stat-rank" style={{ color: isAll ? '#a855f7' : undefined }}>{isAll ? '👥' : (cfg.pct ? i + 1 : '-')}</span>
-                  <span className="mobile-stat-name" style={{ color: isAll ? '#a855f7' : 'var(--text-primary)' }}>{row.name}</span>
-                  {cfg.pct ? (
-                    <>
-                      <span className="mobile-stat-val">{cfg.val(row)}</span>
-                      <div className="mobile-stat-bar-wrap">
-                        <div className="mobile-stat-bar-fill" style={{ width: `${cfg.pct(row)}%`, background: cfg.color }}></div>
-                      </div>
-                    </>
-                  ) : (
-                    <span className="mobile-stat-val" style={{ fontWeight: '700' }}>{cfg.val(row)}</span>
-                  )}
+            const sorted = [...stats].sort((a, b) => cfg.pct(b) - cfg.pct(a));
+            return sorted.map((row, i) => (
+              <div key={row.id} className="mobile-stat-row">
+                <span className="mobile-stat-rank">{i + 1}</span>
+                <span className="mobile-stat-name">{row.name}</span>
+                <span className="mobile-stat-val">{cfg.val(row)}</span>
+                <span className="mobile-stat-frac">{cfg.num(row)}/{cfg.denom(row)}</span>
+                <div className="mobile-stat-bar-wrap">
+                  <div className="mobile-stat-bar-fill" style={{ width: `${cfg.pct(row)}%`, background: cfg.color }}></div>
                 </div>
-              );})}
-              </>
-            );
+              </div>
+            ));
           })()}
         </div>
       </div>
