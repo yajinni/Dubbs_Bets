@@ -968,32 +968,6 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
         {/* Sentinel for infinite scroll */}
         {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
 
-        {hasMore && (
-          <button
-            type="button"
-            onClick={() => setVisibleCount(prev => prev + 6)}
-            className="btn-secondary"
-            style={{
-              width: '100%',
-              padding: '12px',
-              fontSize: '13px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              border: '1px dashed var(--glass-border)',
-              borderRadius: '8px',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              background: 'rgba(255,255,255,0.02)',
-            }}
-          >
-            <ChevronDown size={16} />
-            Load More ({currentMatches.length - visibleMatches.length} remaining)
-          </button>
-        )}
-
         {hidePast && (
           <button
             type="button"
