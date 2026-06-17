@@ -944,30 +944,6 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
       </div>
 
       <div className="matches-list">
-        {visibleMatches.length === 0 && hidePast ? (
-          <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            No upcoming matches for this stage.
-          </div>
-        ) : null}
-
-        {visibleMatches.map(m => (
-          <MatchCard
-            key={m.id}
-            m={m}
-            pred={getPredictionForMatch(m.id)}
-            activeParticipantId={activeParticipantId}
-            onSave={onSave}
-            matchPredictions={matchPredictionsCache[m.id]}
-            getMatchPredictions={getMatchPredictions}
-            leaderboard={leaderboard}
-            selectedMatchId={selectedMatchId}
-            onRefresh={onRefresh}
-          />
-        ))}
-
-        {/* Sentinel for infinite scroll */}
-        {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
-
         {hidePast && (
           <button
             type="button"
@@ -993,6 +969,30 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
             Expand to See Previous Matches ({pastMatches.length})
           </button>
         )}
+
+        {visibleMatches.length === 0 && hidePast ? (
+          <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+            No upcoming matches for this stage.
+          </div>
+        ) : null}
+
+        {visibleMatches.map(m => (
+          <MatchCard
+            key={m.id}
+            m={m}
+            pred={getPredictionForMatch(m.id)}
+            activeParticipantId={activeParticipantId}
+            onSave={onSave}
+            matchPredictions={matchPredictionsCache[m.id]}
+            getMatchPredictions={getMatchPredictions}
+            leaderboard={leaderboard}
+            selectedMatchId={selectedMatchId}
+            onRefresh={onRefresh}
+          />
+        ))}
+
+        {/* Sentinel for infinite scroll */}
+        {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
 
         {!hidePast && pastMatches.map(m => (
           <MatchCard
