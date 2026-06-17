@@ -223,6 +223,9 @@ export async function checkAndInitDb(db) {
     try {
       await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('db_initialized', '1')").run();
     } catch(e) {}
+    // Prime caches after initial seed
+    try { await recomputeLeaderboardCache(db); } catch(e) {}
+    try { await recomputeStatsCache(db); } catch(e) {}
     _dbInitialized = true;
 
     console.log('Successfully completed D1 database self-seeding.');
