@@ -72,7 +72,8 @@ export default function App() {
     const week = Math.floor(diffDays / 7) + 1;
     return Math.min(6, Math.max(1, week));
   });
-  const [allPredictions, setAllPredictions] = useState([]);
+  const [matchPredictionsCache, setMatchPredictionsCache] = useState({});
+  const [statsData, setStatsData] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   
@@ -181,30 +182,6 @@ export default function App() {
     return kickOffMs + 60000 <= Date.now();
   });
 
-  const runningPointsMap = useMemo(() => {
-    const map = {};
-    const sorted = [...matches].sort((a, b) => {
-      const dateA = new Date((a.local_date || '').replace(' ', 'T'));
-      const dateB = new Date((b.local_date || '').replace(' ', 'T'));
-      if (dateA - dateB !== 0) return dateA - dateB;
-      return a.id - b.id;
-    });
-
-    leaderboard.forEach(p => {
-      let runningSum = 0;
-      sorted.forEach(m => {
-        if (m.finished === 1) {
-          const pred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === p.id);
-          if (pred) {
-            runningSum += pred.total_points || 0;
-          }
-        }
-        map[`${p.id}_${m.id}`] = runningSum;
-      });
-    });
-    return map;
-  }, [matches, leaderboard, allPredictions]);
-
   const liveTabMatches = useMemo(() => {
     // eslint-disable-next-line react-hooks/purity
     const nowMs = Date.now();
@@ -266,21 +243,37 @@ export default function App() {
     }
   };
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/stats');
+      setStatsData(await res.json());
+    } catch (err) {
+      console.error('Failed to load stats:', err);
+    }
+  }, []);
+
+  const getMatchPredictions = useCallback(async (matchId) => {
+    try {
+      const res = await fetch(`/api/predictions?matchId=${matchId}`);
+      const data = await res.json();
+      setMatchPredictionsCache(prev => {
+        if (prev[matchId]) return prev;
+        return { ...prev, [matchId]: data };
+      });
+    } catch (err) {
+      console.error('Failed to load match predictions:', err);
+    }
+  }, []);
+
   const refreshAllData = async () => {
     try {
-      const matchesRes = await fetch('/api/matches');
-      const matchesData = await matchesRes.json();
+      const [matchesData, leaderboardData] = await Promise.all([
+        fetch('/api/matches').then(r => r.json()),
+        fetch('/api/leaderboard').then(r => r.json()),
+      ]);
       setMatches(matchesData);
-
-      const leaderboardRes = await fetch('/api/leaderboard');
-      const leaderboardData = await leaderboardRes.json();
       setLeaderboard(leaderboardData);
 
-      const allPredsRes = await fetch('/api/predictions');
-      const allPredsData = await allPredsRes.json();
-      setAllPredictions(allPredsData);
-
-      // If active participant is set, reload predictions
       if (activeParticipantId) {
         await fetchPredictions(activeParticipantId);
       }
@@ -288,6 +281,10 @@ export default function App() {
       console.error('Failed to reload data:', err);
     }
   };
+
+  const loadStatsForTabs = useCallback(() => {
+    if (!statsData) fetchStats();
+  }, [statsData, fetchStats]);
 
   const triggerBackgroundSync = async () => {
     try {
@@ -411,7 +408,46 @@ export default function App() {
   const refreshAllDataRef = useRef(refreshAllData);
   refreshAllDataRef.current = refreshAllData;
 
-  // Live sync: pull scores from ESPN every 60 seconds if there are live matches
+  const refreshMatchesRef = useRef();
+  refreshMatchesRef.current = async () => {
+    try {
+      const res = await fetch('/api/matches?liveOnly=true');
+      const liveUpdates = await res.json();
+      setMatches(prev => prev.map(m => {
+        const update = liveUpdates.find(u => u.id === m.id);
+        return update ? { ...m, ...update } : m;
+      }));
+    } catch (err) {
+      console.error('Failed to refresh matches:', err);
+    }
+  };
+
+  const refreshPredictionsRef = useRef();
+  refreshPredictionsRef.current = async () => {
+    try {
+      const lbRes = await fetch('/api/leaderboard');
+      setLeaderboard(await lbRes.json());
+      setMatchPredictionsCache({});
+      setStatsData(null);
+      if (activeParticipantId) {
+        const pRes = await fetch(`/api/predictions?participantId=${activeParticipantId}`);
+        setPredictions(await pRes.json());
+      }
+    } catch (err) {
+      console.error('Failed to refresh predictions:', err);
+    }
+  };
+
+  const refreshByEventTypeRef = useRef();
+  refreshByEventTypeRef.current = (type) => {
+    if (type === 'matches_updated') {
+      refreshMatchesRef.current();
+    } else {
+      refreshAllDataRef.current();
+    }
+  };
+
+  // Live sync: pull scores from ESPN every 30 seconds if there are live matches
   useEffect(() => {
     if (!hasLiveMatches) return;
 
@@ -425,7 +461,7 @@ export default function App() {
       } catch (err) {
         console.error('Interval sync failed:', err);
       }
-      refreshAllDataRef.current();
+      refreshMatchesRef.current();
     };
 
     performSync();
@@ -441,7 +477,7 @@ export default function App() {
       try {
         const data = JSON.parse(e.data);
         if (data.type !== 'done' && data.type !== 'heartbeat') {
-          refreshAllDataRef.current();
+          refreshByEventTypeRef.current(data.type);
         }
       } catch (err) {
         console.error('SSE parse error:', err);
@@ -559,11 +595,14 @@ export default function App() {
         }
       }
     } else if (tab === 'match-view') {
+      if (!statsData) fetchStats();
       const completedMatches = matches.filter(m => m.finished === 1);
       if (completedMatches.length > 0) {
         completedMatches.sort((a, b) => new Date(b.local_date) - new Date(a.local_date));
         setSelectedMatchId(completedMatches[0].id);
       }
+    } else if (tab === 'stats') {
+      if (!statsData) fetchStats();
     }
     setActiveTab(tab);
     window.location.hash = tab;
@@ -733,9 +772,9 @@ export default function App() {
                       pred={predictions.find(p => p.match_id === m.id)}
                       activeParticipantId={activeParticipantId}
                       onSave={refreshAllData}
-                      allPredictions={allPredictions}
+                      matchPredictions={matchPredictionsCache[m.id]}
+                      getMatchPredictions={getMatchPredictions}
                       leaderboard={leaderboard}
-                      runningPointsMap={runningPointsMap}
                       selectedMatchId={null}
                       showLiveResults={m.status === 'live'}
                       onRefresh={refreshAllData}
@@ -748,14 +787,15 @@ export default function App() {
 
            {activeTab === 'matches' && (
              <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
-                <MatchesList 
+                 <MatchesList 
                   matches={matches} 
                   predictions={predictions}
                   activeParticipantId={activeParticipantId}
                   onSave={refreshAllData}
                   selectedMatchId={selectedMatchId}
                   onSelectMatch={setSelectedMatchId}
-                  allPredictions={allPredictions}
+                  matchPredictionsCache={matchPredictionsCache}
+                  getMatchPredictions={getMatchPredictions}
                   leaderboard={leaderboard}
                   onRefresh={refreshAllData}
                 />
@@ -764,9 +804,10 @@ export default function App() {
 
            {activeTab === 'match-view' && (
              <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
-                <MatchView 
+                 <MatchView 
                   matches={matches}
-                  allPredictions={allPredictions}
+                  statsData={statsData}
+                  fetchStats={fetchStats}
                   leaderboard={leaderboard}
                   activeParticipantId={activeParticipantId}
                   selectedMatchId={selectedMatchId}
@@ -779,10 +820,9 @@ export default function App() {
            {activeTab === 'stats' && (
              <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
                <StatsView 
-                 matches={matches}
-                 allPredictions={allPredictions}
-                 leaderboard={leaderboard}
-               />
+                  statsData={statsData}
+                  fetchStats={fetchStats}
+                />
              </div>
            )}
 

@@ -127,7 +127,7 @@ function calcLivePoints(pred, match, liveHomeScore, liveAwayScore, liveTotalCard
 
 const POLL_INTERVAL_MS = 30_000; // 30 seconds when live
 
-export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode, match = null, allPredictions = [], leaderboard = [], tab, onScoreUpdate }) {
+export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode, match = null, tab, onScoreUpdate }) {
   const [commentary, setCommentary] = useState([]);
   const [stats, setStats] = useState([]);
   const [liveScore, setLiveScore] = useState({ home: null, away: null });

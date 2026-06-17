@@ -1,4 +1,4 @@
-import { checkAndInitDb } from './db_helper.js';
+import { checkAndInitDb, recomputeLeaderboardCache, recomputeStatsCache } from './db_helper.js';
 
 export async function onRequest(context) {
   const { env } = context;
@@ -107,6 +107,9 @@ export async function onRequest(context) {
         updatedPredictionsCount++;
       }
     }
+
+    await recomputeLeaderboardCache(env.db);
+    await recomputeStatsCache(env.db);
 
     return new Response(JSON.stringify({ success: true, message: `Successfully updated ${updatedPredictionsCount} predictions.` }), {
       status: 200,

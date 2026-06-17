@@ -1,48 +1,27 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, Users, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 
-export default function MatchView({ matches, allPredictions = [], leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch, onRefresh }) {
-  const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
+export default function MatchView({ matches, statsData, fetchStats, leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch, onRefresh }) {
+  const [filterStage, setFilterStage] = useState('all');
+  const [localPredCache, setLocalPredCache] = useState({});
 
-  const handleScroll = (e, matchId) => {
-    const scrollLeft = e.target.scrollLeft;
-    const elements = document.querySelectorAll(`.bets-scroll-${matchId}`);
-    elements.forEach(el => {
-      if (el !== e.target && el.scrollLeft !== scrollLeft) {
-        el.scrollLeft = scrollLeft;
-      }
-    });
+  // Lazy-load stats if not already loaded
+  useEffect(() => {
+    if (!statsData && fetchStats) {
+      fetchStats();
+    }
+  }, [statsData, fetchStats]);
+
+  const getMatchPredictions = async (matchId) => {
+    if (localPredCache[matchId]) return;
+    try {
+      const res = await fetch(`/api/predictions?matchId=${matchId}`);
+      const data = await res.json();
+      setLocalPredCache(prev => ({ ...prev, [matchId]: data }));
+    } catch (_) {}
   };
-
-  // Pre-calculate running points totals for each participant chronologically up to and including each match
-  const runningPointsMap = useMemo(() => {
-    const map = {}; // key: `${participantId}_${matchId}` -> runningTotal
-    
-    // Sort all matches chronologically (by date, then id)
-    const sorted = [...matches].sort((a, b) => {
-      const dateA = new Date((a.local_date || '').replace(' ', 'T'));
-      const dateB = new Date((b.local_date || '').replace(' ', 'T'));
-      if (dateA - dateB !== 0) return dateA - dateB;
-      return a.id - b.id;
-    });
-
-    leaderboard.forEach(p => {
-      let runningSum = 0;
-      sorted.forEach(m => {
-        if (m.finished === 1) {
-          const pred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === p.id);
-          if (pred) {
-            runningSum += pred.total_points || 0;
-          }
-        }
-        map[`${p.id}_${m.id}`] = runningSum;
-      });
-    });
-
-    return map;
-  }, [matches, allPredictions, leaderboard]);
 
   // Stage tab definitions
   const stages = [
@@ -71,7 +50,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
     }
   }, [selectedMatchId, matches, onClearSelectedMatch]);
 
-  // Helper to categorize rounds
   const getMatchCategory = (match) => {
     const type = match.type || 'group';
     if (['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(type.toLowerCase())) {
@@ -80,7 +58,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
     return 'group';
   };
 
-  // Filter matches
   const filteredMatches = matches.filter(m => {
     if (filterStage === 'all') return true;
     if (filterStage === 'group') return getMatchCategory(m) === 'group';
@@ -105,14 +82,12 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
     if (!isoString) return '';
     let normalized = isoString.replace(' ', 'T');
     const hasTimezone = normalized.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(normalized);
-    
     let date;
     if (hasTimezone) {
       date = new Date(normalized);
     } else {
       date = new Date(normalized + '-04:00');
     }
-    
     const dateStr = date.toLocaleString('en-US', {
       timeZone: 'America/New_York',
       month: 'short',
@@ -126,7 +101,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Tabs */}
       <div className="stage-tabs">
         {stages.map(s => (
           <button
@@ -139,7 +113,6 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
         ))}
       </div>
 
-      {/* Matches comparison list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {filteredMatches.length === 0 ? (
           <div className="glass-panel" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
@@ -147,39 +120,16 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
           </div>
         ) : (
           filteredMatches.map(m => {
+            const matchPreds = localPredCache[m.id];
+            if (!matchPreds && (m.finished === 1 || m.status === 'live')) {
+              getMatchPredictions(m.id);
+            }
+
             const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
             const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
-            const homeCode = m.home_code || 'H';
-            const awayCode = m.away_code || 'A';
-            
-            // Determine match results if finished
-            let actualWinner = null;
-            let actualOU = null;
-            let actualHighestHalf = null;
-            let actualCleanSheet = null;
-            if (m.finished === 1) {
-              if (m.home_score > m.away_score) actualWinner = 'home';
-              else if (m.away_score > m.home_score) actualWinner = 'away';
-              else actualWinner = 'draw';
-
-              const totalGoals = m.home_score + m.away_score;
-              actualOU = totalGoals > m.over_under_line ? 'over' : 'under';
-
-              if (m.home_ht_score !== null && m.home_ht_score !== undefined && m.away_ht_score !== null && m.away_ht_score !== undefined) {
-                const firstHalfGoals = m.home_ht_score + m.away_ht_score;
-                const secondHalfGoals = totalGoals - firstHalfGoals;
-                if (firstHalfGoals > secondHalfGoals) actualHighestHalf = 'first';
-                else if (secondHalfGoals > firstHalfGoals) actualHighestHalf = 'second';
-                else actualHighestHalf = 'equal';
-              }
-
-              actualCleanSheet = (m.home_score === 0 || m.away_score === 0) ? 'yes' : 'no';
-            }
 
             return (
               <div key={m.id} id={`match-view-card-${m.id}`} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px' }}>
-                
-                {/* Match Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--primary-hover)', letterSpacing: '0.05em' }}>
@@ -212,13 +162,11 @@ export default function MatchView({ matches, allPredictions = [], leaderboard = 
                   </div>
                 </div>
 
-                {/* Shared Players' Picks component */}
                 <PlayerPicksList
                   m={m}
-                  allPredictions={allPredictions}
+                  matchPredictions={matchPreds}
                   leaderboard={leaderboard}
                   activeParticipantId={activeParticipantId}
-                  runningPointsMap={runningPointsMap}
                   showLiveResults={m.status === 'live'}
                   onRefresh={onRefresh}
                 />

@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve and submit predictions (GET, POST)
-import { checkAndInitDb, logChange, emitEvent } from './db_helper.js';
+import { checkAndInitDb, logChange, emitEvent, recomputeLeaderboardCache, recomputeStatsCache } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -26,6 +26,18 @@ export async function onRequest(context) {
     if (method === 'GET') {
       const url = new URL(request.url);
       const participantId = url.searchParams.get('participantId');
+      const matchIdParam = url.searchParams.get('matchId');
+
+      if (matchIdParam) {
+        const { results } = await env.db.prepare(`
+          SELECT pr.*, p.name AS participant_name, COALESCE(rpc.total_points, 0) AS running_total
+          FROM predictions pr
+          INNER JOIN participants p ON pr.participant_id = p.id
+          LEFT JOIN running_points_cache rpc ON rpc.participant_id = pr.participant_id AND rpc.match_id = pr.match_id
+          WHERE pr.match_id = ?
+        `).bind(parseInt(matchIdParam)).all();
+        return new Response(JSON.stringify(results), { status: 200, headers });
+      }
 
       if (!participantId) {
         // Return all predictions in system with participant names
@@ -33,6 +45,7 @@ export async function onRequest(context) {
           SELECT pr.*, p.name AS participant_name
           FROM predictions pr
           INNER JOIN participants p ON pr.participant_id = p.id
+          LIMIT 5000
         `).all();
         return new Response(JSON.stringify(results), { status: 200, headers });
       }
@@ -67,8 +80,14 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ error: 'Participant ID and Match ID are required' }), { status: 400, headers });
       }
 
-      // 1. Fetch match to verify it exists and check if it has already started
-      const match = await env.db.prepare('SELECT local_date, status, finished, home_score, away_score, home_ht_score, away_ht_score, over_under_line, actual_cards, actual_first_scorer, home_win_pct, away_win_pct FROM matches WHERE id = ?').bind(matchId).first();
+      // 1. Fetch match with team info (merged query)
+      const match = await env.db.prepare(`
+        SELECT m.local_date, m.status, m.finished, m.home_score, m.away_score, m.home_ht_score, m.away_ht_score, m.over_under_line, m.actual_cards, m.actual_first_scorer, m.home_win_pct, m.away_win_pct, m.home_team_name, m.away_team_name, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+        FROM matches m
+        LEFT JOIN teams t1 ON m.home_team_id = t1.id
+        LEFT JOIN teams t2 ON m.away_team_id = t2.id
+        WHERE m.id = ?
+      `).bind(matchId).first();
 
       if (!match) {
         return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
@@ -90,19 +109,12 @@ export async function onRequest(context) {
       const pHalfPick = predictedHighestScoringHalf || null;
       const pCleanPick = predictedCleanSheet || null;
 
-      // Get participant name and match info
+      // Get participant name
       const participant = await env.db.prepare('SELECT name FROM participants WHERE id = ?').bind(participantId).first();
       const participantName = participant ? participant.name : `Player ID ${participantId}`;
-      const matchDetails = await env.db.prepare(`
-        SELECT m.home_team_name, m.away_team_name, t1.fifa_code AS home_code, t2.fifa_code AS away_code
-        FROM matches m
-        LEFT JOIN teams t1 ON m.home_team_id = t1.id
-        LEFT JOIN teams t2 ON m.away_team_id = t2.id
-        WHERE m.id = ?
-      `).bind(matchId).first();
-      
-      const homeCode = matchDetails?.home_code || matchDetails?.home_team_name.substring(0, 3).toUpperCase() || 'HOM';
-      const awayCode = matchDetails?.away_code || matchDetails?.away_team_name.substring(0, 3).toUpperCase() || 'AWA';
+
+      const homeCode = match?.home_code || match?.home_team_name.substring(0, 3).toUpperCase() || 'HOM';
+      const awayCode = match?.away_code || match?.away_team_name.substring(0, 3).toUpperCase() || 'AWA';
       const matchLabel = `${homeCode} vs ${awayCode}`;
 
       // 3. Upsert prediction
@@ -275,24 +287,18 @@ export async function onRequest(context) {
             total_points = ?
           WHERE participant_id = ? AND match_id = ?
         `).bind(pWinner, pOu, pScore, pUnderdog, pTotalCardsEarned, pFirstScorerEarned, pHalf, pCleanSheet, totalPoints, participantId, matchId).run();
+        await recomputeLeaderboardCache(env.db);
+        await recomputeStatsCache(env.db);
       }
 
-      const savedPrediction = await env.db.prepare('SELECT * FROM predictions WHERE participant_id = ? AND match_id = ?')
-        .bind(participantId, matchId)
-        .first();
-
       await emitEvent(env.db, 'predictions_updated');
-      // ── Signal Group Notification (fire-and-forget) ──
+      // ── Signal Group Notification (fire-and-forget, reuse already-fetched data) ──
       if (env.SIGNAL_API_URL && env.SIGNAL_SENDER && env.SIGNAL_GROUP_ID) {
         try {
-          // Look up participant name and match details
-          const participant = await env.db.prepare('SELECT name FROM participants WHERE id = ?').bind(participantId).first();
-          const matchInfo = await env.db.prepare('SELECT home_team_name, away_team_name, local_date, over_under_line FROM matches WHERE id = ?').bind(matchId).first();
-
-          if (participant && matchInfo) {
+          if (participant && match) {
             const pName = participant.name;
-            const home = matchInfo.home_team_name || 'Home';
-            const away = matchInfo.away_team_name || 'Away';
+            const home = match.home_team_name || 'Home';
+            const away = match.away_team_name || 'Away';
 
             // Format the winner display
             const winnerDisplay = predictedWinner === 'home' ? home
@@ -310,7 +316,7 @@ export async function onRequest(context) {
               : 'Equal';
 
             // Format O/U display
-            const ouDisplay = `${(predictedOverUnder || '').charAt(0).toUpperCase()}${(predictedOverUnder || '').slice(1)} ${matchInfo.over_under_line || '2.5'}`;
+            const ouDisplay = `${(predictedOverUnder || '').charAt(0).toUpperCase()}${(predictedOverUnder || '').slice(1)} ${match.over_under_line || '2.5'}`;
 
             const msg = [
               `🎯 ${pName} placed a pick!`,
@@ -340,7 +346,25 @@ export async function onRequest(context) {
         }
       }
 
-      return new Response(JSON.stringify({ success: true, prediction: savedPrediction }), { status: 200, headers });
+      return new Response(JSON.stringify({
+        success: true,
+        prediction: {
+          participant_id: participantId,
+          match_id: matchId,
+          predicted_winner: predictedWinner,
+          predicted_over_under: predictedOverUnder,
+          predicted_home_score: pHomeScore,
+          predicted_away_score: pAwayScore,
+          predicted_total_cards: pTotalCards,
+          predicted_first_scorer: pFirstScorer,
+          predicted_highest_scoring_half: pHalfPick,
+          predicted_clean_sheet: pCleanPick,
+          points_winner: 0,
+          points_ou: 0,
+          points_score: 0,
+          total_points: 0,
+        }
+      }), { status: 200, headers });
     }
 
     return new Response(JSON.stringify({ error: `Method ${method} not allowed` }), { status: 405, headers });

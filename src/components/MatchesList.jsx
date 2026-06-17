@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio, ChevronDown, ChevronUp } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 import LiveFeed from './LiveFeed';
 
-export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {}, selectedMatchId, showLiveResults: propShowLiveResults = false, onRefresh }) {
+export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictions, getMatchPredictions, leaderboard = [], selectedMatchId, showLiveResults: propShowLiveResults = false, onRefresh }) {
   const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
   const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
   const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
@@ -49,6 +49,13 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
       setIsCollapsed(false);
     }
   }, [selectedMatchId, m.id]);
+
+  // Lazy-load predictions for this match when card is expanded
+  useEffect(() => {
+    if (!isCollapsed && !matchPredictions && getMatchPredictions) {
+      getMatchPredictions(m.id);
+    }
+  }, [isCollapsed, matchPredictions, m.id, getMatchPredictions]);
 
   const handleScroll = (e, matchId) => {
     const scrollLeft = e.target.scrollLeft;
@@ -713,10 +720,9 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
         {/* Shared Players' Picks component */}
         <PlayerPicksList
           m={m}
-          allPredictions={allPredictions}
+          matchPredictions={matchPredictions}
           leaderboard={leaderboard}
           activeParticipantId={activeParticipantId}
-          runningPointsMap={runningPointsMap}
           winnerLocalState={{
             winner,
             overUnder,
@@ -793,8 +799,6 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
           homeCode={m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase()}
           awayCode={m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase()}
           match={m}
-          allPredictions={allPredictions}
-          leaderboard={leaderboard}
           tab={feedTab}
           onScoreUpdate={(h, a) => setLiveScores({ home: h, away: a })}
         />
@@ -836,33 +840,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
   );
 }
 
-export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, allPredictions = [], leaderboard = [], onRefresh }) {
+export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, matchPredictionsCache = {}, getMatchPredictions, leaderboard = [], onRefresh }) {
   const [filterStage, setFilterStage] = useState('all'); // 'all', 'group', 'knockouts', 'live'
-
-  const runningPointsMap = useMemo(() => {
-    const map = {};
-    const sorted = [...matches].sort((a, b) => {
-      const dateA = new Date((a.local_date || '').replace(' ', 'T'));
-      const dateB = new Date((b.local_date || '').replace(' ', 'T'));
-      if (dateA - dateB !== 0) return dateA - dateB;
-      return a.id - b.id;
-    });
-
-    leaderboard.forEach(p => {
-      let runningSum = 0;
-      sorted.forEach(m => {
-        if (m.finished === 1) {
-          const pred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === p.id);
-          if (pred) {
-            runningSum += pred.total_points || 0;
-          }
-        }
-        map[`${p.id}_${m.id}`] = runningSum;
-      });
-    });
-
-    return map;
-  }, [matches, allPredictions, leaderboard]);
 
   useEffect(() => {
     if (selectedMatchId) {
@@ -945,9 +924,9 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
               pred={getPredictionForMatch(m.id)}
               activeParticipantId={activeParticipantId}
               onSave={onSave}
-              allPredictions={allPredictions}
+              matchPredictions={matchPredictionsCache[m.id]}
+              getMatchPredictions={getMatchPredictions}
               leaderboard={leaderboard}
-              runningPointsMap={runningPointsMap}
               selectedMatchId={selectedMatchId}
               onRefresh={onRefresh}
             />

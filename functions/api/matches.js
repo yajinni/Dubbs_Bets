@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve and update matches (GET, POST)
-import { checkAndInitDb, logChange, formatOuPct, emitEvent } from './db_helper.js';
+import { checkAndInitDb, logChange, formatOuPct, emitEvent, recomputeLeaderboardCache, recomputeStatsCache, getMatchesCache, setMatchesCache, clearMatchesCache } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -24,8 +24,24 @@ export async function onRequest(context) {
     await checkAndInitDb(env.db);
 
     if (method === 'GET') {
-      // Get all matches with home/away team flags
-      const query = `
+      const url = new URL(request.url);
+      const liveOnly = url.searchParams.get('liveOnly') === 'true';
+
+      if (liveOnly) {
+        const { results } = await env.db.prepare(`
+          SELECT id, home_score, away_score, home_ht_score, away_ht_score, status, finished, actual_cards, actual_first_scorer, home_team_name, away_team_name
+          FROM matches
+          WHERE status = 'live'
+        `).all();
+        return new Response(JSON.stringify(results), { status: 200, headers });
+      }
+
+      const cached = getMatchesCache();
+      if (cached) {
+        return new Response(JSON.stringify(cached), { status: 200, headers });
+      }
+
+      const { results } = await env.db.prepare(`
         SELECT 
           m.*,
           t1.flag AS home_flag,
@@ -36,9 +52,8 @@ export async function onRequest(context) {
         LEFT JOIN teams t1 ON m.home_team_id = t1.id
         LEFT JOIN teams t2 ON m.away_team_id = t2.id
         ORDER BY m.local_date ASC
-      `;
-      
-      const { results } = await env.db.prepare(query).all();
+      `).all();
+      setMatchesCache(results);
       return new Response(JSON.stringify(results), { status: 200, headers });
     }
 
@@ -170,9 +185,13 @@ export async function onRequest(context) {
         .bind(hScore, aScore, hHtScore, aHtScore, status || 'scheduled', finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, actFirstScorer, matchId)
         .run();
 
+      clearMatchesCache();
+
       // If finished, we want to recalculate predictions/points for this match
       if (finishedVal === 1) {
         await recalculateMatchPredictions(env.db, matchId, hScore, aScore, ouLine, cLine, actCards, actFirstScorer, hPct, aPct, dPct, hHtScore, aHtScore);
+        await recomputeLeaderboardCache(env.db);
+        await recomputeStatsCache(env.db);
       }
 
       await emitEvent(env.db, 'matches_updated');

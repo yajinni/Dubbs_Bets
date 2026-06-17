@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to sync matches, scores, and odds from API-Football
-import { checkAndInitDb, logChange, formatOuPct, emitEvent } from './db_helper.js';
+import { checkAndInitDb, logChange, formatOuPct, emitEvent, recomputeLeaderboardCache, recomputeStatsCache, clearMatchesCache } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -301,6 +301,7 @@ async function syncFromESPN(db, qstashToken = null, qstashUrl = null) {
   }
   
   let matchesUpdated = 0;
+  let finishedDuringSync = 0;
   
   for (const event of events) {
     const comp = event.competitions[0];
@@ -442,8 +443,8 @@ async function syncFromESPN(db, qstashToken = null, qstashUrl = null) {
         dbMatch.id
       ).run();
       
-      // Recalculate predictions if the match has finished
-      if (finished === 1) {
+      if (finished === 1 && dbMatch.finished !== 1) {
+        finishedDuringSync++;
         await recalculateMatchPredictionsInSync(
           db, 
           dbMatch.id, 
@@ -479,6 +480,15 @@ async function syncFromESPN(db, qstashToken = null, qstashUrl = null) {
       
       matchesUpdated++;
     }
+  }
+  
+  if (matchesUpdated > 0) {
+    clearMatchesCache();
+    if (finishedDuringSync > 0) {
+      await recomputeLeaderboardCache(db);
+      await recomputeStatsCache(db);
+    }
+    await emitEvent(db, 'matches_updated');
   }
   
   return { source: 'espn', matchesUpdated, oddsUpdated: 0 };
@@ -677,35 +687,42 @@ async function syncFromTheOddsAPI(db, apiKey) {
         await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} O/U Goals`, oldVal, newVal);
       }
 
-      // Update D1 database with the latest odds and schedule
-      await db.prepare(`
-        UPDATE matches
-        SET
-          home_win_pct = ?,
-          away_win_pct = ?,
-          draw_pct = ?,
-          over_under_line = ?,
-          over_odds = ?,
-          under_odds = ?,
-          odds_updated_at = ?
-        WHERE id = ?
-      `).bind(
-        homePct,
-        awayPct,
-        drawPct,
-        ouLine,
-        overOdds,
-        underOdds,
-        new Date().toISOString(),
-        dbMatch.id
-      ).run();
-      
-      matchesUpdated++;
+      // Update D1 database with the latest odds only if something changed
+      if (dbMatch.home_win_pct !== homePct || dbMatch.away_win_pct !== awayPct || dbMatch.draw_pct !== drawPct ||
+          dbMatch.over_under_line !== ouLine || dbMatch.over_odds !== overOdds || dbMatch.under_odds !== underOdds) {
+        await db.prepare(`
+          UPDATE matches
+          SET
+            home_win_pct = ?,
+            away_win_pct = ?,
+            draw_pct = ?,
+            over_under_line = ?,
+            over_odds = ?,
+            under_odds = ?,
+            odds_updated_at = ?
+          WHERE id = ?
+        `).bind(
+          homePct,
+          awayPct,
+          drawPct,
+          ouLine,
+          overOdds,
+          underOdds,
+          new Date().toISOString(),
+          dbMatch.id
+        ).run();
+        matchesUpdated++;
+      }
     }
   }
   
 
   
+  if (matchesUpdated > 0) {
+    clearMatchesCache();
+    await emitEvent(db, 'matches_updated');
+  }
+
   return { source: 'the-odds-api', matchesUpdated, oddsUpdated };
 }
 

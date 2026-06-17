@@ -58,7 +58,7 @@ function calcLivePoints(pred, match, liveHomeScore, liveAwayScore, liveTotalCard
 
 export default function PlayerPicksList({ 
   m, 
-  allPredictions, 
+  matchPredictions, 
   leaderboard, 
   activeParticipantId, 
   runningPointsMap = {}, 
@@ -290,7 +290,7 @@ export default function PlayerPicksList({
           <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px' }}>No players yet.</span>
         ) : (
           leaderboard.map(op => {
-            const opPred = allPredictions.find(ap => ap.match_id === m.id && ap.participant_id === op.id);
+            const opPred = matchPredictions?.find(ap => ap.participant_id === op.id);
             const isSelf = op.id === activeParticipantId;
 
             // Construct displaying predictions: if it is self and we have local state overrides, use them
@@ -382,7 +382,7 @@ export default function PlayerPicksList({
                         [Match: {displayPred && m.finished === 1 ? displayPred.total_points : 0} pts]
                       </span>
                       <span style={{ color: 'var(--info)', fontWeight: '700', fontSize: '11px' }}>
-                        [Current: {runningPointsMap[`${op.id}_${m.id}`] || 0} pts]
+                        [Running: {opPred?.running_total || 0} pts]
                       </span>
                       <span style={{ color: 'var(--primary-hover)', fontWeight: '700', fontSize: '11px' }}>
                         [Total: {op.total_points} pts]

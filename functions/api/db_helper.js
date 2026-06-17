@@ -1,8 +1,40 @@
 // Database self-initialization helper for Cloudflare D1
 import { SCHEMA_SQL, TEAMS_SQL, MATCHES_SQL } from './db_init_data.js';
 
+let _dbInitialized = false;
+let _matchesCache = null;
+let _matchesCacheTime = 0;
+const MATCHES_CACHE_TTL = 30000;
+
+export function getMatchesCache() {
+  if (_matchesCache && Date.now() - _matchesCacheTime < MATCHES_CACHE_TTL) {
+    return _matchesCache;
+  }
+  return null;
+}
+
+export function setMatchesCache(data) {
+  _matchesCache = data;
+  _matchesCacheTime = Date.now();
+}
+
+export function clearMatchesCache() {
+  _matchesCache = null;
+  _matchesCacheTime = 0;
+}
+
 export async function checkAndInitDb(db) {
   try {
+    // Fast path: skip migrations/consolidation if already initialized
+    if (_dbInitialized) return;
+    try {
+      const initialized = await db.prepare("SELECT value FROM settings WHERE key = 'db_initialized'").first();
+      if (initialized) {
+        _dbInitialized = true;
+        return;
+      }
+    } catch(e) {}
+
     // Dynamic Schema Migrations for Cards Prop Bets
     try { await db.prepare("ALTER TABLE matches ADD COLUMN cards_line REAL DEFAULT 3.5").run(); } catch(e){}
     try { await db.prepare("ALTER TABLE matches ADD COLUMN cards_over_odds REAL DEFAULT 1.9").run(); } catch(e){}
@@ -58,6 +90,72 @@ export async function checkAndInitDb(db) {
     } catch(e){}
 
 
+    // Stats cache table
+    try {
+      await db.prepare(`
+        CREATE TABLE IF NOT EXISTS stats_cache (
+          participant_id INTEGER PRIMARY KEY,
+          name TEXT NOT NULL,
+          total_finished_preds INTEGER DEFAULT 0,
+          correct_winners INTEGER DEFAULT 0,
+          correct_ou INTEGER DEFAULT 0,
+          underdog_correct INTEGER DEFAULT 0,
+          underdog_attempts INTEGER DEFAULT 0,
+          correct_scores INTEGER DEFAULT 0,
+          correct_first_scorers INTEGER DEFAULT 0,
+          correct_exact_cards INTEGER DEFAULT 0,
+          correct_half INTEGER DEFAULT 0,
+          correct_clean INTEGER DEFAULT 0,
+          winner_pct REAL DEFAULT 0,
+          ou_pct REAL DEFAULT 0,
+          underdog_pct REAL DEFAULT 0,
+          first_scorer_pct REAL DEFAULT 0,
+          exact_cards_pct REAL DEFAULT 0,
+          half_pct REAL DEFAULT 0,
+          clean_pct REAL DEFAULT 0,
+          score_pct REAL DEFAULT 0,
+          total_points REAL DEFAULT 0,
+          median_per_match REAL DEFAULT 0,
+          max_per_match REAL DEFAULT 0,
+          median_per_day REAL DEFAULT 0,
+          max_per_day REAL DEFAULT 0
+        )
+      `).run();
+    } catch(e){}
+
+    // Running points cache table (cumulative total per participant per match)
+    try {
+      await db.prepare(`
+        CREATE TABLE IF NOT EXISTS running_points_cache (
+          participant_id INTEGER,
+          match_id INTEGER,
+          total_points REAL DEFAULT 0,
+          PRIMARY KEY (participant_id, match_id)
+        )
+      `).run();
+    } catch(e){}
+
+    // Leaderboard cache table
+    try {
+      await db.prepare(`
+        CREATE TABLE IF NOT EXISTS leaderboard_cache (
+          id INTEGER PRIMARY KEY,
+          name TEXT NOT NULL,
+          total_points REAL DEFAULT 0,
+          correct_winners INTEGER DEFAULT 0,
+          correct_ou INTEGER DEFAULT 0,
+          correct_scores INTEGER DEFAULT 0,
+          correct_first_scorer INTEGER DEFAULT 0,
+          correct_total_cards INTEGER DEFAULT 0,
+          correct_highest_scoring_half INTEGER DEFAULT 0,
+          correct_clean_sheet INTEGER DEFAULT 0,
+          correct_bets_count INTEGER DEFAULT 0,
+          total_bets_count INTEGER DEFAULT 0
+        )
+      `).run();
+    } catch(e){}
+
+
     // 1. Check if matches table exists
     const checkTable = await db.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='matches'"
@@ -68,6 +166,10 @@ export async function checkAndInitDb(db) {
       const countMatches = await db.prepare("SELECT COUNT(*) as count FROM matches").first();
       if (countMatches && countMatches.count > 0) {
         await consolidateExistingLogs(db);
+        try {
+          await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('db_initialized', '1')").run();
+        } catch(e) {}
+        _dbInitialized = true;
         return;
       }
     }
@@ -94,6 +196,11 @@ export async function checkAndInitDb(db) {
         await db.prepare(sql).run();
       }
     }
+
+    try {
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('db_initialized', '1')").run();
+    } catch(e) {}
+    _dbInitialized = true;
 
     console.log('Successfully completed D1 database self-seeding.');
   } catch (error) {
@@ -142,8 +249,19 @@ export function formatOuPct(overOdds, underOdds) {
   return `Over: ${overPct}%, Under: ${underPct}%`;
 }
 
+let _logsConsolidated = false;
+
 export async function consolidateExistingLogs(db) {
   try {
+    if (_logsConsolidated) return;
+    try {
+      const done = await db.prepare("SELECT value FROM settings WHERE key = 'logs_consolidated'").first();
+      if (done) {
+        _logsConsolidated = true;
+        return;
+      }
+    } catch(e) {}
+
     const { results: predLogs } = await db.prepare("SELECT * FROM logs WHERE category = 'prediction'").all();
     if (!predLogs || predLogs.length === 0) return;
 
@@ -248,5 +366,194 @@ export async function consolidateExistingLogs(db) {
     console.log(`[Migration] Successfully consolidated ${oldStyleLogs.length} entries into ${groups.length} consolidated entries.`);
   } catch (err) {
     console.error('[Migration] Failed to consolidate existing prediction logs:', err.message);
+  }
+  _logsConsolidated = true;
+  try {
+    await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('logs_consolidated', '1')").run();
+  } catch(e) {}
+}
+
+export async function recomputeLeaderboardCache(db) {
+  try {
+    await db.prepare(`
+      INSERT OR REPLACE INTO leaderboard_cache
+      SELECT
+        p.id,
+        p.name,
+        COALESCE(SUM(pred.total_points), 0),
+        COALESCE(SUM(CASE WHEN pred.points_winner > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN pred.points_ou > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN pred.points_score > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN pred.points_first_scorer > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END), 0),
+        SUM(CASE WHEN m.finished = 1 THEN
+          (CASE WHEN pred.points_winner > 0 THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.points_ou > 0 THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.points_score > 0 THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.points_first_scorer > 0 THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END)
+        ELSE 0 END),
+        SUM(CASE WHEN m.finished = 1 THEN
+          (CASE WHEN pred.predicted_winner IS NOT NULL AND pred.predicted_winner != '' THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.predicted_over_under IS NOT NULL AND pred.predicted_over_under != '' THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.predicted_home_score IS NOT NULL THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.predicted_first_scorer IS NOT NULL AND pred.predicted_first_scorer != '' THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.predicted_total_cards IS NOT NULL THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.predicted_highest_scoring_half IS NOT NULL AND pred.predicted_highest_scoring_half != '' THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END)
+        ELSE 0 END)
+      FROM participants p
+      LEFT JOIN predictions pred ON p.id = pred.participant_id
+      LEFT JOIN matches m ON pred.match_id = m.id
+      GROUP BY p.id, p.name
+    `).run();
+  } catch (err) {
+    console.error('[LeaderboardCache] Failed to recompute:', err.message);
+  }
+}
+
+export async function recomputeStatsCache(db) {
+  try {
+    // 1. Recompute running_points_cache: cumulative total before each match for each participant
+    await db.prepare(`DELETE FROM running_points_cache`).run();
+    const { results: allPredictionsForRP } = await db.prepare(`
+      SELECT pr.participant_id, pr.match_id, pr.total_points, m.local_date, m.finished
+      FROM predictions pr
+      INNER JOIN matches m ON pr.match_id = m.id
+      WHERE m.finished = 1
+      ORDER BY m.local_date ASC, m.id ASC
+    `).all();
+
+    if (allPredictionsForRP && allPredictionsForRP.length > 0) {
+      const runningTotals = {};
+      for (const pred of allPredictionsForRP) {
+        const key = `${pred.participant_id}_${pred.match_id}`;
+        const prev = runningTotals[`${pred.participant_id}_prev`] || 0;
+        // running_total = points from all previous finished matches (excludes current)
+        runningTotals[key] = prev;
+        runningTotals[`${pred.participant_id}_prev`] = prev + (pred.total_points || 0);
+      }
+
+      const insertRP = db.prepare(`
+        INSERT OR REPLACE INTO running_points_cache (participant_id, match_id, total_points)
+        VALUES (?, ?, ?)
+      `);
+      for (const [key, total_points] of Object.entries(runningTotals)) {
+        if (key.includes('_prev')) continue;
+        const [pId, mId] = key.split('_');
+        await insertRP.bind(parseInt(pId), parseInt(mId), total_points).run();
+      }
+    }
+
+    // 2. Recompute per-participant stats (matching StatsView.jsx logic)
+    const { results: participants } = await db.prepare('SELECT id, name FROM participants').all();
+    const { results: matches } = await db.prepare('SELECT * FROM matches').all();
+    const finishedMatchIds = new Set((matches || []).filter(m => m.finished === 1).map(m => m.id));
+
+    // Get all predictions for finished matches
+    const { results: finishedPreds } = await db.prepare(`
+      SELECT pr.*, m.local_date, m.home_win_pct, m.away_win_pct, m.draw_pct
+      FROM predictions pr
+      INNER JOIN matches m ON pr.match_id = m.id
+      WHERE m.finished = 1
+    `).all();
+
+    const predsByParticipant = {};
+    for (const pred of finishedPreds || []) {
+      if (!predsByParticipant[pred.participant_id]) predsByParticipant[pred.participant_id] = [];
+      predsByParticipant[pred.participant_id].push(pred);
+    }
+
+    const calcMedian = (arr) => {
+      if (arr.length === 0) return 0;
+      const s = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(s.length / 2);
+      return s.length % 2 !== 0 ? s[mid] : Math.round(((s[mid - 1] + s[mid]) / 2) * 10) / 10;
+    };
+
+    const toDateStr = (isoStr) => {
+      try {
+        const d = new Date(isoStr.replace(' ', 'T'));
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+      } catch (_) {
+        return (isoStr || '').split('T')[0];
+      }
+    };
+
+    const insertStats = db.prepare(`
+      INSERT OR REPLACE INTO stats_cache (
+        participant_id, name,
+        total_finished_preds,
+        correct_winners, correct_ou, underdog_correct, underdog_attempts,
+        correct_scores, correct_first_scorers, correct_exact_cards, correct_half, correct_clean,
+        winner_pct, ou_pct, underdog_pct, first_scorer_pct, exact_cards_pct, half_pct, clean_pct, score_pct,
+        total_points,
+        median_per_match, max_per_match, median_per_day, max_per_day
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    for (const p of participants || []) {
+      const pPreds = predsByParticipant[p.id] || [];
+      const totalFinishedPreds = pPreds.length;
+
+      const correctWinners = pPreds.filter(pred => pred.points_winner > 0).length;
+      const correctOu = pPreds.filter(pred => pred.points_ou > 0).length;
+      const underdogCorrect = pPreds.filter(pred => pred.points_cards_ou > 0).length;
+      const underdogAttempts = pPreds.filter(pred => {
+        if (!pred.predicted_winner) return false;
+        const m = (matches || []).find(mt => mt.id === pred.match_id);
+        if (!m || m.home_win_pct == null || m.away_win_pct == null || m.draw_pct == null) return false;
+        const maxPct = Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
+        if (pred.predicted_winner === 'home' && m.home_win_pct < maxPct) return true;
+        if (pred.predicted_winner === 'away' && m.away_win_pct < maxPct) return true;
+        if (pred.predicted_winner === 'draw' && m.draw_pct < maxPct) return true;
+        return false;
+      }).length;
+      const correctScores = pPreds.filter(pred => pred.points_score > 0).length;
+      const correctFirstScorers = pPreds.filter(pred => pred.points_first_scorer > 0).length;
+      const correctExactCards = pPreds.filter(pred => pred.points_total_cards > 0).length;
+      const correctHalf = pPreds.filter(pred => pred.points_highest_scoring_half > 0).length;
+      const correctClean = pPreds.filter(pred => pred.points_clean_sheet > 0).length;
+
+      const totalPoints = pPreds.reduce((sum, pred) => sum + (pred.total_points || 0), 0);
+      const winnerPct = totalFinishedPreds > 0 ? Math.round((correctWinners / totalFinishedPreds) * 100) : 0;
+      const ouPct = totalFinishedPreds > 0 ? Math.round((correctOu / totalFinishedPreds) * 100) : 0;
+      const scorePct = totalFinishedPreds > 0 ? Math.round((correctScores / totalFinishedPreds) * 100) : 0;
+      const firstScorerPct = totalFinishedPreds > 0 ? Math.round((correctFirstScorers / totalFinishedPreds) * 100) : 0;
+      const exactCardsPct = totalFinishedPreds > 0 ? Math.round((correctExactCards / totalFinishedPreds) * 100) : 0;
+      const halfPct = totalFinishedPreds > 0 ? Math.round((correctHalf / totalFinishedPreds) * 100) : 0;
+      const cleanPct = totalFinishedPreds > 0 ? Math.round((correctClean / totalFinishedPreds) * 100) : 0;
+      const underdogPct = underdogAttempts > 0 ? Math.round((underdogCorrect / underdogAttempts) * 100) : 0;
+
+      const perMatch = pPreds.map(pred => pred.total_points || 0);
+      const dayMap = {};
+      pPreds.forEach(pred => {
+        const m = (matches || []).find(mt => mt.id === pred.match_id);
+        if (m && m.local_date) {
+          const ds = toDateStr(m.local_date);
+          dayMap[ds] = (dayMap[ds] || 0) + (pred.total_points || 0);
+        }
+      });
+      const medianPerMatch = calcMedian(perMatch);
+      const maxPerMatch = perMatch.length > 0 ? Math.max(...perMatch) : 0;
+      const medianPerDay = calcMedian(Object.values(dayMap));
+      const maxPerDay = Object.values(dayMap).length > 0 ? Math.max(...Object.values(dayMap)) : 0;
+
+      await insertStats.bind(
+        p.id, p.name,
+        totalFinishedPreds,
+        correctWinners, correctOu, underdogCorrect, underdogAttempts,
+        correctScores, correctFirstScorers, correctExactCards, correctHalf, correctClean,
+        winnerPct, ouPct, underdogPct, firstScorerPct, exactCardsPct, halfPct, cleanPct, scorePct,
+        totalPoints,
+        medianPerMatch, maxPerMatch, medianPerDay, maxPerDay
+      ).run();
+    }
+  } catch (err) {
+    console.error('[StatsCache] Failed to recompute:', err.message);
   }
 }

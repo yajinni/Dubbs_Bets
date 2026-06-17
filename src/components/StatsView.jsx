@@ -2,284 +2,65 @@ import React from 'react';
 import { Award, Target, TrendingUp, Shield, Zap, Trophy, CheckCircle, XCircle } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 
-export default function StatsView({ matches = [], allPredictions = [], leaderboard = [] }) {
-  // 1. Identify finished matches
-  const finishedMatches = matches.filter(m => m.finished === 1);
-  const finishedMatchIds = new Set(finishedMatches.map(m => m.id));
+export default function StatsView({ statsData, fetchStats }) {
+  // Lazy-load stats if not already loaded
+  React.useEffect(() => {
+    if (!statsData && fetchStats) {
+      fetchStats();
+    }
+  }, [statsData, fetchStats]);
 
-  // 2. Compute stats per participant
-  const stats = leaderboard.map(p => {
-    // Predictions made by this participant for finished matches
-    const pPreds = allPredictions.filter(pred => pred.participant_id === p.id && finishedMatchIds.has(pred.match_id));
-    
-    const totalFinishedPreds = pPreds.length;
-    
-    // Count correct answers
-    const correctWinners = pPreds.filter(pred => pred.points_winner > 0).length;
-    const correctOu = pPreds.filter(pred => pred.points_ou > 0).length;
-    const underdogCorrect = pPreds.filter(pred => pred.points_cards_ou > 0).length;
-    const underdogAttempts = pPreds.filter(pred => {
-      if (!pred.predicted_winner) return false;
-      const m = matches.find(mt => mt.id === pred.match_id);
-      if (!m || m.home_win_pct == null || m.away_win_pct == null || m.draw_pct == null) return false;
-      const maxPct = Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
-      if (pred.predicted_winner === 'home' && m.home_win_pct < maxPct) return true;
-      if (pred.predicted_winner === 'away' && m.away_win_pct < maxPct) return true;
-      if (pred.predicted_winner === 'draw' && m.draw_pct < maxPct) return true;
-      return false;
-    }).length;
-    const correctScores = pPreds.filter(pred => pred.points_score > 0).length;
-    const correctFirstScorers = pPreds.filter(pred => pred.points_first_scorer > 0).length;
-    const correctExactCards = pPreds.filter(pred => pred.points_total_cards > 0).length;
-    const correctHalf = pPreds.filter(pred => pred.points_highest_scoring_half > 0).length;
-    const correctClean = pPreds.filter(pred => pred.points_clean_sheet > 0).length;
-
-    // Accuracy percentages
-    const winnerPct = totalFinishedPreds > 0 ? Math.round((correctWinners / totalFinishedPreds) * 100) : 0;
-    const ouPct = totalFinishedPreds > 0 ? Math.round((correctOu / totalFinishedPreds) * 100) : 0;
-    const scorePct = totalFinishedPreds > 0 ? Math.round((correctScores / totalFinishedPreds) * 100) : 0;
-    const firstScorerPct = totalFinishedPreds > 0 ? Math.round((correctFirstScorers / totalFinishedPreds) * 100) : 0;
-    const exactCardsPct = totalFinishedPreds > 0 ? Math.round((correctExactCards / totalFinishedPreds) * 100) : 0;
-    const halfPct = totalFinishedPreds > 0 ? Math.round((correctHalf / totalFinishedPreds) * 100) : 0;
-    const cleanPct = totalFinishedPreds > 0 ? Math.round((correctClean / totalFinishedPreds) * 100) : 0;
-    const underdogPct = underdogAttempts > 0 ? Math.round((underdogCorrect / underdogAttempts) * 100) : 0;
-
-    return {
-      id: p.id,
-      name: p.name,
-      totalFinishedPreds,
-      correctWinners,
-      correctOu,
-      underdogCorrect,
-      underdogAttempts,
-      underdogPct,
-      correctScores,
-      correctFirstScorers,
-      correctExactCards,
-      correctHalf,
-      correctClean,
-      winnerPct,
-      ouPct,
-      scorePct,
-      firstScorerPct,
-      exactCardsPct,
-      halfPct,
-      cleanPct,
-      totalPoints: p.total_points
-    };
-  });
+  const stats = statsData?.stats || [];
+  const allRow = statsData?.allRow || null;
+  const chartDataRaw = statsData?.chartData || null;
+  const topSingleGame = statsData?.topSingleGame || null;
+  const topSingleDay = statsData?.topSingleDay || null;
 
   // State for Chart Options
-  const [chartType, setChartType] = React.useState('cumulative'); // 'cumulative' | 'daily'
-  const [timeRange, setTimeRange] = React.useState('week'); // 'week' | 'all'
+  const [chartType, setChartType] = React.useState('cumulative');
+  const [timeRange, setTimeRange] = React.useState('week');
   const [hiddenPlayers, setHiddenPlayers] = React.useState(new Set());
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const [mobileStatTab, setMobileStatTab] = React.useState('win');
   const [statsPageTab, setStatsPageTab] = React.useState('stats');
 
-  // Colors for players
   const playerColors = [
-    '#a855f7', // Purple
-    '#3b82f6', // Blue
-    '#22c55e', // Green
-    '#fbbf24', // Gold
-    '#ec4899', // Pink
-    '#06b6d4', // Cyan
-    '#f97316', // Orange
-    '#14b8a6', // Teal
+    '#a855f7', '#3b82f6', '#22c55e', '#fbbf24',
+    '#ec4899', '#06b6d4', '#f97316', '#14b8a6',
   ];
-
   const getPlayerColor = (index) => playerColors[index % playerColors.length];
 
-  // 3. Compile daily points for plotting
+  // Build chart data from pre-computed API response
   const chartData = React.useMemo(() => {
-    if (finishedMatches.length === 0 || leaderboard.length === 0) return null;
-
-    // Helper: convert UTC ISO string to Eastern Time date string (YYYY-MM-DD)
-    const toEasternDateStr = (isoStr) => {
-      try {
-        const d = new Date(isoStr);
-        return new Intl.DateTimeFormat('en-CA', {
-          timeZone: 'America/New_York',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-        }).format(d);
-      } catch (_) {
-        return isoStr.split('T')[0];
-      }
-    };
-
-    // Group finished matches by date (in Eastern Time)
-    const matchesByDate = {};
-    finishedMatches.forEach(m => {
-      if (!m.local_date) return;
-      const dateStr = toEasternDateStr(m.local_date);
-      if (!matchesByDate[dateStr]) {
-        matchesByDate[dateStr] = [];
-      }
-      matchesByDate[dateStr].push(m);
-    });
-
-    const dates = Object.keys(matchesByDate).sort();
-    if (dates.length === 0) return null;
-
-    const playerProgress = leaderboard.map((p, idx) => ({
-      id: p.id,
-      name: p.name,
-      color: getPlayerColor(idx),
-      daily: {},
-      cumulative: {}
-    }));
-
-    dates.forEach(date => {
-      const dayMatches = matchesByDate[date];
-      const matchIds = new Set(dayMatches.map(m => m.id));
-
-      playerProgress.forEach(pp => {
-        const dayPreds = allPredictions.filter(
-          pred => pred.participant_id === pp.id && matchIds.has(pred.match_id)
-        );
-        const dayPoints = dayPreds.reduce((sum, pred) => sum + (pred.total_points || 0), 0);
-        pp.daily[date] = dayPoints;
-      });
-    });
-
-    playerProgress.forEach(pp => {
+    if (!chartDataRaw || !chartDataRaw.dates || chartDataRaw.dates.length === 0) return null;
+    const dates = chartDataRaw.dates;
+    const daily = chartDataRaw.daily || {};
+    const pIds = Object.keys(daily);
+    const playerProgress = pIds.map((pid, idx) => {
+      const stat = stats.find(s => s.participant_id === parseInt(pid));
+      const cumulative = {};
       let runningSum = 0;
       dates.forEach(date => {
-        runningSum += pp.daily[date];
-        pp.cumulative[date] = runningSum;
+        runningSum += daily[pid]?.[date] || 0;
+        cumulative[date] = runningSum;
       });
+      return { id: parseInt(pid), name: stat?.name || `Player ${pid}`, color: getPlayerColor(idx), daily: daily[pid] || {}, cumulative };
     });
-
     return { dates, playerProgress };
-  }, [finishedMatches, leaderboard, allPredictions]);
+  }, [chartDataRaw, stats]);
 
-  // 4. Find top performers in each category
-  const hasFinishedPreds = stats.some(s => s.totalFinishedPreds > 0);
-  
-  let topWinner = null;
-  let topOu = null;
-  let topCards = null;
-  let topScore = null;
-  let topFirstScorer = null;
-  let topExactCards = null;
-
+  // Top performers from pre-computed stats
+  const hasFinishedPreds = stats.some(s => s.total_finished_preds > 0);
+  let topWinner = null, topCards = null, topScore = null, topExactCards = null;
   if (hasFinishedPreds) {
-    topWinner = [...stats].sort((a, b) => b.winnerPct - a.winnerPct || b.correctWinners - a.correctWinners)[0];
-    topOu = [...stats].sort((a, b) => b.ouPct - a.ouPct || b.correctOu - a.correctOu)[0];
-    topCards = [...stats].sort((a, b) => b.underdogPct - a.underdogPct || b.underdogCorrect - a.underdogCorrect)[0];
-    topScore = [...stats].sort((a, b) => b.scorePct - a.scorePct || b.correctScores - a.correctScores)[0];
-    topFirstScorer = [...stats].sort((a, b) => b.firstScorerPct - a.firstScorerPct || b.correctFirstScorers - a.correctFirstScorers)[0];
-    topExactCards = [...stats].sort((a, b) => b.exactCardsPct - a.exactCardsPct || b.correctExactCards - a.correctExactCards)[0];
+    topWinner = [...stats].sort((a, b) => b.winner_pct - a.winner_pct || b.correct_winners - a.correct_winners)[0];
+    topCards = [...stats].sort((a, b) => b.underdog_pct - a.underdog_pct || b.underdog_correct - a.underdog_correct)[0];
+    topScore = [...stats].sort((a, b) => b.score_pct - a.score_pct || b.correct_scores - a.correct_scores)[0];
+    topExactCards = [...stats].sort((a, b) => b.exact_cards_pct - a.exact_cards_pct || b.correct_exact_cards - a.correct_exact_cards)[0];
   }
 
-  // 5. Find all-time best single-game and single-day performances
-  let topSingleGame = null;
-  let topSingleGameMatch = null;
-  let topSingleDay = null;
-
-  const finishedPreds = allPredictions.filter(pred => finishedMatchIds.has(pred.match_id));
-
-  if (finishedPreds.length > 0) {
-    topSingleGame = [...finishedPreds].sort((a, b) => (b.total_points || 0) - (a.total_points || 0))[0];
-    topSingleGameMatch = matches.find(m => m.id === topSingleGame.match_id);
-
-    const toDateStr = (isoStr) => {
-      try {
-        return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(isoStr));
-      } catch (_) { return isoStr.split('T')[0]; }
-    };
-
-    const dayMatchesByDate = {};
-    finishedMatches.forEach(m => {
-      if (!m.local_date) return;
-      const ds = toDateStr(m.local_date);
-      if (!dayMatchesByDate[ds]) dayMatchesByDate[ds] = [];
-      dayMatchesByDate[ds].push(m);
-    });
-
-    let maxDayPts = 0;
-    Object.entries(dayMatchesByDate).forEach(([dateStr, dayMatches]) => {
-      const dayMatchIds = new Set(dayMatches.map(m => m.id));
-      leaderboard.forEach(p => {
-        const total = allPredictions
-          .filter(pred => pred.participant_id === p.id && dayMatchIds.has(pred.match_id))
-          .reduce((sum, pred) => sum + (pred.total_points || 0), 0);
-        if (total > maxDayPts) { maxDayPts = total; topSingleDay = { name: p.name, points: total, date: dateStr }; }
-      });
-    });
-  }
-
-  // 6. Compute median points per match and per day, plus ALL combined row
-  const calcMedian = (arr) => {
-    if (arr.length === 0) return 0;
-    const s = [...arr].sort((a, b) => a - b);
-    const mid = Math.floor(s.length / 2);
-    return s.length % 2 !== 0 ? s[mid] : Math.round(((s[mid - 1] + s[mid]) / 2) * 10) / 10;
-  };
-
-  const toDateStr = (isoStr) => {
-    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(isoStr)); }
-    catch (_) { return isoStr.split('T')[0]; }
-  };
-
-  const statsWithMedians = stats.map(s => {
-    const pPreds = allPredictions.filter(p => p.participant_id === s.id && finishedMatchIds.has(p.match_id));
-    const perMatch = pPreds.map(p => p.total_points || 0);
-    const dayMap = {};
-    pPreds.forEach(p => {
-      const m = matches.find(mt => mt.id === p.match_id);
-      if (m && m.local_date) { const ds = toDateStr(m.local_date); dayMap[ds] = (dayMap[ds] || 0) + (p.total_points || 0); }
-    });
-    return { ...s, medianPerMatch: calcMedian(perMatch), maxPerMatch: perMatch.length > 0 ? Math.max(...perMatch) : 0, medianPerDay: calcMedian(Object.values(dayMap)), maxPerDay: Object.values(dayMap).length > 0 ? Math.max(...Object.values(dayMap)) : 0 };
-  });
-
-  const allFP = allPredictions.filter(p => finishedMatchIds.has(p.match_id));
-  const allPerMatch = allFP.map(p => p.total_points || 0);
-  const allDayMap = {};
-  allFP.forEach(p => {
-    const m = matches.find(mt => mt.id === p.match_id);
-    if (m && m.local_date) { const ds = toDateStr(m.local_date); allDayMap[ds] = (allDayMap[ds] || 0) + (p.total_points || 0); }
-  });
-  const allMedianMatch = calcMedian(allPerMatch);
-  const allMedianDay = calcMedian(Object.values(allDayMap));
-
-  const allCorrectWinners = allFP.filter(p => p.points_winner > 0).length;
-  const allCorrectOu = allFP.filter(p => p.points_ou > 0).length;
-  const allCorrectScores = allFP.filter(p => p.points_score > 0).length;
-  const allCorrectFirstScorers = allFP.filter(p => p.points_first_scorer > 0).length;
-  const allCorrectExactCards = allFP.filter(p => p.points_total_cards > 0).length;
-  const allCorrectHalf = allFP.filter(p => p.points_highest_scoring_half > 0).length;
-  const allCorrectClean = allFP.filter(p => p.points_clean_sheet > 0).length;
-  const totalAll = allFP.length;
-  const allUnderdogCorrect = allFP.filter(p => p.points_cards_ou > 0).length;
-  const allUnderdogAttempts = allFP.filter(p => {
-    if (!p.predicted_winner) return false;
-    const m = matches.find(mt => mt.id === p.match_id);
-    if (!m || m.home_win_pct == null || m.away_win_pct == null || m.draw_pct == null) return false;
-    const maxPct = Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
-    return (p.predicted_winner === 'home' && m.home_win_pct < maxPct) ||
-           (p.predicted_winner === 'away' && m.away_win_pct < maxPct) ||
-           (p.predicted_winner === 'draw' && m.draw_pct < maxPct);
-  }).length;
-
-  const allRow = {
-    name: 'ALL',
-    medianPerMatch: allMedianMatch,
-    maxPerMatch: allPerMatch.length > 0 ? Math.max(...allPerMatch) : 0,
-    medianPerDay: allMedianDay,
-    maxPerDay: Object.values(allDayMap).length > 0 ? Math.max(...Object.values(allDayMap)) : 0,
-    winnerPct: totalAll > 0 ? Math.round((allCorrectWinners / totalAll) * 100) : 0,
-    ouPct: totalAll > 0 ? Math.round((allCorrectOu / totalAll) * 100) : 0,
-    underdogPct: allUnderdogAttempts > 0 ? Math.round((allUnderdogCorrect / allUnderdogAttempts) * 100) : 0,
-    firstScorerPct: totalAll > 0 ? Math.round((allCorrectFirstScorers / totalAll) * 100) : 0,
-    halfPct: totalAll > 0 ? Math.round((allCorrectHalf / totalAll) * 100) : 0,
-    cleanPct: totalAll > 0 ? Math.round((allCorrectClean / totalAll) * 100) : 0,
-    scorePct: totalAll > 0 ? Math.round((allCorrectScores / totalAll) * 100) : 0,
-    exactCardsPct: totalAll > 0 ? Math.round((allCorrectExactCards / totalAll) * 100) : 0,
-  };
+  // Stats rows already have median/max from cache
+  const statsWithMedians = stats;
 
   // Toggle player line visibility
   const togglePlayer = (playerId) => {
@@ -1025,7 +806,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                   <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topSingleGame?.participant_name}</span>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topSingleGame?.total_points} pts {topSingleGameMatch ? `(${shortenTeamName(topSingleGameMatch.home_team_name || topSingleGameMatch.home_team_label)} ${topSingleGameMatch.home_score}-${topSingleGameMatch.away_score} ${shortenTeamName(topSingleGameMatch.away_team_name || topSingleGameMatch.away_team_label)})` : ''}
+                    {topSingleGame?.total_points} pts {topSingleGame ? `(${shortenTeamName(topSingleGame.home_team_name)} ${topSingleGame.home_score}-${topSingleGame.away_score} ${shortenTeamName(topSingleGame.away_team_name)})` : ''}
                   </span>
                 </div>
               </div>
