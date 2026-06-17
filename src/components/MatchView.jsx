@@ -7,12 +7,10 @@ export default function MatchView({ matches, statsData, fetchStats, leaderboard 
   const [filterStage, setFilterStage] = useState('all');
   const [localPredCache, setLocalPredCache] = useState({});
 
-  // Lazy-load stats if not already loaded
+  // Lazy-load stats (force refresh to clear stale error state)
   useEffect(() => {
-    if (!statsData && fetchStats) {
-      fetchStats();
-    }
-  }, [statsData, fetchStats]);
+    if (fetchStats) fetchStats(true);
+  }, []);
 
   const getMatchPredictions = async (matchId) => {
     if (localPredCache[matchId]) return;

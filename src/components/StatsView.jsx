@@ -3,12 +3,10 @@ import { Award, Target, TrendingUp, Shield, Zap, Trophy, CheckCircle, XCircle } 
 import { shortenTeamName } from '../utils/teamNames';
 
 export default function StatsView({ statsData, fetchStats }) {
-  // Lazy-load stats if not already loaded
+  // Lazy-load stats on mount (force refresh to clear stale error state)
   React.useEffect(() => {
-    if (!statsData && fetchStats) {
-      fetchStats();
-    }
-  }, [statsData, fetchStats]);
+    if (fetchStats) fetchStats(true);
+  }, []);
 
   const stats = statsData?.stats || [];
   const allRow = statsData?.allRow || null;
@@ -521,7 +519,7 @@ export default function StatsView({ statsData, fetchStats }) {
             </tr>
           </thead>
           <tbody>
-            {[...statsWithMedians, allRow].map((row) => {
+            {[...statsWithMedians, allRow].filter(Boolean).map((row) => {
               const isAll = row.name === 'ALL';
               return (
               <tr key={isAll ? 'all' : row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: isAll ? 'rgba(168,85,247,0.08)' : 'transparent' }}>

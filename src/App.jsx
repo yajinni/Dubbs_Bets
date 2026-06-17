@@ -243,12 +243,16 @@ export default function App() {
     }
   };
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (force) => {
     try {
+      if (force) setStatsData(null);
       const res = await fetch('/api/stats');
-      setStatsData(await res.json());
+      const data = await res.json();
+      if (!res.ok) { setStatsData(null); return; }
+      setStatsData(data);
     } catch (err) {
       console.error('Failed to load stats:', err);
+      setStatsData(null);
     }
   }, []);
 
