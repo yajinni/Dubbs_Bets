@@ -48,7 +48,7 @@ export default function StatsView({ statsData, fetchStats }) {
   }, [chartDataRaw, stats]);
 
   // Top performers from pre-computed stats
-  const hasFinishedPreds = stats.some(s => s.total_finished_preds > 0);
+  const hasFinishedPreds = stats.some(s => s.totalFinishedPreds > 0);
   let topWinner = null, topCards = null, topScore = null, topExactCards = null;
   if (hasFinishedPreds) {
     topWinner = [...stats].sort((a, b) => b.winner_pct - a.winner_pct || b.correct_winners - a.correct_winners)[0];
