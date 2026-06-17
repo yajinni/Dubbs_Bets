@@ -23,6 +23,7 @@ export default function StatsView({ statsData, fetchStats }) {
   const [mobileStatTab, setMobileStatTab] = React.useState('win');
   const [statsPageTab, setStatsPageTab] = React.useState('stats');
   const [metricModal, setMetricModal] = React.useState(null);
+  const [superStatsTab, setSuperStatsTab] = React.useState('match');
 
   const playerColors = [
     '#a855f7', '#3b82f6', '#22c55e', '#fbbf24',
@@ -536,61 +537,52 @@ export default function StatsView({ statsData, fetchStats }) {
 
       {/* Super Stats Table */}
       <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0, borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px' }}>
-          Super Stats
-        </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>
+            Super Stats
+          </h3>
+          <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+            <button onClick={() => setSuperStatsTab('match')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', border: 'none', background: superStatsTab === 'match' ? 'var(--primary-color, #a855f7)' : 'transparent', color: superStatsTab === 'match' ? '#fff' : 'var(--text-secondary)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>Per Match</button>
+            <button onClick={() => setSuperStatsTab('day')} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', border: 'none', background: superStatsTab === 'day' ? 'var(--primary-color, #a855f7)' : 'transparent', color: superStatsTab === 'day' ? '#fff' : 'var(--text-secondary)', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>Per Day</button>
+          </div>
+        </div>
         <div style={{ overflowX: 'auto' }}>
-        <table className="match-view-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-              <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
-              <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }} colSpan="4">Per Match</th>
-              <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }} colSpan="4">Per Day</th>
-            </tr>
-            <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-              <th></th>
-              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'CV', player: null })}>CV</th>
-              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'Skew', player: null })}>Skew</th>
-              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'Floor', player: null })}>Floor</th>
-              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'SR', player: null })}>SR</th>
-              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'CV', player: null })}>CV</th>
-              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'Skew', player: null })}>Skew</th>
-              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'Floor', player: null })}>Floor</th>
-              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'SR', player: null })}>SR</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(superStats?.rows || []).map((ss) => {
-              const row = stats.find(s => s.participant_id === ss.participant_id);
-              const name = row?.name || `Player ${ss.participant_id}`;
-              return (
-              <tr key={ss.participant_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <td style={{ padding: '8px', fontWeight: '700', color: 'var(--text-primary)' }}>{name}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: ss.perGame.cv === 0 && 'var(--text-muted)' || ss.perGame.cv > 1 ? '#ef4444' : ss.perGame.cv < 0.5 ? '#22c55e' : 'var(--text-primary)' }} onClick={() => setMetricModal({ metric: 'CV', player: name })}>{ss.perGame.cv}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: ss.perGame.skew === 0 && 'var(--text-muted)' }} onClick={() => setMetricModal({ metric: 'Skew', player: name })}>{ss.perGame.skew}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }} onClick={() => setMetricModal({ metric: 'Floor', player: name })}>{ss.perGame.floor}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: ss.perGame.sharpe === 0 && 'var(--text-muted)' }} onClick={() => setMetricModal({ metric: 'SR', player: name })}>{ss.perGame.sharpe}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: ss.perDay.cv === 0 && 'var(--text-muted)' || ss.perDay.cv > 1 ? '#ef4444' : ss.perDay.cv < 0.5 ? '#22c55e' : 'var(--text-primary)' }} onClick={() => setMetricModal({ metric: 'CV', player: name })}>{ss.perDay.cv}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: ss.perDay.skew === 0 && 'var(--text-muted)' }} onClick={() => setMetricModal({ metric: 'Skew', player: name })}>{ss.perDay.skew}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }} onClick={() => setMetricModal({ metric: 'Floor', player: name })}>{ss.perDay.floor}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: ss.perDay.sharpe === 0 && 'var(--text-muted)' }} onClick={() => setMetricModal({ metric: 'SR', player: name })}>{ss.perDay.sharpe}</td>
+        {(() => {
+          const rows = superStats?.rows || [];
+          const dataKey = superStatsTab === 'match' ? 'perGame' : 'perDay';
+          const maxFloor = Math.max(...rows.map(r => r[dataKey].floor), 0);
+          const maxSharpe = Math.max(...rows.map(r => r[dataKey].sharpe), 0);
+          const skewColor = (v) => v > 1 ? '#ef4444' : v < 0.2 ? '#22c55e' : 'var(--text-primary)';
+          const cmpColor = (v, max) => max > 0 && v === max ? '#22c55e' : 'var(--text-primary)';
+          return (
+          <table className="match-view-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'CV', player: null })}>CV</th>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'Skew', player: null })}>Skew</th>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'Floor', player: null })}>Floor</th>
+                <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setMetricModal({ metric: 'SR', player: null })}>SR</th>
               </tr>
-            );})}
-            {superStats?.allRow && (
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(168,85,247,0.08)' }}>
-                <td style={{ padding: '8px', fontWeight: '700', color: '#a855f7' }}>ALL</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: superStats.allRow.perGame.cv === 0 && 'var(--text-muted)' || superStats.allRow.perGame.cv > 1 ? '#ef4444' : superStats.allRow.perGame.cv < 0.5 ? '#22c55e' : 'var(--text-primary)' }} onClick={() => setMetricModal({ metric: 'CV', player: 'ALL' })}>{superStats.allRow.perGame.cv}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: superStats.allRow.perGame.skew === 0 && 'var(--text-muted)' }} onClick={() => setMetricModal({ metric: 'Skew', player: 'ALL' })}>{superStats.allRow.perGame.skew}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }} onClick={() => setMetricModal({ metric: 'Floor', player: 'ALL' })}>{superStats.allRow.perGame.floor}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: superStats.allRow.perGame.sharpe === 0 && 'var(--text-muted)' }} onClick={() => setMetricModal({ metric: 'SR', player: 'ALL' })}>{superStats.allRow.perGame.sharpe}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: superStats.allRow.perDay.cv === 0 && 'var(--text-muted)' || superStats.allRow.perDay.cv > 1 ? '#ef4444' : superStats.allRow.perDay.cv < 0.5 ? '#22c55e' : 'var(--text-primary)' }} onClick={() => setMetricModal({ metric: 'CV', player: 'ALL' })}>{superStats.allRow.perDay.cv}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: superStats.allRow.perDay.skew === 0 && 'var(--text-muted)' }} onClick={() => setMetricModal({ metric: 'Skew', player: 'ALL' })}>{superStats.allRow.perDay.skew}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }} onClick={() => setMetricModal({ metric: 'Floor', player: 'ALL' })}>{superStats.allRow.perDay.floor}</td>
-                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: superStats.allRow.perDay.sharpe === 0 && 'var(--text-muted)' }} onClick={() => setMetricModal({ metric: 'SR', player: 'ALL' })}>{superStats.allRow.perDay.sharpe}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((ss) => {
+                const row = stats.find(s => s.participant_id === ss.participant_id);
+                const name = row?.name || `Player ${ss.participant_id}`;
+                const d = ss[dataKey];
+                return (
+                <tr key={ss.participant_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <td style={{ padding: '8px', fontWeight: '700', color: 'var(--text-primary)' }}>{name}</td>
+                  <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: d.cv === 0 ? 'var(--text-muted)' : d.cv > 1 ? '#ef4444' : d.cv < 0.5 ? '#22c55e' : 'var(--text-primary)' }} onClick={() => setMetricModal({ metric: 'CV', player: name })}>{d.cv}</td>
+                  <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: d.skew === 0 ? 'var(--text-muted)' : skewColor(d.skew) }} onClick={() => setMetricModal({ metric: 'Skew', player: name })}>{d.skew}</td>
+                  <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: d.floor === 0 ? 'var(--text-muted)' : cmpColor(d.floor, maxFloor) }} onClick={() => setMetricModal({ metric: 'Floor', player: name })}>{d.floor}</td>
+                  <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: d.sharpe === 0 ? 'var(--text-muted)' : cmpColor(d.sharpe, maxSharpe) }} onClick={() => setMetricModal({ metric: 'SR', player: name })}>{d.sharpe}</td>
+                </tr>
+              );})}
+            </tbody>
+          </table>
+          );
+        })()}
         </div>
       </div>
 
