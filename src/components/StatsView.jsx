@@ -75,6 +75,7 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   const [hiddenPlayers, setHiddenPlayers] = React.useState(new Set());
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const [mobileStatTab, setMobileStatTab] = React.useState('win');
+  const [statsPageTab, setStatsPageTab] = React.useState('stats');
 
   // Colors for players
   const playerColors = [
@@ -629,102 +630,32 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
   return (
     <div className="stats-view-container" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '20px 0' }}>
       
-      {/* Overview Cards / Achievements */}
-      {hasFinishedPreds && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-          
-            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #a855f7' }}>
-              <div style={{ background: 'rgba(168, 85, 247, 0.15)', padding: '12px', borderRadius: '12px' }}>
-                <Award size={24} color="#a855f7" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Winner Predictor King 👑</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topWinner?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topWinner?.winnerPct}% Accuracy ({topWinner?.correctWinners}/{topWinner?.totalFinishedPreds})
-                  </span>
-                </div>
-              </div>
-            </div>
+      {/* Tab Bar */}
+      <div style={{ display: 'flex', gap: '8px', padding: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: '1px solid var(--glass-border)', width: 'fit-content' }}>
+        <button
+          onClick={() => setStatsPageTab('stats')}
+          style={{
+            padding: '8px 20px', fontSize: '14px', fontWeight: '600',
+            border: 'none', borderRadius: '8px', cursor: 'pointer',
+            background: statsPageTab === 'stats' ? 'var(--primary-color, #a855f7)' : 'transparent',
+            color: statsPageTab === 'stats' ? '#fff' : 'var(--text-secondary)',
+            transition: 'all 0.2s'
+          }}
+        >Stats</button>
+        <button
+          onClick={() => setStatsPageTab('awards')}
+          style={{
+            padding: '8px 20px', fontSize: '14px', fontWeight: '600',
+            border: 'none', borderRadius: '8px', cursor: 'pointer',
+            background: statsPageTab === 'awards' ? 'var(--primary-color, #a855f7)' : 'transparent',
+            color: statsPageTab === 'awards' ? '#fff' : 'var(--text-secondary)',
+            transition: 'all 0.2s'
+          }}
+        >Awards</button>
+      </div>
 
-            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #22c55e' }}>
-              <div style={{ background: 'rgba(34, 197, 94, 0.15)', padding: '12px', borderRadius: '12px' }}>
-                <Shield size={24} color="#22c55e" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>CARD SHARK 🦈</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topExactCards?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topExactCards?.exactCardsPct}% Accuracy ({topExactCards?.correctExactCards}/{topExactCards?.totalFinishedPreds})
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #3b82f6' }}>
-              <div style={{ background: 'rgba(59, 130, 246, 0.15)', padding: '12px', borderRadius: '12px' }}>
-                <TrendingUp size={24} color="#3b82f6" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Underdog Whisperer 🐉</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topCards?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topCards?.underdogPct}% Accuracy ({topCards?.underdogCorrect}/{topCards?.underdogAttempts})
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #eab308' }}>
-              <div style={{ background: 'rgba(234, 179, 8, 0.15)', padding: '12px', borderRadius: '12px' }}>
-                <Target size={24} color="#eab308" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Exact Score Sniper 🎯</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topScore?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topScore?.scorePct}% Accuracy ({topScore?.correctScores}/{topScore?.totalFinishedPreds})
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #f97316' }}>
-              <div style={{ background: 'rgba(249, 115, 22, 0.15)', padding: '12px', borderRadius: '12px' }}>
-                <Zap size={24} color="#f97316" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Cheat Code 🎮</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topSingleGame?.participant_name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topSingleGame?.total_points} pts {topSingleGameMatch ? `(${shortenTeamName(topSingleGameMatch.home_team_name || topSingleGameMatch.home_team_label)} ${topSingleGameMatch.home_score}-${topSingleGameMatch.away_score} ${shortenTeamName(topSingleGameMatch.away_team_name || topSingleGameMatch.away_team_label)})` : ''}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #fbbf24' }}>
-              <div style={{ background: 'rgba(251, 191, 36, 0.15)', padding: '12px', borderRadius: '12px' }}>
-                <Trophy size={24} color="#fbbf24" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Lotto Winner 🍀</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topSingleDay?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topSingleDay?.points} pts {topSingleDay?.date ? `(${new Date(topSingleDay.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })})` : ''}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-        </div>
-      )}
+      {/* Stats Tab */}
+      {statsPageTab === 'stats' && (<>
 
       {/* Main Stats Table */}
       <div className="glass-panel desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowX: 'auto' }}>
@@ -920,6 +851,109 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
 
       {/* Interactive Performance Timeline */}
       {chartContent}
+
+      </>)}
+
+      {/* Awards Tab */}
+      {statsPageTab === 'awards' && (<>
+
+      {hasFinishedPreds && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+          
+            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #a855f7' }}>
+              <div style={{ background: 'rgba(168, 85, 247, 0.15)', padding: '12px', borderRadius: '12px' }}>
+                <Award size={24} color="#a855f7" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Winner Predictor King 👑</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topWinner?.name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {topWinner?.winnerPct}% Accuracy ({topWinner?.correctWinners}/{topWinner?.totalFinishedPreds})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #22c55e' }}>
+              <div style={{ background: 'rgba(34, 197, 94, 0.15)', padding: '12px', borderRadius: '12px' }}>
+                <Shield size={24} color="#22c55e" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>CARD SHARK 🦈</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topExactCards?.name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {topExactCards?.exactCardsPct}% Accuracy ({topExactCards?.correctExactCards}/{topExactCards?.totalFinishedPreds})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #3b82f6' }}>
+              <div style={{ background: 'rgba(59, 130, 246, 0.15)', padding: '12px', borderRadius: '12px' }}>
+                <TrendingUp size={24} color="#3b82f6" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Underdog Whisperer 🐉</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topCards?.name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {topCards?.underdogPct}% Accuracy ({topCards?.underdogCorrect}/{topCards?.underdogAttempts})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #eab308' }}>
+              <div style={{ background: 'rgba(234, 179, 8, 0.15)', padding: '12px', borderRadius: '12px' }}>
+                <Target size={24} color="#eab308" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Exact Score Sniper 🎯</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topScore?.name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {topScore?.scorePct}% Accuracy ({topScore?.correctScores}/{topScore?.totalFinishedPreds})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #f97316' }}>
+              <div style={{ background: 'rgba(249, 115, 22, 0.15)', padding: '12px', borderRadius: '12px' }}>
+                <Zap size={24} color="#f97316" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Cheat Code 🎮</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topSingleGame?.participant_name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {topSingleGame?.total_points} pts {topSingleGameMatch ? `(${shortenTeamName(topSingleGameMatch.home_team_name || topSingleGameMatch.home_team_label)} ${topSingleGameMatch.home_score}-${topSingleGameMatch.away_score} ${shortenTeamName(topSingleGameMatch.away_team_name || topSingleGameMatch.away_team_label)})` : ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #fbbf24' }}>
+              <div style={{ background: 'rgba(251, 191, 36, 0.15)', padding: '12px', borderRadius: '12px' }}>
+                <Trophy size={24} color="#fbbf24" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Lotto Winner 🍀</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topSingleDay?.name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {topSingleDay?.points} pts {topSingleDay?.date ? `(${new Date(topSingleDay.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })})` : ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+        </div>
+      )}
+
+      </>)}
     </div>
   );
 }
