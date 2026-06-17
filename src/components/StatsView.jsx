@@ -1,5 +1,6 @@
 import React from 'react';
-import { Award, Target, TrendingUp, Shield, CheckCircle, XCircle } from 'lucide-react';
+import { Award, Target, TrendingUp, Shield, Zap, Trophy, CheckCircle, XCircle } from 'lucide-react';
+import { shortenTeamName } from '../utils/teamNames';
 
 export default function StatsView({ matches = [], allPredictions = [], leaderboard = [] }) {
   // 1. Identify finished matches
@@ -171,6 +172,43 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
     topScore = [...stats].sort((a, b) => b.scorePct - a.scorePct || b.correctScores - a.correctScores)[0];
     topFirstScorer = [...stats].sort((a, b) => b.firstScorerPct - a.firstScorerPct || b.correctFirstScorers - a.correctFirstScorers)[0];
     topExactCards = [...stats].sort((a, b) => b.exactCardsPct - a.exactCardsPct || b.correctExactCards - a.correctExactCards)[0];
+  }
+
+  // 5. Find all-time best single-game and single-day performances
+  let topSingleGame = null;
+  let topSingleGameMatch = null;
+  let topSingleDay = null;
+
+  const finishedPreds = allPredictions.filter(pred => finishedMatchIds.has(pred.match_id));
+
+  if (finishedPreds.length > 0) {
+    topSingleGame = [...finishedPreds].sort((a, b) => (b.total_points || 0) - (a.total_points || 0))[0];
+    topSingleGameMatch = matches.find(m => m.id === topSingleGame.match_id);
+
+    const toDateStr = (isoStr) => {
+      try {
+        return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(isoStr));
+      } catch (_) { return isoStr.split('T')[0]; }
+    };
+
+    const dayMatchesByDate = {};
+    finishedMatches.forEach(m => {
+      if (!m.local_date) return;
+      const ds = toDateStr(m.local_date);
+      if (!dayMatchesByDate[ds]) dayMatchesByDate[ds] = [];
+      dayMatchesByDate[ds].push(m);
+    });
+
+    let maxDayPts = 0;
+    Object.entries(dayMatchesByDate).forEach(([dateStr, dayMatches]) => {
+      const dayMatchIds = new Set(dayMatches.map(m => m.id));
+      leaderboard.forEach(p => {
+        const total = allPredictions
+          .filter(pred => pred.participant_id === p.id && dayMatchIds.has(pred.match_id))
+          .reduce((sum, pred) => sum + (pred.total_points || 0), 0);
+        if (total > maxDayPts) { maxDayPts = total; topSingleDay = { name: p.name, points: total, date: dateStr }; }
+      });
+    });
   }
 
   // Toggle player line visibility
@@ -650,6 +688,36 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
                   <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topScore?.name}</span>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {topScore?.scorePct}% Accuracy ({topScore?.correctScores}/{topScore?.totalFinishedPreds})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #f97316' }}>
+              <div style={{ background: 'rgba(249, 115, 22, 0.15)', padding: '12px', borderRadius: '12px' }}>
+                <Zap size={24} color="#f97316" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Cheat Code 🎮</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topSingleGame?.participant_name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {topSingleGame?.total_points} pts {topSingleGameMatch ? `(${shortenTeamName(topSingleGameMatch.home_team_name || topSingleGameMatch.home_team_label)} ${topSingleGameMatch.home_score}-${topSingleGameMatch.away_score} ${shortenTeamName(topSingleGameMatch.away_team_name || topSingleGameMatch.away_team_label)})` : ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '16px', borderLeft: '4px solid #fbbf24' }}>
+              <div style={{ background: 'rgba(251, 191, 36, 0.15)', padding: '12px', borderRadius: '12px' }}>
+                <Trophy size={24} color="#fbbf24" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Lotto Winner 🍀</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topSingleDay?.name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {topSingleDay?.points} pts {topSingleDay?.date ? `(${new Date(topSingleDay.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })})` : ''}
                   </span>
                 </div>
               </div>

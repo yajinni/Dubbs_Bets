@@ -4,7 +4,7 @@ import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 import LiveFeed from './LiveFeed';
 
-export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {}, selectedMatchId, showLiveResults = false, onRefresh }) {
+export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions = [], leaderboard = [], runningPointsMap = {}, selectedMatchId, showLiveResults: propShowLiveResults = false, onRefresh }) {
   const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
   const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
   const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
@@ -35,6 +35,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, allPredictions
 
   // eslint-disable-next-line react-hooks/purity
   const isLive = m.status === 'live' || (m.finished === 0 && m.status === 'scheduled' && new Date(m.local_date).getTime() <= Date.now());
+  const showLiveResults = propShowLiveResults || isLive;
   // Auto-open feed for live matches
   const [feedTab, setFeedTab] = useState(isLive ? 'commentary' : null);
   const [isCollapsed, setIsCollapsed] = useState(m.finished === 1);
