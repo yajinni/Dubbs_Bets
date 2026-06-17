@@ -734,9 +734,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
         <table className="match-view-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '400px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Per Match</th>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Per Day</th>
+              <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
+              <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Per Match</th>
+              <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Per Day</th>
             </tr>
           </thead>
           <tbody>
@@ -744,9 +744,9 @@ export default function StatsView({ matches = [], allPredictions = [], leaderboa
               const isAll = row.name === 'ALL';
               return (
               <tr key={isAll ? 'all' : row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: isAll ? 'rgba(168,85,247,0.08)' : 'transparent' }}>
-                <td style={{ padding: '16px', fontWeight: '700', color: isAll ? '#a855f7' : 'var(--text-primary)' }}>{isAll ? '👥 ALL' : row.name}</td>
-                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerMatch} | {row.maxPerMatch}</td>
-                <td style={{ padding: '16px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerDay} | {row.maxPerDay}</td>
+                <td style={{ padding: '8px', fontWeight: '700', color: isAll ? '#a855f7' : 'var(--text-primary)' }}>{isAll ? '👥 ALL' : row.name}</td>
+                <td style={{ padding: '8px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerMatch} | {row.maxPerMatch}</td>
+                <td style={{ padding: '8px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600' }}>{row.medianPerDay} | {row.maxPerDay}</td>
               </tr>
             );})}
           </tbody>
