@@ -554,7 +554,7 @@ export default function StatsView({ statsData, fetchStats }) {
           const maxSharpe = Math.max(...rows.map(r => r[dataKey].sharpe), 0);
           const skewColor = (v) => v > 1 ? '#ef4444' : v < 0.2 ? '#22c55e' : 'var(--text-primary)';
           const cmpColor = (v, max) => max > 0 && v === max ? '#22c55e' : 'var(--text-primary)';
-          return (
+          return (<>
           <style>{`
             .super-stats-header th { cursor: pointer; border-bottom: 1px dashed var(--text-muted); transition: background 0.15s; }
             .super-stats-header th:hover { background: rgba(168,85,247,0.12); }
@@ -584,7 +584,7 @@ export default function StatsView({ statsData, fetchStats }) {
                 </tr>
               );})}
             </tbody>
-          </table>
+          </table></>
           );
         })()}
         </div>
