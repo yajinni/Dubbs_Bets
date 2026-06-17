@@ -13,6 +13,7 @@ export default function StatsView({ statsData, fetchStats }) {
   const chartDataRaw = statsData?.chartData || null;
   const topSingleGame = statsData?.topSingleGame || null;
   const topSingleDay = statsData?.topSingleDay || null;
+  const superStats = statsData?.superStats || null;
 
   // State for Chart Options
   const [chartType, setChartType] = React.useState('cumulative');
@@ -21,6 +22,7 @@ export default function StatsView({ statsData, fetchStats }) {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const [mobileStatTab, setMobileStatTab] = React.useState('win');
   const [statsPageTab, setStatsPageTab] = React.useState('stats');
+  const [cvModalPlayer, setCvModalPlayer] = React.useState(null);
 
   const playerColors = [
     '#a855f7', '#3b82f6', '#22c55e', '#fbbf24',
@@ -531,6 +533,110 @@ export default function StatsView({ statsData, fetchStats }) {
           </tbody>
         </table>
       </div>
+
+      {/* Super Stats Table */}
+      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '700', margin: 0, borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px' }}>
+          Super Stats
+        </h3>
+        <div style={{ overflowX: 'auto' }}>
+        <table className="match-view-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
+              <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
+              <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }} colSpan="4">Per Match</th>
+              <th style={{ padding: '6px 5px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }} colSpan="4">Per Day</th>
+            </tr>
+            <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
+              <th></th>
+              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setCvModalPlayer('CV')}>CV</th>
+              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>Skew</th>
+              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>Floor</th>
+              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>SR</th>
+              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', cursor: 'help' }} onClick={() => setCvModalPlayer('CV')}>CV</th>
+              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>Skew</th>
+              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>Floor</th>
+              <th style={{ padding: '4px 5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>SR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(superStats?.rows || []).map((ss) => {
+              const row = stats.find(s => s.participant_id === ss.participant_id);
+              return (
+              <tr key={ss.participant_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <td style={{ padding: '8px', fontWeight: '700', color: 'var(--text-primary)' }}>{row?.name || `Player ${ss.participant_id}`}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: ss.perGame.cv === 0 && 'var(--text-muted)' || ss.perGame.cv > 1 ? '#ef4444' : ss.perGame.cv < 0.5 ? '#22c55e' : 'var(--text-primary)' }} onClick={() => setCvModalPlayer(row?.name)}>{ss.perGame.cv}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', color: ss.perGame.skew === 0 && 'var(--text-muted)' }}>{ss.perGame.skew}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600' }}>{ss.perGame.floor}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', color: ss.perGame.sharpe === 0 && 'var(--text-muted)' }}>{ss.perGame.sharpe}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: ss.perDay.cv === 0 && 'var(--text-muted)' || ss.perDay.cv > 1 ? '#ef4444' : ss.perDay.cv < 0.5 ? '#22c55e' : 'var(--text-primary)' }} onClick={() => setCvModalPlayer(row?.name)}>{ss.perDay.cv}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', color: ss.perDay.skew === 0 && 'var(--text-muted)' }}>{ss.perDay.skew}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600' }}>{ss.perDay.floor}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', color: ss.perDay.sharpe === 0 && 'var(--text-muted)' }}>{ss.perDay.sharpe}</td>
+              </tr>
+            );})}
+            {superStats?.allRow && (
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(168,85,247,0.08)' }}>
+                <td style={{ padding: '8px', fontWeight: '700', color: '#a855f7' }}>ALL</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: superStats.allRow.perGame.cv === 0 && 'var(--text-muted)' || superStats.allRow.perGame.cv > 1 ? '#ef4444' : superStats.allRow.perGame.cv < 0.5 ? '#22c55e' : 'var(--text-primary)' }} onClick={() => setCvModalPlayer('ALL')}>{superStats.allRow.perGame.cv}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', color: superStats.allRow.perGame.skew === 0 && 'var(--text-muted)' }}>{superStats.allRow.perGame.skew}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600' }}>{superStats.allRow.perGame.floor}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', color: superStats.allRow.perGame.sharpe === 0 && 'var(--text-muted)' }}>{superStats.allRow.perGame.sharpe}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: superStats.allRow.perDay.cv === 0 && 'var(--text-muted)' || superStats.allRow.perDay.cv > 1 ? '#ef4444' : superStats.allRow.perDay.cv < 0.5 ? '#22c55e' : 'var(--text-primary)' }} onClick={() => setCvModalPlayer('ALL')}>{superStats.allRow.perDay.cv}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', color: superStats.allRow.perDay.skew === 0 && 'var(--text-muted)' }}>{superStats.allRow.perDay.skew}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600' }}>{superStats.allRow.perDay.floor}</td>
+                <td style={{ padding: '8px', fontSize: '14px', fontWeight: '600', color: superStats.allRow.perDay.sharpe === 0 && 'var(--text-muted)' }}>{superStats.allRow.perDay.sharpe}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      {/* CV Explanation Modal */}
+      {cvModalPlayer && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: '20px'
+        }} onClick={() => setCvModalPlayer(null)}>
+          <div className="glass-panel" style={{
+            maxWidth: '500px', width: '100%', padding: '24px',
+            border: '1px solid var(--glass-border)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 12px 0' }}>
+              Coefficient of Variation (CV)
+            </h3>
+            <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <strong style={{ color: 'var(--text-primary)' }}>What It Stands For:</strong><br />
+                Coefficient of Variation
+              </div>
+              <div>
+                <strong style={{ color: 'var(--text-primary)' }}>How It's Calculated:</strong><br />
+                CV = Standard Deviation ÷ Mean
+              </div>
+              <div>
+                <strong style={{ color: 'var(--text-primary)' }}>What It Tells You:</strong><br />
+                A low CV (under 0.5) means they are a rock-solid, predictable picker. A high CV (over 1.0) means they are an absolute loose cannon—completely unpredictable from game to game.
+              </div>
+              {cvModalPlayer !== 'CV' && (
+                <div style={{ padding: '8px 12px', background: 'rgba(168,85,247,0.1)', borderRadius: '8px', fontSize: '13px', color: '#c084fc' }}>
+                  {cvModalPlayer}'s CV highlighted above
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setCvModalPlayer(null)}
+              style={{
+                marginTop: '16px', padding: '8px 20px', background: 'var(--primary-color, #a855f7)',
+                color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer',
+                fontWeight: '600', fontSize: '14px', width: '100%'
+              }}
+            >Close</button>
+          </div>
+        </div>
+      )}
 
       {/* Main Stats Table */}
       <div className="glass-panel desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowX: 'auto' }}>

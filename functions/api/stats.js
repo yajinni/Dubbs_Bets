@@ -236,6 +236,93 @@ export async function onRequest(context) {
       runningPointsMap[`${rp.participant_id}_${rp.match_id}`] = rp.total_points;
     }
 
+    // 7. Compute Super Stats (per-participant per-game and per-day metrics)
+    const gamePointsMap = {};
+    const dayPointsMap = {};
+    for (const p of chartPreds || []) {
+      if (!p.participant_id) continue;
+      if (!gamePointsMap[p.participant_id]) {
+        gamePointsMap[p.participant_id] = [];
+        dayPointsMap[p.participant_id] = {};
+      }
+      gamePointsMap[p.participant_id].push(p.total_points || 0);
+      if (p.local_date) {
+        try {
+          const d = new Date(p.local_date.replace(' ', 'T'));
+          const ds = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+          dayPointsMap[p.participant_id][ds] = (dayPointsMap[p.participant_id][ds] || 0) + (p.total_points || 0);
+        } catch(_) {}
+      }
+    }
+
+    const calcMean = (arr) => arr.length === 0 ? 0 : arr.reduce((a, b) => a + b, 0) / arr.length;
+    const calcStd = (arr) => {
+      if (arr.length < 2) return 0;
+      const m = calcMean(arr);
+      return Math.sqrt(arr.reduce((sum, v) => sum + Math.pow(v - m, 2), 0) / (arr.length - 1));
+    };
+    const calcCV = (arr) => {
+      const m = calcMean(arr);
+      const s = calcStd(arr);
+      if (m === 0) return 0;
+      return s / m;
+    };
+    const calcSkew = (arr) => {
+      if (arr.length < 3) return 0;
+      const n = arr.length;
+      const m = calcMean(arr);
+      const s = calcStd(arr);
+      if (s === 0) return 0;
+      const sumCubed = arr.reduce((sum, v) => sum + Math.pow((v - m) / s, 3), 0);
+      return (n / ((n - 1) * (n - 2))) * sumCubed;
+    };
+    const calcPercentile = (arr, p) => {
+      if (arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const rank = p * (sorted.length - 1);
+      const lower = Math.floor(rank);
+      const upper = Math.ceil(rank);
+      if (lower === upper) return sorted[lower];
+      return sorted[lower] * (upper - rank) + sorted[upper] * (rank - lower);
+    };
+    const calcSharpe = (arr) => {
+      const m = calcMean(arr);
+      const s = calcStd(arr);
+      if (s === 0) return 0;
+      return m / s;
+    };
+    const r3 = (v) => v === 0 ? 0 : Math.round(v * 1000) / 1000;
+    const r1 = (v) => Math.round(v * 10) / 10;
+
+    const superStatsRows = (statsRows || []).map(r => {
+      const pid = r.participant_id;
+      const gamePoints = gamePointsMap[pid] || [];
+      const dayPoints = Object.values(dayPointsMap[pid] || {});
+      return {
+        participant_id: pid,
+        perGame: { cv: r3(calcCV(gamePoints)), skew: r3(calcSkew(gamePoints)), floor: r1(calcPercentile(gamePoints, 0.25)), sharpe: r3(calcSharpe(gamePoints)) },
+        perDay: { cv: r3(calcCV(dayPoints)), skew: r3(calcSkew(dayPoints)), floor: r1(calcPercentile(dayPoints, 0.25)), sharpe: r3(calcSharpe(dayPoints)) },
+      };
+    });
+
+    const allGamePoints = [];
+    const allDayPointsSet = {};
+    for (const p of chartPreds || []) {
+      allGamePoints.push(p.total_points || 0);
+      if (p.local_date) {
+        try {
+          const d = new Date(p.local_date.replace(' ', 'T'));
+          const ds = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+          allDayPointsSet[ds] = (allDayPointsSet[ds] || 0) + (p.total_points || 0);
+        } catch(_) {}
+      }
+    }
+    const allDayPoints = Object.values(allDayPointsSet);
+    const allSuperStats = {
+      perGame: { cv: r3(calcCV(allGamePoints)), skew: r3(calcSkew(allGamePoints)), floor: r1(calcPercentile(allGamePoints, 0.25)), sharpe: r3(calcSharpe(allGamePoints)) },
+      perDay: { cv: r3(calcCV(allDayPoints)), skew: r3(calcSkew(allDayPoints)), floor: r1(calcPercentile(allDayPoints, 0.25)), sharpe: r3(calcSharpe(allDayPoints)) },
+    };
+
     return new Response(JSON.stringify({
       stats: statsRows || [],
       allRow: allStats,
@@ -251,6 +338,7 @@ export async function onRequest(context) {
       } : null,
       topSingleDay,
       runningPointsMap,
+      superStats: { rows: superStatsRows, allRow: allSuperStats },
     }), { status: 200, headers });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
