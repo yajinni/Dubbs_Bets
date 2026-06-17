@@ -439,9 +439,15 @@ export default function App() {
   };
 
   const refreshByEventTypeRef = useRef();
-  refreshByEventTypeRef.current = (type) => {
+  refreshByEventTypeRef.current = async (type) => {
     if (type === 'matches_updated') {
-      refreshMatchesRef.current();
+      try {
+        const res = await fetch('/api/matches');
+        const freshMatches = await res.json();
+        setMatches(freshMatches);
+      } catch (err) {
+        console.error('Failed to refresh matches:', err);
+      }
     } else {
       refreshAllDataRef.current();
     }

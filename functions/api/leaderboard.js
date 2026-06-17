@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve leaderboard standings
-import { checkAndInitDb } from './db_helper.js';
+import { checkAndInitDb, recomputeLeaderboardCache } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -28,16 +28,15 @@ export async function onRequest(context) {
       LIMIT 100
     `).all();
 
-    // Fallback to participants table if cache is empty (e.g. no matches scored yet)
+    // Recompute cache if empty (e.g. first deploy, or cache not primed yet)
     if (!results || results.length === 0) {
-      results = await env.db.prepare(`
-        SELECT id, name, 0 AS total_points, 0 AS correct_winners, 0 AS correct_ou,
-               0 AS correct_scores, 0 AS correct_first_scorer, 0 AS correct_total_cards,
-               0 AS correct_highest_scoring_half, 0 AS correct_clean_sheet,
-               0 AS correct_bets_count, 0 AS total_bets_count
-        FROM participants ORDER BY name ASC
+      await recomputeLeaderboardCache(env.db);
+      const refetch = await env.db.prepare(`
+        SELECT * FROM leaderboard_cache
+        ORDER BY total_points DESC, correct_scores DESC, correct_winners DESC, name ASC
+        LIMIT 100
       `).all();
-      results = results.results || [];
+      results = refetch.results || [];
     }
 
     return new Response(JSON.stringify(results), { status: 200, headers });

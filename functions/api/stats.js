@@ -1,4 +1,4 @@
-import { checkAndInitDb } from './db_helper.js';
+import { checkAndInitDb, recomputeStatsCache } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -22,9 +22,17 @@ export async function onRequest(context) {
     await checkAndInitDb(env.db);
 
     // 1. Fetch per-participant stats from cache
-    const { results: rawStats } = await env.db.prepare(`
+    let { results: rawStats } = await env.db.prepare(`
       SELECT * FROM stats_cache ORDER BY total_points DESC
     `).all();
+
+    if (!rawStats || rawStats.length === 0) {
+      await recomputeStatsCache(env.db);
+      const refetch = await env.db.prepare(`
+        SELECT * FROM stats_cache ORDER BY total_points DESC
+      `).all();
+      rawStats = refetch.results || [];
+    }
 
     // Map snake_case DB columns to camelCase for frontend consistency
     const statsRows = (rawStats || []).map(r => ({

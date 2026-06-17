@@ -189,6 +189,8 @@ export async function checkAndInitDb(db) {
       const countMatches = await db.prepare("SELECT COUNT(*) as count FROM matches").first();
       if (countMatches && countMatches.count > 0) {
         await consolidateExistingLogs(db);
+        try { await recomputeLeaderboardCache(db); } catch(e) { console.error('[Init] recomputeLeaderboardCache error:', e.message); }
+        try { await recomputeStatsCache(db); } catch(e) { console.error('[Init] recomputeStatsCache error:', e.message); }
         try {
           await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('db_initialized', '1')").run();
         } catch(e) {}
