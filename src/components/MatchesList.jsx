@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio, ChevronDown, ChevronUp, Trophy, Circle } from 'lucide-react';
+import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio, ChevronDown, ChevronUp, Trophy } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 import LiveFeed from './LiveFeed';
@@ -347,12 +347,12 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
         <div className="analytics-grid">
           {/* Winner Probability */}
           <div className="analytics-item">
-            <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Trophy size={12} color="#fbbf24" />{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {m.home_win_pct}%</span>
+            <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff', paddingLeft: '22px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Trophy size={14} color="#fbbf24" style={{ position: 'absolute', left: '0' }} />{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {m.home_win_pct}%</span>
               <span>Draw: {m.draw_pct}%</span>
               <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {m.away_win_pct}%</span>
             </div>
-            <div className="win-pct-bar">
+            <div className="win-pct-bar" style={{ marginLeft: '22px' }}>
               <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
               <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
@@ -361,12 +361,22 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
 
           {/* First Team to Score Probability */}
           <div className="analytics-item">
-            <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Circle size={12} color="#ffffff" fill="none" />{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {homeFirstPct}%</span>
+            <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff', paddingLeft: '22px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ position: 'absolute', left: '0' }}>
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M12 5.5l1.5 3.5h3.5l-2.5 2.5 1 3.5-3.5-2-3.5 2 1-3.5L7 9h3.5z" fill="currentColor"/>
+                  <line x1="12" y1="2" x2="12" y2="5.5" stroke="currentColor" strokeWidth="1"/>
+                  <line x1="20.5" y1="8" x2="17" y2="9.5" stroke="currentColor" strokeWidth="1"/>
+                  <line x1="18.5" y1="17" x2="15.5" y2="14.5" stroke="currentColor" strokeWidth="1"/>
+                  <line x1="5.5" y1="17" x2="8.5" y2="14.5" stroke="currentColor" strokeWidth="1"/>
+                  <line x1="3.5" y1="8" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1"/>
+                </svg>
+                {(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {homeFirstPct}%</span>
               <span>No Goal: {noGoalPct}%</span>
               <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {awayFirstPct}%</span>
             </div>
-            <div className="win-pct-bar">
+            <div className="win-pct-bar" style={{ marginLeft: '22px' }}>
               <div className="win-pct-segment home" style={{ width: `${homeFirstPct}%` }}></div>
               <div className="win-pct-segment draw" style={{ width: `${noGoalPct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${awayFirstPct}%` }}></div>
