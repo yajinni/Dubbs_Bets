@@ -566,8 +566,8 @@ h1, h2, h3, h4, h5, h6 {
 .match-stats-drawer {
   grid-column: 1 / -1;
   border-top: 1px solid var(--glass-border);
-  margin-top: 12px;
-  padding-top: 16px;
+  margin-top: 4px;
+  padding-top: 6px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 24px;
