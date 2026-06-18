@@ -1199,7 +1199,7 @@ h1, h2, h3, h4, h5, h6 {
   }
   
   .team-container.home {
-    flex-direction: column-reverse !important;
+    flex-direction: column !important;
     text-align: center !important;
   }
   
