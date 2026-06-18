@@ -503,6 +503,10 @@ export async function recomputeLeaderboardCache(db) {
       LEFT JOIN matches m ON pred.match_id = m.id
       GROUP BY p.id, p.name
     `).run();
+  } catch (err) {
+    console.error('[LeaderboardCache] Failed to recompute:', err.message);
+  }
+}
 
 export async function recomputeStatsCache(db) {
   try {
