@@ -379,20 +379,6 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
             </div>
           </div>
 
-          {/* Goals Over/Under Probability */}
-          <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
-            <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
-              Score O/U ({m.over_under_line})
-            </div>
-            <div className="analytics-labels">
-              <span>Under {m.over_under_line}: {underPct}%</span>
-              <span>Over {m.over_under_line}: {overPct}%</span>
-            </div>
-            <div className="ou-pct-bar">
-              <div className="ou-pct-segment under" style={{ width: `${underPct}%` }}></div>
-              <div className="ou-pct-segment over" style={{ width: `${overPct}%` }}></div>
-            </div>
-          </div>
 
           {/* Underdog Indicator */}
           <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
