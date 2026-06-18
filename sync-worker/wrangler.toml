@@ -1,10 +1,10 @@
-# Wrangler configuration for Cloudflare Worker cron-sync trigger
+# Wrangler configuration for Cloudflare Worker midnight odds-lock cron
 name = "dubbs-bets-sync-cron"
 main = "index.js"
 compatibility_date = "2026-06-10"
 
 [triggers]
-crons = ["0 */6 * * *"] # Executes every 6 hours to check for matches nearing completion
+crons = ["5 4 * * *"] # 4:05 UTC = 12:05 AM EDT (June); locks odds for today's matches
 
 [vars]
 PAGES_URL = "https://dubbs-bets.pages.dev"

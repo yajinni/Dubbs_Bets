@@ -1,23 +1,22 @@
-// Cloudflare Worker Cron Trigger to fetch the Pages sync API endpoint every 6 hours
+// Cloudflare Worker Cron Trigger: locks odds for today's matches at midnight ET
 export default {
   async scheduled(event, env, ctx) {
     const pagesUrl = env.PAGES_URL || "https://dubbs-bets.pages.dev";
     const secret = env.SYNC_SECRET;
     
-    // Construct sync url with secret if available
-    const url = `${pagesUrl}/api/sync?skipOdds=true&trigger=cron${secret ? `&secret=${secret}` : ''}`;
+    const url = `${pagesUrl}/api/sync?midnightLock=true${secret ? `&secret=${secret}` : ''}`;
     
-    console.log(`[Cron Trigger] Starting sync fetch to: ${pagesUrl}/api/sync...`);
+    console.log(`[Midnight Lock] Calling: ${pagesUrl}/api/sync?midnightLock=true...`);
     
     ctx.waitUntil(
       fetch(url)
         .then(async (response) => {
           const text = await response.text();
-          console.log(`[Cron Trigger] Sync response status: ${response.status}`);
-          console.log(`[Cron Trigger] Sync response body: ${text}`);
+          console.log(`[Midnight Lock] Response status: ${response.status}`);
+          console.log(`[Midnight Lock] Response body: ${text}`);
         })
         .catch((error) => {
-          console.error(`[Cron Trigger] Sync error encountered: ${error.message}`);
+          console.error(`[Midnight Lock] Error: ${error.message}`);
         })
     );
   }
