@@ -291,10 +291,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
           <>
             <div className="team-container home team-container--live">
               {m.home_flag && <img src={m.home_flag} alt={`${homeName} flag`} className="flag-icon" />}
-              <div className="team-score-row">
-                <span className="team-name">{homeName}</span>
-                <span className="score-live">{displayHome}</span>
-              </div>
+              <span className="team-name">{homeName}</span>
+              <span className="score-live">{displayHome}</span>
             </div>
             <div className="match-info-center match-info-center--live">
               <span className="match-badge live">Live</span>
@@ -302,10 +300,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
             </div>
             <div className="team-container away team-container--live">
               {m.away_flag && <img src={m.away_flag} alt={`${awayName} flag`} className="flag-icon" />}
-              <div className="team-score-row">
-                <span className="score-live">{displayAway}</span>
-                <span className="team-name">{awayName}</span>
-              </div>
+              <span className="team-name">{awayName}</span>
+              <span className="score-live">{displayAway}</span>
             </div>
           </>
         ) : (
