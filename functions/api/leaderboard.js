@@ -22,9 +22,6 @@ export async function onRequest(context) {
 
     await checkAndInitDb(env.db);
 
-    // Force one-time recompute to fix column alignment from previous bad deploy
-    await recomputeLeaderboardCache(env.db);
-
     let { results } = await env.db.prepare(`
       SELECT * FROM leaderboard_cache
       ORDER BY total_points DESC, correct_scores DESC, correct_winners DESC, name ASC
