@@ -92,10 +92,6 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
           <div className="stat-cell" title="Bet Accuracy %" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             %
           </div>
-          <div className="points-cell">
-            <span className="hide-mobile">Points</span>
-            <span className="show-mobile-only">PTS</span>
-          </div>
         </div>
 
         {/* Rows */}
@@ -126,7 +122,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                  <span className="participant-name">{p.name}</span>
+                  <span className="participant-name">{p.name} ({p.total_points})</span>
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_scores > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
@@ -163,10 +159,6 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
 
                 <div className="stat-cell" style={{ color: accuracy > 0 ? '#a855f7' : 'var(--text-muted)', fontWeight: '700' }}>
                   {accuracy}%
-                </div>
-
-                <div className="points-cell">
-                  {p.total_points}
                 </div>
               </div>
             );
