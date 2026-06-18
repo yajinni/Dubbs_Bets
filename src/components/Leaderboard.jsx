@@ -70,9 +70,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
         <div className="leaderboard-row header-row">
           <div className="hide-mobile">Rank</div>
           <div></div>
-          <div className="stat-cell detailed-col soccer-header" title="Correct Exact Scores" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '22px' }}>
-            ⚽
-          </div>
+          <div className="stat-cell detailed-col" title="Correct Exact Scores">S</div>
           <div className="stat-cell detailed-col" title="Correct Winners">
             <span className="hide-mobile">Winners</span>
             <span className="show-mobile-only">Win</span>
