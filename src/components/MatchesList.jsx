@@ -460,7 +460,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
       </div>
 
       {/* Predictions Section */}
-      <div className="match-stats-drawer" style={{ gridTemplateColumns: '1fr', borderTop: '1px solid var(--glass-border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'stretch', alignSelf: 'stretch' }}>
+      <div className="match-stats-drawer" style={{ gridTemplateColumns: '1fr', borderTop: '1px solid var(--glass-border)', paddingTop: '8px', display: 'flex', flexDirection: 'column', alignItems: 'stretch', alignSelf: 'stretch' }}>
         {activeParticipantId ? (
           isLocked ? (
             /* Locked Prediction View */
