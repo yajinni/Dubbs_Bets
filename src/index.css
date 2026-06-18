@@ -523,6 +523,43 @@ h1, h2, h3, h4, h5, h6 {
   color: #6ee7b7;
 }
 
+/* Live match score layout */
+.match-teams-grid--live {
+  gap: 8px;
+}
+
+.team-container--live {
+  gap: 4px;
+}
+
+.score-live {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.match-info-center--live {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 60px;
+}
+
+.match-info-center--live .match-badge {
+  margin-top: 0;
+}
+
+.timer-live {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-family: var(--font-heading);
+  letter-spacing: 0.02em;
+}
+
 /* Betting Stats inside Match Card */
 .match-stats-drawer {
   grid-column: 1 / -1;
@@ -1191,6 +1228,26 @@ h1, h2, h3, h4, h5, h6 {
 
   .team-name {
     font-size: 13px !important;
+  }
+
+  .team-container--live {
+    gap: 2px !important;
+  }
+
+  .team-container--live.home {
+    flex-direction: row !important;
+  }
+
+  .team-container--live.away {
+    flex-direction: row !important;
+  }
+
+  .score-live {
+    font-size: 22px !important;
+  }
+
+  .match-info-center--live {
+    min-width: 50px !important;
   }
 
   .score-flag {

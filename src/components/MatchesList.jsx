@@ -43,6 +43,19 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
   const displayHome = liveScores ? liveScores.home : m.home_score;
   const displayAway = liveScores ? liveScores.away : m.away_score;
 
+  // Live timer: elapsed minutes since kickoff
+  const [liveTimer, setLiveTimer] = useState('');
+  useEffect(() => {
+    if (!isLive) return;
+    const updateTimer = () => {
+      const elapsed = Math.floor((Date.now() - new Date(m.local_date).getTime()) / 60000);
+      setLiveTimer(elapsed > 0 ? `${elapsed}'` : '0\'');
+    };
+    updateTimer();
+    const interval = setInterval(updateTimer, 10000);
+    return () => clearInterval(interval);
+  }, [isLive, m.local_date]);
+
   // Auto-expand if this match is selected from another view (e.g. Dashboard)
   useEffect(() => {
     if (selectedMatchId === m.id) {
@@ -279,31 +292,48 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
       </div>
 
       {/* Match Score & Teams */}
-      <div className="match-teams-grid">
-        <div className="team-container home">
-          <span className="team-name">{homeName}</span>
-          {m.home_flag && <img src={m.home_flag} alt={`${homeName} flag`} className="flag-icon" />}
-        </div>
-
-        <div className="match-info-center">
-          {m.status === 'scheduled' ? (
-            <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-muted)' }}>VS</span>
-          ) : (
-            <div className="score-display">
-              <span>{displayHome}</span>
-              <span className="score-divider">-</span>
-              <span>{displayAway}</span>
+      <div className={`match-teams-grid ${isLive ? 'match-teams-grid--live' : ''}`}>
+        {isLive ? (
+          <>
+            <div className="team-container home team-container--live">
+              <span className="team-name">{homeName}</span>
+              <span className="score-live">{displayHome}</span>
             </div>
-          )}
-          <span className={`match-badge ${m.status}`}>
-            {m.status === 'scheduled' ? 'Scheduled' : m.status === 'live' ? 'Live' : 'FT'}
-          </span>
-        </div>
-
-        <div className="team-container away">
-          {m.away_flag && <img src={m.away_flag} alt={`${awayName} flag`} className="flag-icon" />}
-          <span className="team-name">{awayName}</span>
-        </div>
+            <div className="match-info-center match-info-center--live">
+              <span className="match-badge live">Live</span>
+              <span className="timer-live">{liveTimer}</span>
+            </div>
+            <div className="team-container away team-container--live">
+              <span className="score-live">{displayAway}</span>
+              <span className="team-name">{awayName}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="team-container home">
+              <span className="team-name">{homeName}</span>
+              {m.home_flag && <img src={m.home_flag} alt={`${homeName} flag`} className="flag-icon" />}
+            </div>
+            <div className="match-info-center">
+              {m.status === 'scheduled' ? (
+                <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-muted)' }}>VS</span>
+              ) : (
+                <div className="score-display">
+                  <span>{displayHome}</span>
+                  <span className="score-divider">-</span>
+                  <span>{displayAway}</span>
+                </div>
+              )}
+              <span className={`match-badge ${m.status}`}>
+                {m.status === 'scheduled' ? 'Scheduled' : m.status === 'live' ? 'Live' : 'FT'}
+              </span>
+            </div>
+            <div className="team-container away">
+              {m.away_flag && <img src={m.away_flag} alt={`${awayName} flag`} className="flag-icon" />}
+              <span className="team-name">{awayName}</span>
+            </div>
+          </>
+        )}
       </div>
 
       {!isCollapsed && (
