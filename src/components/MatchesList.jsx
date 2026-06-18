@@ -448,11 +448,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
         {/* Actual Match Results Box (Only when match is finished) */}
         {m.finished === 1 && (
           <div className="match-analytics-box" style={{ marginTop: '12px', borderLeft: '3px solid var(--success)' }}>
-            <div className="analytics-title" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--success)' }}>
-              <CheckCircle size={14} />
-              Confirmed Match Results
-            </div>
-            <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
               <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
                 {displayHome > displayAway ? (m.home_code || homeName) : displayAway > displayHome ? (m.away_code || awayName) : 'Draw'}
               </span>
