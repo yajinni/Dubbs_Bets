@@ -339,12 +339,12 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
           {/* Analytics Box */}
           <div className="match-analytics-box">
         <div className="analytics-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          3rd Party Analysis
+          Analysis
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: m.odds_locked === 1 ? 'var(--success)' : 'var(--text-muted)', letterSpacing: '0.02em' }}>
             <Lock size={12} />
             {m.odds_locked === 1 && m.odds_updated_at
-              ? `Locked ${new Date(m.odds_updated_at).toLocaleDateString()}`
-              : `Synced ${m.odds_updated_at ? new Date(m.odds_updated_at).toLocaleDateString() : ''}`}
+              ? `Locked ${new Date(m.odds_updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}, ${new Date(m.odds_updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+              : `Synced ${m.odds_updated_at ? `${new Date(m.odds_updated_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}, ${new Date(m.odds_updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : ''}`}
           </span>
         </div>
         <div className="analytics-grid">
