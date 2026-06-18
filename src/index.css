@@ -543,9 +543,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .match-info-center--live {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
   min-width: 60px;
 }
 
@@ -1240,6 +1241,11 @@ h1, h2, h3, h4, h5, h6 {
 
   .match-info-center--live {
     min-width: 50px !important;
+    gap: 4px !important;
+  }
+
+  .score-live {
+    font-size: 22px !important;
   }
 
   .score-flag {
