@@ -28,8 +28,8 @@ export async function onRequest(context) {
       LIMIT 100
     `).all();
 
-    // Recompute cache if empty (first deploy) or missing new columns
-    const needsRecompute = !results || results.length === 0 || (results.length > 0 && results[0].correct_underdog == null);
+    // Recompute cache if empty (first deploy) or if new columns haven't been populated
+    const needsRecompute = !results || results.length === 0 || (results.length > 0 && !results.some(r => r.correct_underdog > 0 || r.points_winner > 0));
     if (needsRecompute) {
       await recomputeLeaderboardCache(env.db);
       const refetch = await env.db.prepare(`
