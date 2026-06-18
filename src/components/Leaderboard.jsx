@@ -1,6 +1,20 @@
-import { Award } from 'lucide-react';
+import { Award, BarChart3, Trophy } from 'lucide-react';
+import { useState } from 'react';
+
+const pointValues = {
+  scores: 4,
+  winner: 3,
+  ou: 1,
+  first_scorer: 2,
+  total_cards: 3,
+  highest_scoring_half: 2,
+  clean_sheet: 1,
+  underdog: 1,
+};
 
 export default function Leaderboard({ leaderboard, activeParticipantId }) {
+  const [viewMode, setViewMode] = useState('count');
+
   return (
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -8,6 +22,47 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
           <Award size={20} color="#8b5cf6" />
           Leaderboard Standings
         </h2>
+        <div className="toggle-group" style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+          <button
+            className={`toggle-btn ${viewMode === 'count' ? 'active' : ''}`}
+            onClick={() => setViewMode('count')}
+            style={{
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: 'pointer',
+              background: viewMode === 'count' ? 'var(--primary)' : 'transparent',
+              color: viewMode === 'count' ? '#fff' : 'var(--text-secondary)',
+              fontFamily: 'var(--font-heading)',
+              letterSpacing: '0.03em',
+              textTransform: 'uppercase',
+            }}
+          >
+            <BarChart3 size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+            Count
+          </button>
+          <button
+            className={`toggle-btn ${viewMode === 'points' ? 'active' : ''}`}
+            onClick={() => setViewMode('points')}
+            style={{
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: '700',
+              border: 'none',
+              borderLeft: '1px solid var(--glass-border)',
+              cursor: 'pointer',
+              background: viewMode === 'points' ? 'var(--primary)' : 'transparent',
+              color: viewMode === 'points' ? '#fff' : 'var(--text-secondary)',
+              fontFamily: 'var(--font-heading)',
+              letterSpacing: '0.03em',
+              textTransform: 'uppercase',
+            }}
+          >
+            <Trophy size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+            Points
+          </button>
+        </div>
       </div>
 
       <div className="leaderboard-container show-all-cols" style={{ overflowX: 'auto' }}>
@@ -33,7 +88,8 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
             <span className="show-mobile-only">HH</span>
           </div>
           <div className="stat-cell detailed-col" title="Correct Clean Sheet">CS</div>
-          <div className="stat-cell" title="Bet Accuracy % (Excludes Underdog)" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="stat-cell detailed-col underdog-header" title="Correct Underdog Bonus" style={{ color: '#fbbf24' }}>Dog</div>
+          <div className="stat-cell" title="Bet Accuracy %" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             %
           </div>
           <div className="points-cell">
@@ -51,13 +107,15 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
           leaderboard.map((p, index) => {
             const rank = index + 1;
             const isActive = p.id === activeParticipantId;
-            const accuracy = p.total_bets_count > 0 
-              ? Math.round((p.correct_bets_count / p.total_bets_count) * 100) 
+            const accuracy = p.total_bets_count > 0
+              ? Math.round((p.correct_bets_count / p.total_bets_count) * 100)
               : 0;
 
+            const isCount = viewMode === 'count';
+
             return (
-              <div 
-                key={p.id} 
+              <div
+                key={p.id}
                 className="leaderboard-row"
                 style={isActive ? { borderColor: 'var(--primary)', background: 'rgba(139, 92, 246, 0.04)' } : {}}
               >
@@ -66,46 +124,43 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                     {rank}
                   </div>
                 </div>
-                
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                   <span className="participant-name">{p.name}</span>
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_scores > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
-                  {p.correct_scores}
-                  <span style={{ fontSize: '9px', opacity: 0.8, marginLeft: '2px' }}>({p.correct_scores * 4})</span>
+                  {isCount ? p.correct_scores : p.points_score}
                 </div>
-                
+
                 <div className="stat-cell detailed-col" style={{ color: p.correct_winners > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
-                  {p.correct_winners}
-                  <span style={{ fontSize: '9px', opacity: 0.8, marginLeft: '2px' }}>({p.correct_winners * 3})</span>
+                  {isCount ? p.correct_winners : p.points_winner}
                 </div>
-                
+
                 <div className="stat-cell detailed-col" style={{ color: p.correct_ou > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
-                  {p.correct_ou}
-                  <span style={{ fontSize: '9px', opacity: 0.8, marginLeft: '2px' }}>({p.correct_ou * 1})</span>
+                  {isCount ? p.correct_ou : p.points_ou}
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_first_scorer > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
-                  {p.correct_first_scorer}
-                  <span style={{ fontSize: '9px', opacity: 0.8, marginLeft: '2px' }}>({p.correct_first_scorer * 2})</span>
+                  {isCount ? p.correct_first_scorer : p.points_first_scorer}
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_total_cards > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
-                  {p.correct_total_cards}
-                  <span style={{ fontSize: '9px', opacity: 0.8, marginLeft: '2px' }}>({p.correct_total_cards * 3})</span>
+                  {isCount ? p.correct_total_cards : p.points_total_cards}
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_highest_scoring_half > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
-                  {p.correct_highest_scoring_half}
-                  <span style={{ fontSize: '9px', opacity: 0.8, marginLeft: '2px' }}>({p.correct_highest_scoring_half * 2})</span>
+                  {isCount ? p.correct_highest_scoring_half : p.points_highest_scoring_half}
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_clean_sheet > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
-                  {p.correct_clean_sheet}
-                  <span style={{ fontSize: '9px', opacity: 0.8, marginLeft: '2px' }}>({p.correct_clean_sheet * 1})</span>
+                  {isCount ? p.correct_clean_sheet : p.points_clean_sheet}
                 </div>
-                
+
+                <div className="stat-cell detailed-col underdog-header" style={{ color: p.correct_underdog > 0 ? '#fbbf24' : 'var(--text-muted)' }}>
+                  {isCount ? p.correct_underdog : p.points_underdog}
+                </div>
+
                 <div className="stat-cell" style={{ color: accuracy > 0 ? '#a855f7' : 'var(--text-muted)', fontWeight: '700' }}>
                   {accuracy}%
                 </div>

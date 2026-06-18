@@ -38,12 +38,14 @@ export async function checkAndInitDb(db) {
     } catch(e) {}
 
     // Schema migrations: only ALTER columns that don't exist yet
-    const [matchCols, predCols] = await Promise.all([
+    const [matchCols, predCols, lbCols] = await Promise.all([
       db.prepare("PRAGMA table_info(matches)").all(),
       db.prepare("PRAGMA table_info(predictions)").all(),
+      db.prepare("PRAGMA table_info(leaderboard_cache)").all(),
     ]);
     const existingMatchCols = new Set((matchCols.results || []).map(c => c.name));
     const existingPredCols = new Set((predCols.results || []).map(c => c.name));
+    const existingLbCols = new Set((lbCols.results || []).map(c => c.name));
 
     const matchMigrations = [
       ['cards_line', 'REAL DEFAULT 3.5'],
@@ -82,6 +84,24 @@ export async function checkAndInitDb(db) {
     for (const [col, type] of predMigrations) {
       if (!existingPredCols.has(col)) {
         await db.prepare(`ALTER TABLE predictions ADD COLUMN ${col} ${type}`).run();
+      }
+    }
+
+    // Leaderboard cache migrations
+    const lbMigrations = [
+      ['correct_underdog', 'INTEGER DEFAULT 0'],
+      ['points_winner', 'REAL DEFAULT 0'],
+      ['points_ou', 'REAL DEFAULT 0'],
+      ['points_score', 'REAL DEFAULT 0'],
+      ['points_first_scorer', 'REAL DEFAULT 0'],
+      ['points_total_cards', 'REAL DEFAULT 0'],
+      ['points_highest_scoring_half', 'REAL DEFAULT 0'],
+      ['points_clean_sheet', 'REAL DEFAULT 0'],
+      ['points_underdog', 'REAL DEFAULT 0'],
+    ];
+    for (const [col, type] of lbMigrations) {
+      if (!existingLbCols.has(col)) {
+        await db.prepare(`ALTER TABLE leaderboard_cache ADD COLUMN ${col} ${type}`).run();
       }
     }
 
@@ -173,6 +193,15 @@ export async function checkAndInitDb(db) {
           correct_total_cards INTEGER DEFAULT 0,
           correct_highest_scoring_half INTEGER DEFAULT 0,
           correct_clean_sheet INTEGER DEFAULT 0,
+          correct_underdog INTEGER DEFAULT 0,
+          points_winner REAL DEFAULT 0,
+          points_ou REAL DEFAULT 0,
+          points_score REAL DEFAULT 0,
+          points_first_scorer REAL DEFAULT 0,
+          points_total_cards REAL DEFAULT 0,
+          points_highest_scoring_half REAL DEFAULT 0,
+          points_clean_sheet REAL DEFAULT 0,
+          points_underdog REAL DEFAULT 0,
           correct_bets_count INTEGER DEFAULT 0,
           total_bets_count INTEGER DEFAULT 0
         )
@@ -427,6 +456,15 @@ export async function recomputeLeaderboardCache(db) {
         COALESCE(SUM(CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END), 0),
         COALESCE(SUM(CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END), 0),
         COALESCE(SUM(CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(pred.points_winner), 0),
+        COALESCE(SUM(pred.points_ou), 0),
+        COALESCE(SUM(pred.points_score), 0),
+        COALESCE(SUM(pred.points_first_scorer), 0),
+        COALESCE(SUM(pred.points_total_cards), 0),
+        COALESCE(SUM(pred.points_highest_scoring_half), 0),
+        COALESCE(SUM(pred.points_clean_sheet), 0),
+        COALESCE(SUM(pred.points_cards_ou), 0),
         SUM(CASE WHEN m.finished = 1 THEN
           (CASE WHEN pred.points_winner > 0 THEN 1 ELSE 0 END) +
           (CASE WHEN pred.points_ou > 0 THEN 1 ELSE 0 END) +
@@ -434,7 +472,8 @@ export async function recomputeLeaderboardCache(db) {
           (CASE WHEN pred.points_first_scorer > 0 THEN 1 ELSE 0 END) +
           (CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END) +
           (CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END)
+          (CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END)
         ELSE 0 END),
         SUM(CASE WHEN m.finished = 1 THEN
           (CASE WHEN pred.predicted_winner IS NOT NULL AND pred.predicted_winner != '' THEN 1 ELSE 0 END) +
@@ -443,7 +482,8 @@ export async function recomputeLeaderboardCache(db) {
           (CASE WHEN pred.predicted_first_scorer IS NOT NULL AND pred.predicted_first_scorer != '' THEN 1 ELSE 0 END) +
           (CASE WHEN pred.predicted_total_cards IS NOT NULL THEN 1 ELSE 0 END) +
           (CASE WHEN pred.predicted_highest_scoring_half IS NOT NULL AND pred.predicted_highest_scoring_half != '' THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END)
+          (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.predicted_first_scorer IS NOT NULL AND pred.predicted_first_scorer != '' THEN 1 ELSE 0 END)
         ELSE 0 END)
       FROM participants p
       LEFT JOIN predictions pred ON p.id = pred.participant_id
