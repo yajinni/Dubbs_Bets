@@ -368,7 +368,7 @@ export default function PlayerPicksList({
                 border: '1px solid var(--glass-border)',
                 padding: '8px 12px'
               }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: 'max-content', maxWidth: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', maxWidth: 'max-content' }}>
                 {/* Name & Points (inline) */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
