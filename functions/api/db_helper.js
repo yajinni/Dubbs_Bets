@@ -462,15 +462,6 @@ export async function recomputeLeaderboardCache(db) {
         COALESCE(SUM(CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END), 0),
         COALESCE(SUM(CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END), 0),
         COALESCE(SUM(CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(pred.points_winner), 0),
-        COALESCE(SUM(pred.points_ou), 0),
-        COALESCE(SUM(pred.points_score), 0),
-        COALESCE(SUM(pred.points_first_scorer), 0),
-        COALESCE(SUM(pred.points_total_cards), 0),
-        COALESCE(SUM(pred.points_highest_scoring_half), 0),
-        COALESCE(SUM(pred.points_clean_sheet), 0),
-        COALESCE(SUM(pred.points_cards_ou), 0),
         SUM(CASE WHEN m.finished = 1 THEN
           (CASE WHEN pred.points_winner > 0 THEN 1 ELSE 0 END) +
           (CASE WHEN pred.points_ou > 0 THEN 1 ELSE 0 END) +
@@ -489,7 +480,16 @@ export async function recomputeLeaderboardCache(db) {
           (CASE WHEN pred.predicted_total_cards IS NOT NULL THEN 1 ELSE 0 END) +
           (CASE WHEN pred.predicted_highest_scoring_half IS NOT NULL AND pred.predicted_highest_scoring_half != '' THEN 1 ELSE 0 END) +
           (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END)
-        ELSE 0 END)
+        ELSE 0 END),
+        COALESCE(SUM(CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(pred.points_winner), 0),
+        COALESCE(SUM(pred.points_ou), 0),
+        COALESCE(SUM(pred.points_score), 0),
+        COALESCE(SUM(pred.points_first_scorer), 0),
+        COALESCE(SUM(pred.points_total_cards), 0),
+        COALESCE(SUM(pred.points_highest_scoring_half), 0),
+        COALESCE(SUM(pred.points_clean_sheet), 0),
+        COALESCE(SUM(pred.points_cards_ou), 0)
       FROM participants p
       LEFT JOIN predictions pred ON p.id = pred.participant_id
       LEFT JOIN matches m ON pred.match_id = m.id
