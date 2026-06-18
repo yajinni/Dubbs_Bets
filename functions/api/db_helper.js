@@ -101,6 +101,13 @@ export async function checkAndInitDb(db) {
       await recomputeLeaderboardCache(db);
     }
 
+    // Migration: correct score points changed from 1 to 4 (per the scoring rules)
+    const fixResult = await db.prepare(`SELECT COUNT(*) as cnt FROM predictions WHERE points_score = 1`).first();
+    if (fixResult && fixResult.cnt > 0) {
+      await db.prepare(`UPDATE predictions SET points_score = 4, total_points = total_points + 3 WHERE points_score = 1`).run();
+      await recomputeLeaderboardCache(db);
+    }
+
     // Fast path: skip full init/consolidation if already initialized
     if (_dbInitialized) return;
     try {
