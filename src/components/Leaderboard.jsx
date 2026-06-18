@@ -65,7 +65,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
         </div>
       </div>
 
-      <div className="leaderboard-container show-all-cols" style={{ overflowX: 'auto' }}>
+      <div className="leaderboard-container show-all-cols">
         {/* Table Header */}
         <div className="leaderboard-row header-row">
           <div className="hide-mobile">Rank</div>
