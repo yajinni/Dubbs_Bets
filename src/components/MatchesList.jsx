@@ -465,7 +465,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
               <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
                 {displayHome}-{displayAway}
               </span>
-              <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: (displayHome + displayAway) > m.over_under_line ? 'rgba(59, 130, 246, 0.25)' : 'rgba(251, 191, 36, 0.25)', border: (displayHome + displayAway) > m.over_under_line ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid rgba(251, 191, 36, 0.4)', whiteSpace: 'nowrap' }}>
+              <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
                 {(displayHome + displayAway) > m.over_under_line ? 'O' : 'U'}
               </span>
               <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
