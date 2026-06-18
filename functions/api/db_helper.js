@@ -96,6 +96,11 @@ export async function checkAndInitDb(db) {
       }
     }
 
+    // Recompute leaderboard cache if migrations were applied
+    if (!existingLbCols.has('correct_underdog')) {
+      await recomputeLeaderboardCache(db);
+    }
+
     // Fast path: skip full init/consolidation if already initialized
     if (_dbInitialized) return;
     try {
