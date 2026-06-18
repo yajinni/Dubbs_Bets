@@ -659,7 +659,7 @@ export function calculatePointsFromPrediction(pred, match) {
 
   const points_winner = pred.predicted_winner === winner ? 3 : 0;
   const points_ou = pred.predicted_over_under === ouResult ? 1 : 0;
-  const points_score = (pred.predicted_home_score === match.home_score && pred.predicted_away_score === match.away_score) ? 1 : 0;
+  const points_score = (pred.predicted_home_score === match.home_score && pred.predicted_away_score === match.away_score) ? 4 : 0;
 
   let points_cards_ou = 0;
   if (points_winner > 0 && match.home_win_pct != null && match.away_win_pct != null && match.draw_pct != null) {

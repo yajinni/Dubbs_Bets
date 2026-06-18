@@ -130,7 +130,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_scores > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
-                  {isCount ? p.correct_scores : p.points_score}
+                  {isCount ? p.correct_scores : p.correct_scores * pointValues.scores}
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_winners > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
