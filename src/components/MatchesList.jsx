@@ -388,9 +388,6 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
 
           {/* Underdog Indicator */}
           <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
-            <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: '700' }}>
-              🐉 Underdog Bonus (1 pt)
-            </div>
             {(() => {
               const hw = m.home_win_pct;
               const aw = m.away_win_pct;
@@ -405,11 +402,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
               if (dp < maxPct) underdogs.push({ name: 'Draw', pct: dp });
               if (aw < maxPct) underdogs.push({ name: awayCode, pct: aw });
               
-              if (underdogs.length === 0) {
-                return (
-                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Even match — no underdog</div>
-                );
-              }
+              if (underdogs.length === 0) return null;
               
               // Sort lowest percentage first
               underdogs.sort((a, b) => a.pct - b.pct);
@@ -417,7 +410,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
               
               return (
                 <div style={{ fontSize: '13px', color: '#fbbf24', fontWeight: '700' }}>
-                  ⭐ {underdogText} — Pick to win for +1 bonus point!
+                  ⭐ Bonus: {underdogText}
                 </div>
               );
             })()
