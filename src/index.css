@@ -1464,6 +1464,13 @@ h1, h2, h3, h4, h5, h6 {
   .player-result-row > div[style*="overflow"] {
     overflow-x: visible !important;
   }
+
+  .player-result-row .prediction-badge-display,
+  .player-result-row > div > div {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    min-width: 0 !important;
+  }
   .hide-mobile {
     display: none !important;
   }
