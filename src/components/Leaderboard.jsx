@@ -70,7 +70,12 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
         <div className="leaderboard-row header-row">
           <div className="hide-mobile">Rank</div>
           <div></div>
-          <div className="stat-cell detailed-col" title="Correct Exact Scores">S</div>
+          <div className="stat-cell detailed-col" title="Correct Exact Scores">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+            </svg>
+          </div>
           <div className="stat-cell detailed-col" title="Correct Winners">
             <span className="hide-mobile">Winners</span>
             <span className="show-mobile-only">Win</span>
