@@ -284,7 +284,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .leaderboard-row {
   display: grid;
-  grid-template-columns: 48px 1fr repeat(8, 44px);
+  grid-template-columns: 48px 1fr repeat(8, auto);
   align-items: center;
   padding: 12px 16px;
   border-radius: 12px;
@@ -1478,10 +1478,10 @@ h1, h2, h3, h4, h5, h6 {
     padding: 4px 6px !important;
   }
   .show-all-cols .leaderboard-row {
-    grid-template-columns: 28px minmax(110px, 1fr) repeat(8, 20px) !important;
+    grid-template-columns: 24px minmax(110px, 1fr) repeat(8, auto) !important;
   }
   .show-all-cols .leaderboard-row.header-row {
-    grid-template-columns: 28px minmax(110px, 1fr) repeat(8, 20px) !important;
+    grid-template-columns: 24px minmax(110px, 1fr) repeat(8, auto) !important;
   }
   .stat-cell {
     text-align: center !important;
