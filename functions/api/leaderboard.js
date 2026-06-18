@@ -22,22 +22,14 @@ export async function onRequest(context) {
 
     await checkAndInitDb(env.db);
 
+    // Always recompute leaderboard cache to ensure fresh data
+    await recomputeLeaderboardCache(env.db);
+
     let { results } = await env.db.prepare(`
       SELECT * FROM leaderboard_cache
       ORDER BY total_points DESC, correct_scores DESC, correct_winners DESC, name ASC
       LIMIT 100
     `).all();
-
-    // Recompute cache if empty (e.g. first deploy, or cache not primed yet)
-    if (!results || results.length === 0) {
-      await recomputeLeaderboardCache(env.db);
-      const refetch = await env.db.prepare(`
-        SELECT * FROM leaderboard_cache
-        ORDER BY total_points DESC, correct_scores DESC, correct_winners DESC, name ASC
-        LIMIT 100
-      `).all();
-      results = refetch.results || [];
-    }
 
     return new Response(JSON.stringify(results), { status: 200, headers });
   } catch (error) {
