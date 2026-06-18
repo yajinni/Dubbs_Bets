@@ -1452,8 +1452,8 @@ h1, h2, h3, h4, h5, h6 {
     padding: 12px 2px !important;
   }
   .player-result-row {
-    padding: 8px 12px !important;
-    overflow: hidden !important;
+    padding: 8px 0 !important;
+    text-align: center !important;
   }
   .hide-mobile {
     display: none !important;
