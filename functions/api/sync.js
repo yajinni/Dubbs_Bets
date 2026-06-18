@@ -458,8 +458,8 @@ async function syncFromTheOddsAPI(db, apiKey) {
   // 1. Process Odds and Schedules (loop over all matches returned in oddsData)
   for (const match of oddsData) {
     const dbMatch = dbMatches.find(m => 
-      m.home_team_name.toLowerCase() === match.home_team.toLowerCase() && 
-      m.away_team_name.toLowerCase() === match.away_team.toLowerCase()
+      normalizeTeamName(m.home_team_name) === normalizeTeamName(match.home_team) && 
+      normalizeTeamName(m.away_team_name) === normalizeTeamName(match.away_team)
     );
     
     if (dbMatch) {
@@ -862,8 +862,8 @@ async function handleMidnightLock(db, apiKey) {
 
   for (const match of oddsData) {
     const dbMatch = matches.find(m =>
-      m.home_team_name.toLowerCase() === match.home_team.toLowerCase() &&
-      m.away_team_name.toLowerCase() === match.away_team.toLowerCase()
+      normalizeTeamName(m.home_team_name) === normalizeTeamName(match.home_team) &&
+      normalizeTeamName(m.away_team_name) === normalizeTeamName(match.away_team)
     );
 
     if (!dbMatch) continue;
