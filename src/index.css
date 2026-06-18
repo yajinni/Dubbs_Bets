@@ -286,6 +286,7 @@ h1, h2, h3, h4, h5, h6 {
   display: grid;
   grid-template-columns: 48px 1fr repeat(8, 44px);
   align-items: center;
+  column-gap: 6px;
   padding: 12px 16px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.015);
@@ -1489,9 +1490,11 @@ h1, h2, h3, h4, h5, h6 {
   }
   .show-all-cols .leaderboard-row {
     grid-template-columns: 36px 1fr repeat(8, 24px) !important;
+    column-gap: 3px !important;
   }
   .show-all-cols .leaderboard-row.header-row {
     grid-template-columns: 36px 1fr repeat(8, 24px) !important;
+    column-gap: 3px !important;
   }
   .points-cell {
     font-size: 11px !important;
