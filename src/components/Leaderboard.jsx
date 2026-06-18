@@ -74,8 +74,8 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ verticalAlign: 'middle' }}>
               <rect x="1" y="4" width="10" height="16" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
               <rect x="13" y="4" width="10" height="16" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-              <line x1="1" y1="12" x2="11" y2="12" stroke="currentColor" strokeWidth="1.5"/>
-              <line x1="13" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="1.5"/>
+              <text x="6" y="15.5" textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor" fontFamily="sans-serif">1</text>
+              <text x="18" y="15.5" textAnchor="middle" fontSize="10" fontWeight="700" fill="currentColor" fontFamily="sans-serif">0</text>
               <rect x="3" y="1" width="2" height="4" rx="1"/>
               <rect x="7" y="1" width="2" height="4" rx="1"/>
               <rect x="15" y="1" width="2" height="4" rx="1"/>
