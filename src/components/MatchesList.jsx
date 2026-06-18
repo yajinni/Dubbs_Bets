@@ -43,10 +43,15 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
   const displayHome = liveScores ? liveScores.home : m.home_score;
   const displayAway = liveScores ? liveScores.away : m.away_score;
 
-  // Live timer: elapsed minutes since kickoff
+  // Live timer: use ESPN display clock if available, else calculate from kickoff
+  const isMatchSeconds = (val) => /^\d+:\d{2}$/.test(val);
   const [liveTimer, setLiveTimer] = useState('');
   useEffect(() => {
     if (!isLive) return;
+    if (m.display_clock && isMatchSeconds(m.display_clock)) {
+      setLiveTimer(m.display_clock);
+      return;
+    }
     const updateTimer = () => {
       const elapsed = Math.floor((Date.now() - new Date(m.local_date).getTime()) / 60000);
       setLiveTimer(elapsed > 0 ? `${elapsed}'` : '0\'');
@@ -54,7 +59,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
     updateTimer();
     const interval = setInterval(updateTimer, 10000);
     return () => clearInterval(interval);
-  }, [isLive, m.local_date]);
+  }, [isLive, m.local_date, m.display_clock]);
 
   // Auto-expand if this match is selected from another view (e.g. Dashboard)
   useEffect(() => {

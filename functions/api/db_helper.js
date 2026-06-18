@@ -59,6 +59,7 @@ export async function checkAndInitDb(db) {
       ['qstash_lock_msg_id', 'TEXT DEFAULT NULL'],
       ['qstash_score_msg_id', 'TEXT DEFAULT NULL'],
       ['odds_updated_at', 'TEXT DEFAULT NULL'],
+      ['display_clock', 'TEXT DEFAULT NULL'],
     ];
     const predMigrations = [
       ['predicted_cards_over_under', 'TEXT DEFAULT NULL'],

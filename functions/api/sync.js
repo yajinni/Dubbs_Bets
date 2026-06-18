@@ -363,6 +363,9 @@ async function syncFromESPN(db) {
         await logChange(db, 'match_time', dbMatch.id, null, `${matchLabel} Kickoff Time Changed`, dbMatch.local_date, newLocalDate);
       }
 
+      // Get display clock from ESPN
+      const displayClock = comp.status?.displayClock || null;
+
       // Update D1 database
       await db.prepare(`
         UPDATE matches
@@ -376,7 +379,8 @@ async function syncFromESPN(db) {
           actual_cards = ?,
           actual_first_scorer = ?,
           espn_event_id = ?,
-          local_date = ?
+          local_date = ?,
+          display_clock = ?
         WHERE id = ?
       `).bind(
         homeScore,
@@ -389,6 +393,7 @@ async function syncFromESPN(db) {
         actualFirstScorer,
         event.id,
         newLocalDate,
+        displayClock,
         dbMatch.id
       ).run();
       

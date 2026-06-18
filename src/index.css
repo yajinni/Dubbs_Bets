@@ -529,12 +529,9 @@ h1, h2, h3, h4, h5, h6 {
   gap: 4px;
 }
 
-.team-container--live.home {
-  align-items: flex-end;
-}
-
+.team-container--live.home,
 .team-container--live.away {
-  align-items: flex-start;
+  align-items: center;
 }
 
 .team-score-row {
@@ -1241,9 +1238,11 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 13px !important;
   }
 
-  .team-container--live {
+  .team-container--live.home,
+  .team-container--live.away {
     flex-direction: column !important;
     gap: 2px !important;
+    text-align: center !important;
   }
 
   .score-live {
