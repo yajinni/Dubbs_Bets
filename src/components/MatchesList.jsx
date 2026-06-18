@@ -372,10 +372,10 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
               <div className="win-pct-segment away" style={{ width: `${awayFirstPct}%` }}></div>
             </div>
           </div>
-
+          </div>
 
           {/* Goals Over/Under Probability */}
-          <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
+          <div className="analytics-item" style={{ marginTop: '4px' }}>
             <div className="analytics-labels">
               <span>Under {m.over_under_line}: {underPct}%</span>
               <span>Over {m.over_under_line}: {overPct}%</span>
@@ -387,7 +387,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
           </div>
 
           {/* Underdog Indicator */}
-          <div className="analytics-item" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', marginTop: '4px' }}>
+          <div className="analytics-item" style={{ marginTop: '4px' }}>
             {(() => {
               const hw = m.home_win_pct;
               const aw = m.away_win_pct;
