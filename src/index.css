@@ -1468,21 +1468,21 @@ h1, h2, h3, h4, h5, h6 {
     text-align: center !important;
   }
   .leaderboard-row {
-    grid-template-columns: 0px 1fr repeat(8, 1fr) !important;
+    grid-template-columns: 1fr repeat(8, 1fr) !important;
     padding: 10px 4px !important;
     font-size: 11px !important;
     gap: 0 !important;
     overflow: hidden !important;
   }
   .leaderboard-row.header-row {
-    grid-template-columns: 0px 1fr repeat(8, 1fr) !important;
+    grid-template-columns: 1fr repeat(8, 1fr) !important;
     padding: 4px 4px !important;
   }
   .show-all-cols .leaderboard-row {
-    grid-template-columns: 0px 1fr repeat(8, 1fr) !important;
+    grid-template-columns: 1fr repeat(8, 1fr) !important;
   }
   .show-all-cols .leaderboard-row.header-row {
-    grid-template-columns: 0px 1fr repeat(8, 1fr) !important;
+    grid-template-columns: 1fr repeat(8, 1fr) !important;
   }
   .stat-cell {
     text-align: center !important;
