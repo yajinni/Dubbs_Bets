@@ -1,4 +1,4 @@
-import { checkAndInitDb, recomputeLeaderboardCache, recomputeStatsCache, scoreAllPredictionsForMatch, flushLogs } from './db_helper.js';
+import { checkAndInitDb, recomputeAllCaches, scoreAllPredictionsForMatch, flushLogs } from './db_helper.js';
 
 export async function onRequest(context) {
   const { env } = context;
@@ -13,8 +13,7 @@ export async function onRequest(context) {
       updatedPredictionsCount += count;
     }
 
-    await recomputeLeaderboardCache(env.db);
-    await recomputeStatsCache(env.db);
+    await recomputeAllCaches(env.db);
     await flushLogs(env.db);
 
     return new Response(JSON.stringify({ success: true, message: `Successfully updated ${updatedPredictionsCount} predictions.` }), {

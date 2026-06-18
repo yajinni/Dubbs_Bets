@@ -3,10 +3,12 @@ import { Award, Target, TrendingUp, Shield, Zap, Trophy, CheckCircle, XCircle } 
 import { shortenTeamName } from '../utils/teamNames';
 
 export default function StatsView({ statsData, fetchStats }) {
-  // Lazy-load stats on mount (force refresh to clear stale error state)
+  // Lazy-load stats on mount if not already loaded
   React.useEffect(() => {
-    if (fetchStats) fetchStats(true);
-  }, []);
+    if (!statsData && fetchStats) {
+      fetchStats();
+    }
+  }, [statsData, fetchStats]);
 
   const stats = statsData?.stats || [];
   const allRow = statsData?.allRow || null;

@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to retrieve and submit predictions (GET, POST)
-import { checkAndInitDb, logChange, emitEvent, recomputeLeaderboardCache, recomputeStatsCache, calculatePointsFromPrediction, flushLogs } from './db_helper.js';
+import { checkAndInitDb, logChange, emitEvent, bumpVersion, recomputeAllCaches, calculatePointsFromPrediction, flushLogs } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -213,6 +213,8 @@ export async function onRequest(context) {
           .run();
       }
 
+      await bumpVersion(env.db, 'predictions');
+
       // 4. Immediately calculate points for this prediction if the match is already finished
       if (match.finished === 1) {
         const pts = calculatePointsFromPrediction({
@@ -240,8 +242,7 @@ export async function onRequest(context) {
           participantId, matchId
         ).run();
 
-        await recomputeLeaderboardCache(env.db);
-        await recomputeStatsCache(env.db);
+        await recomputeAllCaches(env.db);
       }
 
       await emitEvent(env.db, 'predictions_updated');

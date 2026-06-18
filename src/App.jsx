@@ -81,6 +81,16 @@ export default function App() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const hashRestoredRef = useRef(false);
 
+  const [hasFullMatches, setHasFullMatches] = useState(false);
+  const loadedVersionsRef = useRef({
+    matches: null,
+    predictions: null,
+    leaderboard: null,
+    stats: null,
+    participantId: null,
+    hasFullMatches: false
+  });
+
   // ── Nav Customizer ────────────────────────────────────────────────────────
   const [navCustomizerOpen, setNavCustomizerOpen] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0); // 0–100
@@ -269,22 +279,105 @@ export default function App() {
     }
   }, []);
 
-  const refreshAllData = async () => {
+  const loadAllMatchesArchive = useCallback(async () => {
     try {
-      const [matchesData, leaderboardData] = await Promise.all([
-        fetch('/api/matches').then(r => r.json()),
-        fetch('/api/leaderboard').then(r => r.json()),
-      ]);
-      setMatches(matchesData);
-      setLeaderboard(leaderboardData);
-
-      if (activeParticipantId) {
-        await fetchPredictions(activeParticipantId);
+      const res = await fetch('/api/matches');
+      if (!res.ok) return;
+      const data = await res.json();
+      setMatches(data);
+      setHasFullMatches(true);
+      loadedVersionsRef.current.hasFullMatches = true;
+      
+      const vRes = await fetch('/api/versions');
+      if (vRes.ok) {
+        const vData = await vRes.json();
+        loadedVersionsRef.current.matches = vData.matches;
       }
     } catch (err) {
-      console.error('Failed to reload data:', err);
+      console.error('Failed to load matches archive:', err);
     }
-  };
+  }, []);
+
+  const checkVersionsAndRefresh = useCallback(async (force = false) => {
+    try {
+      const vRes = await fetch('/api/versions');
+      if (!vRes.ok) return;
+      const serverVersions = await vRes.json();
+      
+      const promises = [];
+      const updatedVersions = { ...loadedVersionsRef.current };
+
+      // Check matches
+      const matchesChanged = force || serverVersions.matches !== loadedVersionsRef.current.matches;
+      if (matchesChanged) {
+        const url = loadedVersionsRef.current.hasFullMatches ? '/api/matches' : '/api/matches?activeOnly=true';
+        promises.push(
+          fetch(url)
+            .then(r => r.json())
+            .then(data => {
+              setMatches(data);
+              updatedVersions.matches = serverVersions.matches;
+            })
+        );
+      }
+
+      // Check leaderboard
+      const leaderboardChanged = force || serverVersions.leaderboard !== loadedVersionsRef.current.leaderboard;
+      if (leaderboardChanged) {
+        promises.push(
+          fetch('/api/leaderboard')
+            .then(r => r.json())
+            .then(data => {
+              setLeaderboard(data);
+              updatedVersions.leaderboard = serverVersions.leaderboard;
+            })
+        );
+      }
+
+      // Check predictions (only if activeParticipantId is selected)
+      const predictionsChanged = activeParticipantId && (force || 
+        serverVersions.predictions !== loadedVersionsRef.current.predictions || 
+        activeParticipantId !== loadedVersionsRef.current.participantId
+      );
+      if (predictionsChanged) {
+        promises.push(
+          fetch(`/api/predictions?participantId=${activeParticipantId}`)
+            .then(r => r.json())
+            .then(data => {
+              setPredictions(data);
+              updatedVersions.predictions = serverVersions.predictions;
+              updatedVersions.participantId = activeParticipantId;
+              setMatchPredictionsCache({}); // clear detailed match predictions cache on predictions change
+            })
+        );
+      }
+
+      // Check stats (only if activeTab is stats or statsData is already loaded)
+      const isStatsTab = activeTab === 'stats';
+      const statsChanged = (isStatsTab || statsData) && (force || serverVersions.stats !== loadedVersionsRef.current.stats || !statsData);
+      if (statsChanged) {
+        promises.push(
+          fetch('/api/stats')
+            .then(r => r.json())
+            .then(data => {
+              setStatsData(data);
+              updatedVersions.stats = serverVersions.stats;
+            })
+        );
+      }
+
+      if (promises.length > 0) {
+        await Promise.all(promises);
+        loadedVersionsRef.current = updatedVersions;
+      }
+    } catch (err) {
+      console.error('Failed to check versions and refresh:', err);
+    }
+  }, [activeParticipantId, activeTab, statsData]);
+
+  const refreshAllData = useCallback(async () => {
+    await checkVersionsAndRefresh(true);
+  }, [checkVersionsAndRefresh]);
 
   const loadStatsForTabs = useCallback(() => {
     if (!statsData) fetchStats();
@@ -344,23 +437,84 @@ export default function App() {
   useEffect(() => {
     if (activeParticipantId) {
       localStorage.setItem('active_participant_id', activeParticipantId.toString());
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchPredictions(activeParticipantId);
+      const refreshP = async () => {
+        try {
+          const res = await fetch(`/api/predictions?participantId=${activeParticipantId}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          setPredictions(data);
+          setMatchPredictionsCache({});
+          
+          // Sync predictions version from server
+          const vRes = await fetch('/api/versions');
+          if (vRes.ok) {
+            const vData = await vRes.json();
+            loadedVersionsRef.current.predictions = vData.predictions;
+            loadedVersionsRef.current.participantId = activeParticipantId;
+          }
+        } catch (err) {
+          console.error('Failed to load predictions on active player change:', err);
+        }
+      };
+      refreshP();
     } else {
       localStorage.removeItem('active_participant_id');
       setPredictions([]);
+      setMatchPredictionsCache({});
+      loadedVersionsRef.current.predictions = null;
+      loadedVersionsRef.current.participantId = null;
     }
   }, [activeParticipantId]);
 
-  // Initial load
+  // Initial load (Parallelized & Minimized)
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
-      // Fetch last sync timestamp
-      await triggerBackgroundSync();
-      // Fetch data
-      await refreshAllData();
-      setLoading(false);
+      try {
+        const promises = [
+          fetch('/api/matches?activeOnly=true').then(r => r.json()),
+          fetch('/api/leaderboard').then(r => r.json()),
+          fetch('/api/sync?checkOnly=true').then(r => r.json()).catch(() => ({})),
+          fetch('/api/versions').then(r => r.json()).catch(() => ({}))
+        ];
+        
+        if (activeParticipantId) {
+          promises.push(fetch(`/api/predictions?participantId=${activeParticipantId}`).then(r => r.json()));
+        }
+        
+        const results = await Promise.all(promises);
+        const matchesData = results[0];
+        const leaderboardData = results[1];
+        const syncData = results[2];
+        const vData = results[3];
+        const predictionsData = activeParticipantId ? results[4] : [];
+        
+        setMatches(matchesData);
+        setLeaderboard(leaderboardData);
+        if (syncData?.success && syncData?.sync_time) {
+          setLastSync(syncData.sync_time);
+        } else if (syncData?.last_sync) {
+          setLastSync(syncData.last_sync);
+        }
+        if (activeParticipantId) {
+          setPredictions(predictionsData);
+        }
+        
+        if (vData) {
+          loadedVersionsRef.current = {
+            matches: vData.matches || null,
+            predictions: vData.predictions || null,
+            leaderboard: vData.leaderboard || null,
+            stats: vData.stats || null,
+            participantId: activeParticipantId,
+            hasFullMatches: false
+          };
+        }
+      } catch (err) {
+        console.error('Initial load failed:', err);
+      } finally {
+        setLoading(false);
+      }
     };
     initialize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -408,56 +562,35 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handler);
   }, []);
 
-  // Ref to always have the latest refreshAllData for use in effects
-  const refreshAllDataRef = useRef(refreshAllData);
-  refreshAllDataRef.current = refreshAllData;
+  // Polling fallback check for new versions (every 15 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkVersionsAndRefresh();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [checkVersionsAndRefresh]);
 
-  const refreshMatchesRef = useRef();
-  refreshMatchesRef.current = async () => {
-    try {
-      const res = await fetch('/api/matches?liveOnly=true');
-      const liveUpdates = await res.json();
-      setMatches(prev => prev.map(m => {
-        const update = liveUpdates.find(u => u.id === m.id);
-        return update ? { ...m, ...update } : m;
-      }));
-    } catch (err) {
-      console.error('Failed to refresh matches:', err);
-    }
-  };
-
-  const refreshPredictionsRef = useRef();
-  refreshPredictionsRef.current = async () => {
-    try {
-      const lbRes = await fetch('/api/leaderboard');
-      setLeaderboard(await lbRes.json());
-      setMatchPredictionsCache({});
-      setStatsData(null);
-      if (activeParticipantId) {
-        const pRes = await fetch(`/api/predictions?participantId=${activeParticipantId}`);
-        setPredictions(await pRes.json());
+  // Visibility focus check (auto refresh when tab gains focus)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkVersionsAndRefresh();
       }
-    } catch (err) {
-      console.error('Failed to refresh predictions:', err);
-    }
-  };
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [checkVersionsAndRefresh]);
 
-  const refreshByEventTypeRef = useRef();
-  refreshByEventTypeRef.current = async (type) => {
-    if (type === 'matches_updated') {
-      try {
-        const res = await fetch('/api/matches');
-        const freshMatches = await res.json();
-        setMatches(freshMatches);
-      } catch (err) {
-        console.error('Failed to refresh matches:', err);
-      }
-    } else {
-      refreshAllDataRef.current();
+  // Tab switch archive & stats triggers
+  useEffect(() => {
+    if (activeTab === 'match-view' && !hasFullMatches) {
+      loadAllMatchesArchive();
+    } else if (activeTab === 'stats') {
+      checkVersionsAndRefresh();
     }
-  };
+  }, [activeTab, hasFullMatches, loadAllMatchesArchive, checkVersionsAndRefresh]);
 
-  // Live sync: pull scores from ESPN every 30 seconds if there are live matches
+  // Live score sync check from ESPN (only if live matches are running)
   useEffect(() => {
     if (!hasLiveMatches) return;
 
@@ -471,13 +604,13 @@ export default function App() {
       } catch (err) {
         console.error('Interval sync failed:', err);
       }
-      refreshMatchesRef.current();
+      checkVersionsAndRefresh();
     };
 
     performSync();
     const intervalId = setInterval(performSync, 30000);
     return () => clearInterval(intervalId);
-  }, [hasLiveMatches]);
+  }, [hasLiveMatches, checkVersionsAndRefresh]);
 
   // SSE: real-time update events from server
   useEffect(() => {
@@ -487,7 +620,7 @@ export default function App() {
       try {
         const data = JSON.parse(e.data);
         if (data.type !== 'done' && data.type !== 'heartbeat') {
-          refreshByEventTypeRef.current(data.type);
+          checkVersionsAndRefresh();
         }
       } catch (err) {
         console.error('SSE parse error:', err);
@@ -499,7 +632,7 @@ export default function App() {
     return () => {
       evtSource.close();
     };
-  }, []);
+  }, [checkVersionsAndRefresh]);
 
   const forceSync = async () => {
     setSyncing(true);
@@ -808,6 +941,8 @@ export default function App() {
                   getMatchPredictions={getMatchPredictions}
                   leaderboard={leaderboard}
                   onRefresh={refreshAllData}
+                  onLoadArchive={loadAllMatchesArchive}
+                  hasFullMatches={hasFullMatches}
                 />
              </div>
            )}

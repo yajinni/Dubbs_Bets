@@ -816,7 +816,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
   );
 }
 
-export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, matchPredictionsCache = {}, getMatchPredictions, leaderboard = [], onRefresh }) {
+export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, matchPredictionsCache = {}, getMatchPredictions, leaderboard = [], onRefresh, onLoadArchive, hasFullMatches }) {
   const [filterStage, setFilterStage] = useState('all');
   const [showPast, setShowPast] = useState(false);
   const [visibleCount, setVisibleCount] = useState(3);
@@ -826,7 +826,10 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
   useEffect(() => {
     setVisibleCount(3);
     setShowPast(false);
-  }, [filterStage]);
+    if (filterStage === 'live' && onLoadArchive && !hasFullMatches) {
+      onLoadArchive();
+    }
+  }, [filterStage, onLoadArchive, hasFullMatches]);
 
   // Scroll-to-match logic
   useEffect(() => {
@@ -923,7 +926,12 @@ export default function MatchesList({ matches, predictions, activeParticipantId,
         {hidePast ? (
           <button
             type="button"
-            onClick={() => setShowPast(true)}
+            onClick={() => {
+              setShowPast(true);
+              if (onLoadArchive && !hasFullMatches) {
+                onLoadArchive();
+              }
+            }}
             className="btn-secondary"
             style={{
               width: '100%',

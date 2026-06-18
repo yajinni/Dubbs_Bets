@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to sync matches, scores, and odds from API-Football
-import { checkAndInitDb, logChange, formatOuPct, emitEvent, recomputeLeaderboardCache, recomputeStatsCache, clearMatchesCache, scoreAllPredictionsForMatch, flushLogs } from './db_helper.js';
+import { checkAndInitDb, logChange, formatOuPct, emitEvent, bumpVersion, recomputeAllCaches, clearMatchesCache, scoreAllPredictionsForMatch, flushLogs } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -218,6 +218,7 @@ async function syncFromESPN(db) {
   console.log('Syncing from ESPN Scoreboard API...');
   
   const { results: dbMatches } = await db.prepare('SELECT * FROM matches').all();
+  const matchUpdates = [];
   
   const datesToFetch = new Set();
   const getYYYYMMDD = (d) => {
@@ -371,36 +372,38 @@ async function syncFromESPN(db) {
       // Get display clock from ESPN
       const displayClock = comp.status?.displayClock || null;
 
-      // Update D1 database
-      await db.prepare(`
-        UPDATE matches
-        SET
-          home_score = ?,
-          away_score = ?,
-          home_ht_score = ?,
-          away_ht_score = ?,
-          status = ?,
-          finished = ?,
-          actual_cards = ?,
-          actual_first_scorer = ?,
-          espn_event_id = ?,
-          local_date = ?,
-          display_clock = ?
-        WHERE id = ?
-      `).bind(
-        homeScore,
-        awayScore,
-        homeHtScore,
-        awayHtScore,
-        status,
-        finished,
-        actualCards,
-        actualFirstScorer,
-        event.id,
-        newLocalDate,
-        displayClock,
-        dbMatch.id
-      ).run();
+       // Update D1 database
+      matchUpdates.push(
+        db.prepare(`
+          UPDATE matches
+          SET
+            home_score = ?,
+            away_score = ?,
+            home_ht_score = ?,
+            away_ht_score = ?,
+            status = ?,
+            finished = ?,
+            actual_cards = ?,
+            actual_first_scorer = ?,
+            espn_event_id = ?,
+            local_date = ?,
+            display_clock = ?
+          WHERE id = ?
+        `).bind(
+          homeScore,
+          awayScore,
+          homeHtScore,
+          awayHtScore,
+          status,
+          finished,
+          actualCards,
+          actualFirstScorer,
+          event.id,
+          newLocalDate,
+          displayClock,
+          dbMatch.id
+        )
+      );
       
       if (finished === 1 && dbMatch.finished !== 1) {
         finishedDuringSync++;
@@ -421,12 +424,16 @@ async function syncFromESPN(db) {
       matchesUpdated++;
     }
   }
+
+  if (matchUpdates.length > 0) {
+    await db.batch(matchUpdates);
+  }
   
   if (matchesUpdated > 0) {
     clearMatchesCache();
+    await bumpVersion(db, 'matches');
     if (finishedDuringSync > 0) {
-      await recomputeLeaderboardCache(db);
-      await recomputeStatsCache(db);
+      await recomputeAllCaches(db);
     }
     await emitEvent(db, 'matches_updated');
   }
@@ -459,6 +466,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
   `).all();
   let matchesUpdated = 0;
   let oddsUpdated = 0;
+  const oddsUpdates = [];
   
   // 1. Process Odds and Schedules (loop over all matches returned in oddsData)
   for (const match of oddsData) {
@@ -534,41 +542,45 @@ async function syncFromTheOddsAPI(db, apiKey) {
         const oldVal = `Line: ${dbMatch.over_under_line}, ${formatOuPct(dbMatch.over_odds, dbMatch.under_odds)}`;
         const newVal = `Line: ${ouLine}, ${formatOuPct(overOdds, underOdds)}`;
         await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} O/U Goals`, oldVal, newVal);
-      }
-
-      // Update D1 database with the latest odds only if something changed
-      if (dbMatch.home_win_pct !== homePct || dbMatch.away_win_pct !== awayPct || dbMatch.draw_pct !== drawPct ||
-          dbMatch.over_under_line !== ouLine || dbMatch.over_odds !== overOdds || dbMatch.under_odds !== underOdds) {
-        await db.prepare(`
-          UPDATE matches
-          SET
-            home_win_pct = ?,
-            away_win_pct = ?,
-            draw_pct = ?,
-            over_under_line = ?,
-            over_odds = ?,
-            under_odds = ?,
-            odds_updated_at = ?
-          WHERE id = ?
-        `).bind(
-          homePct,
-          awayPct,
-          drawPct,
-          ouLine,
-          overOdds,
-          underOdds,
-          new Date().toISOString(),
-          dbMatch.id
-        ).run();
-        matchesUpdated++;
+          // Update D1 database with the latest odds only if something changed
+        if (dbMatch.home_win_pct !== homePct || dbMatch.away_win_pct !== awayPct || dbMatch.draw_pct !== drawPct ||
+            dbMatch.over_under_line !== ouLine || dbMatch.over_odds !== overOdds || dbMatch.under_odds !== underOdds) {
+          oddsUpdates.push(
+            db.prepare(`
+              UPDATE matches
+              SET
+                home_win_pct = ?,
+                away_win_pct = ?,
+                draw_pct = ?,
+                over_under_line = ?,
+                over_odds = ?,
+                under_odds = ?,
+                odds_updated_at = ?
+              WHERE id = ?
+            `).bind(
+              homePct,
+              awayPct,
+              drawPct,
+              ouLine,
+              overOdds,
+              underOdds,
+              new Date().toISOString(),
+              dbMatch.id
+            )
+          );
+          matchesUpdated++;
+        }
       }
     }
   }
-  
-
-  
+    
+  if (oddsUpdates.length > 0) {
+    await db.batch(oddsUpdates);
+  }
+    
   if (matchesUpdated > 0) {
     clearMatchesCache();
+    await bumpVersion(db, 'matches');
     await emitEvent(db, 'matches_updated');
   }
 
@@ -694,6 +706,8 @@ async function handleLockMatchTask(db, matchId, apiKey) {
     matchId
   ).run();
   
+  await bumpVersion(db, 'matches');
+  
   console.log(`[Lock Task] Successfully updated and locked odds for match ${matchId}.`);
 }
 
@@ -818,6 +832,8 @@ async function handleScoreMatchTask(db, matchId) {
         matchId
       ).run();
       
+      await bumpVersion(db, 'matches');
+      
       if (finished === 1) {
         await scoreAllPredictionsForMatch(db, matchId, {
           home_score: homeScore,
@@ -831,6 +847,7 @@ async function handleScoreMatchTask(db, matchId) {
           home_ht_score: homeHtScore,
           away_ht_score: awayHtScore,
         });
+        await recomputeAllCaches(db);
       }
       break;
     }
@@ -864,6 +881,7 @@ async function handleMidnightLock(db, apiKey) {
 
   let updated = 0;
   let locked = 0;
+  const midnightUpdates = [];
 
   for (const match of oddsData) {
     const dbMatch = matches.find(m =>
@@ -928,28 +946,35 @@ async function handleMidnightLock(db, apiKey) {
       } catch (_) {}
     }
 
-    await db.prepare(`
-      UPDATE matches
-      SET
-        home_win_pct = ?,
-        away_win_pct = ?,
-        draw_pct = ?,
-        over_under_line = ?,
-        over_odds = ?,
-        under_odds = ?,
-        odds_updated_at = ?,
-        odds_locked = CASE WHEN ? = 1 THEN 1 ELSE odds_locked END
-      WHERE id = ?
-    `).bind(
-      homePct, awayPct, drawPct,
-      ouLine, overOdds, underOdds,
-      new Date().toISOString(),
-      isToday ? 1 : 0,
-      dbMatch.id
-    ).run();
+    midnightUpdates.push(
+      db.prepare(`
+        UPDATE matches
+        SET
+          home_win_pct = ?,
+          away_win_pct = ?,
+          draw_pct = ?,
+          over_under_line = ?,
+          over_odds = ?,
+          under_odds = ?,
+          odds_updated_at = ?,
+          odds_locked = CASE WHEN ? = 1 THEN 1 ELSE odds_locked END
+        WHERE id = ?
+      `).bind(
+        homePct, awayPct, drawPct,
+        ouLine, overOdds, underOdds,
+        new Date().toISOString(),
+        isToday ? 1 : 0,
+        dbMatch.id
+      )
+    );
 
     updated++;
     if (isToday) locked++;
+  }
+
+  if (midnightUpdates.length > 0) {
+    await db.batch(midnightUpdates);
+    await bumpVersion(db, 'matches');
   }
 
   await logChange(db, 'system', null, null, '🌙 Midnight Odds Lock', null, `Updated: ${updated}, Locked Today: ${locked}`);

@@ -28,7 +28,25 @@ export async function checkAndInitDb(db) {
     // Clear any stale log buffer from previous requests
     _logBuffer = [];
 
-    // Always run schema migrations (ALTER TABLE) regardless of _dbInitialized
+    // Fast path 1: Skip entirely if initialized in worker global memory
+    if (_dbInitialized) return;
+
+    // Fast path 2: Check settings if fully initialized and migrated
+    const CURRENT_SCHEMA_VERSION = '2'; // Increment this if new migrations are added
+    try {
+      const initSetting = await db.prepare("SELECT value FROM settings WHERE key = 'db_initialized'").first();
+      if (initSetting && initSetting.value === '1') {
+        const schemaSetting = await db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").first();
+        if (schemaSetting && schemaSetting.value === CURRENT_SCHEMA_VERSION) {
+          _dbInitialized = true;
+          return;
+        }
+      }
+    } catch (e) {
+      // settings table might not exist yet during first boot, fall through to full migrations
+    }
+
+    // Always run schema migrations (ALTER TABLE) if schema version doesn't match
     const [matchCols, predCols, lbCols] = await Promise.all([
       db.prepare("PRAGMA table_info(matches)").all(),
       db.prepare("PRAGMA table_info(predictions)").all(),
@@ -67,14 +85,18 @@ export async function checkAndInitDb(db) {
       ['points_clean_sheet', 'INTEGER DEFAULT 0'],
     ];
 
-    for (const [col, type] of matchMigrations) {
-      if (!existingMatchCols.has(col)) {
-        await db.prepare(`ALTER TABLE matches ADD COLUMN ${col} ${type}`).run();
+    if (existingMatchCols.size > 0) {
+      for (const [col, type] of matchMigrations) {
+        if (!existingMatchCols.has(col)) {
+          await db.prepare(`ALTER TABLE matches ADD COLUMN ${col} ${type}`).run();
+        }
       }
     }
-    for (const [col, type] of predMigrations) {
-      if (!existingPredCols.has(col)) {
-        await db.prepare(`ALTER TABLE predictions ADD COLUMN ${col} ${type}`).run();
+    if (existingPredCols.size > 0) {
+      for (const [col, type] of predMigrations) {
+        if (!existingPredCols.has(col)) {
+          await db.prepare(`ALTER TABLE predictions ADD COLUMN ${col} ${type}`).run();
+        }
       }
     }
 
@@ -90,23 +112,32 @@ export async function checkAndInitDb(db) {
       ['points_clean_sheet', 'REAL DEFAULT 0'],
       ['points_underdog', 'REAL DEFAULT 0'],
     ];
-    for (const [col, type] of lbMigrations) {
-      if (!existingLbCols.has(col)) {
-        await db.prepare(`ALTER TABLE leaderboard_cache ADD COLUMN ${col} ${type}`).run();
+    if (existingLbCols.size > 0) {
+      for (const [col, type] of lbMigrations) {
+        if (!existingLbCols.has(col)) {
+          await db.prepare(`ALTER TABLE leaderboard_cache ADD COLUMN ${col} ${type}`).run();
+        }
+      }
+
+      // Recompute leaderboard cache if migrations were applied
+      if (!existingLbCols.has('correct_underdog')) {
+        await recomputeLeaderboardCache(db);
       }
     }
 
-    // Recompute leaderboard cache if migrations were applied
-    if (!existingLbCols.has('correct_underdog')) {
-      await recomputeLeaderboardCache(db);
+    // Migration: correct score points changed from 1 to 4 (per the scoring rules)
+    if (existingPredCols.size > 0) {
+      const fixResult = await db.prepare(`SELECT COUNT(*) as cnt FROM predictions WHERE points_score = 1`).first();
+      if (fixResult && fixResult.cnt > 0) {
+        await db.prepare(`UPDATE predictions SET points_score = 4, total_points = total_points + 3 WHERE points_score = 1`).run();
+        await recomputeLeaderboardCache(db);
+      }
     }
 
-    // Migration: correct score points changed from 1 to 4 (per the scoring rules)
-    const fixResult = await db.prepare(`SELECT COUNT(*) as cnt FROM predictions WHERE points_score = 1`).first();
-    if (fixResult && fixResult.cnt > 0) {
-      await db.prepare(`UPDATE predictions SET points_score = 4, total_points = total_points + 3 WHERE points_score = 1`).run();
-      await recomputeLeaderboardCache(db);
-    }
+    // Save schema version
+    try {
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_version', ?)").bind(CURRENT_SCHEMA_VERSION).run();
+    } catch (e) {}
 
     // Fast path: skip full init/consolidation if already initialized
     if (_dbInitialized) return;
@@ -539,9 +570,10 @@ export async function recomputeStatsCache(db) {
     const { results: matches } = await db.prepare('SELECT * FROM matches').all();
     const finishedMatchIds = new Set((matches || []).filter(m => m.finished === 1).map(m => m.id));
 
-    // Get all predictions for finished matches
+    // Get all predictions for finished matches (include home/away names, scores for JS aggregates)
     const { results: finishedPreds } = await db.prepare(`
-      SELECT pr.*, m.local_date, m.home_win_pct, m.away_win_pct, m.draw_pct
+      SELECT pr.*, m.local_date, m.home_win_pct, m.away_win_pct, m.draw_pct,
+             m.home_team_name, m.away_team_name, m.home_score, m.away_score
       FROM predictions pr
       INNER JOIN matches m ON pr.match_id = m.id
       WHERE m.finished = 1
@@ -638,6 +670,266 @@ export async function recomputeStatsCache(db) {
         medianPerMatch, maxPerMatch, medianPerDay, maxPerDay
       ).run();
     }
+
+    // ─── Compile & Cache Full JSON Payload ───
+    const { results: rawStats } = await db.prepare("SELECT * FROM stats_cache ORDER BY total_points DESC").all();
+    const statsRows = (rawStats || []).map(r => ({
+      participant_id: r.participant_id,
+      name: r.name,
+      totalFinishedPreds: r.total_finished_preds,
+      correctWinners: r.correct_winners,
+      correctOu: r.correct_ou,
+      underdogCorrect: r.underdog_correct,
+      underdogAttempts: r.underdog_attempts,
+      correctScores: r.correct_scores,
+      correctFirstScorers: r.correct_first_scorers,
+      correctExactCards: r.correct_exact_cards,
+      correctHalf: r.correct_half,
+      correctClean: r.correct_clean,
+      winnerPct: r.winner_pct,
+      ouPct: r.ou_pct,
+      underdogPct: r.underdog_pct,
+      firstScorerPct: r.first_scorer_pct,
+      exactCardsPct: r.exact_cards_pct,
+      halfPct: r.half_pct,
+      cleanPct: r.clean_pct,
+      scorePct: r.score_pct,
+      totalPoints: r.total_points,
+      medianPerMatch: r.median_per_match,
+      maxPerMatch: r.max_per_match,
+      medianPerDay: r.median_per_day,
+      maxPerDay: r.max_per_day,
+    }));
+
+    const allStats = {
+      name: 'ALL',
+      medianPerMatch: 0,
+      maxPerMatch: 0,
+      medianPerDay: 0,
+      maxPerDay: 0,
+      winnerPct: 0, ouPct: 0, underdogPct: 0,
+      firstScorerPct: 0, halfPct: 0, cleanPct: 0, scorePct: 0, exactCardsPct: 0,
+    };
+
+    if (statsRows && statsRows.length > 0) {
+      let totalPreds = 0, totalWinners = 0, totalOu = 0, totalUnderdogCor = 0, totalUnderdogAtt = 0;
+      let totalScores = 0, totalFS = 0, totalEC = 0, totalHalf = 0, totalClean = 0;
+      const allPerMatch = [];
+      const allDayMap = {};
+
+      (finishedPreds || []).forEach(p => {
+        totalPreds++;
+        totalWinners += p.points_winner > 0 ? 1 : 0;
+        totalOu += p.points_ou > 0 ? 1 : 0;
+        totalScores += p.points_score > 0 ? 1 : 0;
+        totalFS += p.points_first_scorer > 0 ? 1 : 0;
+        totalEC += p.points_total_cards > 0 ? 1 : 0;
+        totalHalf += p.points_highest_scoring_half > 0 ? 1 : 0;
+        totalClean += p.points_clean_sheet > 0 ? 1 : 0;
+        if (p.points_cards_ou > 0) totalUnderdogCor++;
+        if (p.predicted_winner && p.home_win_pct != null && p.away_win_pct != null && p.draw_pct != null) {
+          const maxPct = Math.max(p.home_win_pct, p.away_win_pct, p.draw_pct);
+          if ((p.predicted_winner === 'home' && p.home_win_pct < maxPct) ||
+              (p.predicted_winner === 'away' && p.away_win_pct < maxPct) ||
+              (p.predicted_winner === 'draw' && p.draw_pct < maxPct)) {
+            totalUnderdogAtt++;
+          }
+        }
+        allPerMatch.push(p.total_points || 0);
+        if (p.local_date) {
+          const ds = toDateStr(p.local_date);
+          allDayMap[ds] = (allDayMap[ds] || 0) + (p.total_points || 0);
+        }
+      });
+
+      allStats.medianPerMatch = calcMedian(allPerMatch);
+      allStats.maxPerMatch = allPerMatch.length > 0 ? Math.max(...allPerMatch) : 0;
+      allStats.medianPerDay = calcMedian(Object.values(allDayMap));
+      allStats.maxPerDay = Object.values(allDayMap).length > 0 ? Math.max(...Object.values(allDayMap)) : 0;
+      allStats.winnerPct = totalPreds > 0 ? Math.round((totalWinners / totalPreds) * 100) : 0;
+      allStats.ouPct = totalPreds > 0 ? Math.round((totalOu / totalPreds) * 100) : 0;
+      allStats.underdogPct = totalUnderdogAtt > 0 ? Math.round((totalUnderdogCor / totalUnderdogAtt) * 100) : 0;
+      allStats.firstScorerPct = totalPreds > 0 ? Math.round((totalFS / totalPreds) * 100) : 0;
+      allStats.halfPct = totalPreds > 0 ? Math.round((totalHalf / totalPreds) * 100) : 0;
+      allStats.cleanPct = totalPreds > 0 ? Math.round((totalClean / totalPreds) * 100) : 0;
+      allStats.scorePct = totalPreds > 0 ? Math.round((totalScores / totalPreds) * 100) : 0;
+      allStats.exactCardsPct = totalPreds > 0 ? Math.round((totalEC / totalPreds) * 100) : 0;
+    }
+
+    // Top Single Game
+    let topSingleGame = null;
+    let maxGamePoints = -1;
+    const nameMap = {};
+    for (const p of participants || []) nameMap[p.id] = p.name;
+
+    for (const pred of finishedPreds || []) {
+      if (pred.total_points > maxGamePoints) {
+        maxGamePoints = pred.total_points;
+        topSingleGame = {
+          participant_name: nameMap[pred.participant_id] || `Player ${pred.participant_id}`,
+          total_points: pred.total_points,
+          home_team_name: pred.home_team_name,
+          away_team_name: pred.away_team_name,
+          home_score: pred.home_score,
+          away_score: pred.away_score,
+          match_id: pred.match_id,
+        };
+      }
+    }
+
+    // Top Single Day
+    let topSingleDay = null;
+    let maxDayPts = 0;
+    const dayPointsSumMap = {};
+    for (const p of finishedPreds || []) {
+      if (!p.local_date) continue;
+      const ds = toDateStr(p.local_date);
+      const key = `${p.participant_id}_${ds}`;
+      dayPointsSumMap[key] = (dayPointsSumMap[key] || 0) + (p.total_points || 0);
+    }
+    for (const [key, pts] of Object.entries(dayPointsSumMap)) {
+      if (pts > maxDayPts) {
+        maxDayPts = pts;
+        const [pId, dateStr] = key.split('_');
+        topSingleDay = {
+          name: nameMap[parseInt(pId)] || `Player ${pId}`,
+          points: pts,
+          date: dateStr
+        };
+      }
+    }
+
+    // Chart Data
+    const finishedMatches = (matches || [])
+      .filter(m => m.finished === 1)
+      .sort((a, b) => new Date(a.local_date.replace(' ', 'T')) - new Date(b.local_date.replace(' ', 'T')));
+      
+    const dateSet = new Set();
+    for (const m of finishedMatches) {
+      const ds = toDateStr(m.local_date);
+      if (ds) dateSet.add(ds);
+    }
+    const dates = [...dateSet].sort();
+
+    const dailyPoints = {};
+    for (const p of participants || []) {
+      dailyPoints[p.id] = {};
+      for (const date of dates) {
+        dailyPoints[p.id][date] = 0;
+      }
+    }
+
+    for (const pred of finishedPreds || []) {
+      const ds = toDateStr(pred.local_date);
+      if (ds && dailyPoints[pred.participant_id] !== undefined) {
+        dailyPoints[pred.participant_id][ds] = (dailyPoints[pred.participant_id][ds] || 0) + (pred.total_points || 0);
+      }
+    }
+
+    // Running points
+    const { results: runningPoints } = await db.prepare(`
+      SELECT participant_id, match_id, total_points FROM running_points_cache
+    `).all();
+    const runningPointsMap = {};
+    for (const rp of runningPoints || []) {
+      runningPointsMap[`${rp.participant_id}_${rp.match_id}`] = rp.total_points;
+    }
+
+    // Super Stats
+    const gamePointsMap = {};
+    const dayPointsMap = {};
+    for (const p of finishedPreds || []) {
+      if (!p.participant_id) continue;
+      if (!gamePointsMap[p.participant_id]) {
+        gamePointsMap[p.participant_id] = [];
+        dayPointsMap[p.participant_id] = {};
+      }
+      gamePointsMap[p.participant_id].push(p.total_points || 0);
+      if (p.local_date) {
+        const ds = toDateStr(p.local_date);
+        dayPointsMap[p.participant_id][ds] = (dayPointsMap[p.participant_id][ds] || 0) + (p.total_points || 0);
+      }
+    }
+
+    const calcMean = (arr) => arr.length === 0 ? 0 : arr.reduce((a, b) => a + b, 0) / arr.length;
+    const calcStd = (arr) => {
+      if (arr.length < 2) return 0;
+      const m = calcMean(arr);
+      return Math.sqrt(arr.reduce((sum, v) => sum + Math.pow(v - m, 2), 0) / (arr.length - 1));
+    };
+    const calcCV = (arr) => {
+      const m = calcMean(arr);
+      const s = calcStd(arr);
+      if (m === 0) return 0;
+      return s / m;
+    };
+    const calcSkew = (arr) => {
+      if (arr.length < 3) return 0;
+      const n = arr.length;
+      const m = calcMean(arr);
+      const s = calcStd(arr);
+      if (s === 0) return 0;
+      const sumCubed = arr.reduce((sum, v) => sum + Math.pow((v - m) / s, 3), 0);
+      return (n / ((n - 1) * (n - 2))) * sumCubed;
+    };
+    const calcPercentile = (arr, p) => {
+      if (arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const rank = p * (sorted.length - 1);
+      const lower = Math.floor(rank);
+      const upper = Math.ceil(rank);
+      if (lower === upper) return sorted[lower];
+      return sorted[lower] * (upper - rank) + sorted[upper] * (rank - lower);
+    };
+    const calcSharpe = (arr) => {
+      const m = calcMean(arr);
+      const s = calcStd(arr);
+      if (s === 0) return 0;
+      return m / s;
+    };
+    const r3 = (v) => v === 0 ? 0 : Math.round(v * 1000) / 1000;
+    const r1 = (v) => Math.round(v * 10) / 10;
+
+    const superStatsRows = (statsRows || []).map(r => {
+      const pid = r.participant_id;
+      const gamePoints = gamePointsMap[pid] || [];
+      const dayPoints = Object.values(dayPointsMap[pid] || {});
+      return {
+        participant_id: pid,
+        perGame: { cv: r3(calcCV(gamePoints)), skew: r3(calcSkew(gamePoints)), floor: r1(calcPercentile(gamePoints, 0.25)), sharpe: r3(calcSharpe(gamePoints)) },
+        perDay: { cv: r3(calcCV(dayPoints)), skew: r3(calcSkew(dayPoints)), floor: r1(calcPercentile(dayPoints, 0.25)), sharpe: r3(calcSharpe(dayPoints)) },
+      };
+    });
+
+    const allGamePoints = [];
+    const allDayPointsSet = {};
+    for (const p of finishedPreds || []) {
+      allGamePoints.push(p.total_points || 0);
+      if (p.local_date) {
+        const ds = toDateStr(p.local_date);
+        allDayPointsSet[ds] = (allDayPointsSet[ds] || 0) + (p.total_points || 0);
+      }
+    }
+    const allDayPoints = Object.values(allDayPointsSet);
+    const allSuperStats = {
+      perGame: { cv: r3(calcCV(allGamePoints)), skew: r3(calcSkew(allGamePoints)), floor: r1(calcPercentile(allGamePoints, 0.25)), sharpe: r3(calcSharpe(allGamePoints)) },
+      perDay: { cv: r3(calcCV(allDayPoints)), skew: r3(calcSkew(allDayPoints)), floor: r1(calcPercentile(allDayPoints, 0.25)), sharpe: r3(calcSharpe(allDayPoints)) },
+    };
+
+    const cachedStatsPayload = {
+      stats: statsRows || [],
+      allRow: allStats,
+      chartData: { dates, daily: dailyPoints },
+      topSingleGame,
+      topSingleDay,
+      runningPointsMap,
+      superStats: { rows: superStatsRows, allRow: allSuperStats }
+    };
+
+    await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('cached_stats_payload', ?)")
+      .bind(JSON.stringify(cachedStatsPayload))
+      .run();
+
   } catch (err) {
     console.error('[StatsCache] Failed to recompute:', err.message);
   }
@@ -716,15 +1008,39 @@ export async function scoreAllPredictionsForMatch(db, matchId, match) {
     WHERE participant_id = ? AND match_id = ?
   `);
 
+  const batch = [];
   for (const pred of predictions) {
     const pts = calculatePointsFromPrediction(pred, match);
-    await stmt.bind(
-      pts.points_winner, pts.points_ou, pts.points_score, pts.points_cards_ou,
-      pts.points_total_cards, pts.points_first_scorer, pts.points_highest_scoring_half,
-      pts.points_clean_sheet, pts.total_points,
-      pred.participant_id, matchId
-    ).run();
+    batch.push(
+      stmt.bind(
+        pts.points_winner, pts.points_ou, pts.points_score, pts.points_cards_ou,
+        pts.points_total_cards, pts.points_first_scorer, pts.points_highest_scoring_half,
+        pts.points_clean_sheet, pts.total_points,
+        pred.participant_id, matchId
+      )
+    );
+  }
+
+  if (batch.length > 0) {
+    await db.batch(batch);
   }
 
   return predictions.length;
+}
+
+export async function bumpVersion(db, key) {
+  const timestamp = new Date().toISOString();
+  try {
+    await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").bind(`version_${key}`, timestamp).run();
+  } catch (err) {
+    console.error(`Failed to bump version for ${key}:`, err.message);
+  }
+}
+
+export async function recomputeAllCaches(db) {
+  await recomputeLeaderboardCache(db);
+  await recomputeStatsCache(db);
+  await bumpVersion(db, 'predictions');
+  await bumpVersion(db, 'leaderboard');
+  await bumpVersion(db, 'stats');
 }
