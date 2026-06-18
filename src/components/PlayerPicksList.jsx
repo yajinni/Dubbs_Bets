@@ -465,7 +465,7 @@ export default function PlayerPicksList({
                         background: (m.finished === 1 || liveStats) ? (isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
                         border: (m.finished === 1 || liveStats) ? (isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
                       }}>
-                        {displayPred.predicted_winner === 'home' ? homeCode : displayPred.predicted_winner === 'away' ? awayCode : displayPred.predicted_winner === 'draw' ? 'Draw' : '-'}
+                        {displayPred.predicted_winner === 'home' ? `W:${homeCode}` : displayPred.predicted_winner === 'away' ? `W:${awayCode}` : displayPred.predicted_winner === 'draw' ? 'Draw' : '-'}
                       </span>
 
                       {/* Underdog Pick */}

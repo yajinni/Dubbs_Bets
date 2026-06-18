@@ -427,7 +427,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
             <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
               <CheckCircle size={14} color="var(--success)" style={{ flexShrink: 0 }} />
               <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
-                {displayHome > displayAway ? (m.home_code || homeName) : displayAway > displayHome ? (m.away_code || awayName) : 'Draw'}
+                {displayHome > displayAway ? `W:${m.home_code || homeName}` : displayAway > displayHome ? `W:${m.away_code || awayName}` : 'Draw'}
               </span>
               <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
                 {displayHome}-{displayAway}
@@ -558,7 +558,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
                       onClick={() => setWinner('home')}
                       disabled={saving}
                     >
-                      {m.home_code || homeName}
+                      {winner === 'home' ? `W:${m.home_code || homeName}` : (m.home_code || homeName)}
                     </button>
                     <button
                       type="button"
@@ -574,7 +574,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
                       onClick={() => setWinner('away')}
                       disabled={saving}
                     >
-                      {m.away_code || awayName}
+                      {winner === 'away' ? `W:${m.away_code || awayName}` : (m.away_code || awayName)}
                     </button>
                   </div>
                 </div>
