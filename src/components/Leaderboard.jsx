@@ -124,8 +124,9 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
-                  <span className="participant-name">{p.name}</span> <span style={{ color: 'var(--primary-hover)', fontWeight: '700', fontSize: '13px' }}>({p.total_points} pts)</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
+                  <span className="participant-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                  <span style={{ color: 'var(--primary-hover)', fontWeight: '600', whiteSpace: 'nowrap', flexShrink: 0 }}>({p.total_points} pts)</span>
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_scores > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
