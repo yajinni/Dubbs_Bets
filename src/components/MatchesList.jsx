@@ -296,16 +296,22 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
         {isLive ? (
           <>
             <div className="team-container home team-container--live">
-              <span className="team-name">{homeName}</span>
-              <span className="score-live">{displayHome}</span>
+              {m.home_flag && <img src={m.home_flag} alt={`${homeName} flag`} className="flag-icon" />}
+              <div className="team-score-row">
+                <span className="team-name">{homeName}</span>
+                <span className="score-live">{displayHome}</span>
+              </div>
             </div>
             <div className="match-info-center match-info-center--live">
               <span className="match-badge live">Live</span>
               <span className="timer-live">{liveTimer}</span>
             </div>
             <div className="team-container away team-container--live">
-              <span className="score-live">{displayAway}</span>
-              <span className="team-name">{awayName}</span>
+              {m.away_flag && <img src={m.away_flag} alt={`${awayName} flag`} className="flag-icon" />}
+              <div className="team-score-row">
+                <span className="score-live">{displayAway}</span>
+                <span className="team-name">{awayName}</span>
+              </div>
             </div>
           </>
         ) : (

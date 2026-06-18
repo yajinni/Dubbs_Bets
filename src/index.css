@@ -524,12 +524,23 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Live match score layout */
-.match-teams-grid--live {
-  gap: 8px;
+.team-container--live {
+  flex-direction: column;
+  gap: 4px;
 }
 
-.team-container--live {
-  gap: 4px;
+.team-container--live.home {
+  align-items: flex-end;
+}
+
+.team-container--live.away {
+  align-items: flex-start;
+}
+
+.team-score-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .score-live {
@@ -1231,19 +1242,16 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .team-container--live {
+    flex-direction: column !important;
     gap: 2px !important;
-  }
-
-  .team-container--live.home {
-    flex-direction: row !important;
-  }
-
-  .team-container--live.away {
-    flex-direction: row !important;
   }
 
   .score-live {
     font-size: 22px !important;
+  }
+
+  .team-score-row {
+    gap: 8px !important;
   }
 
   .match-info-center--live {
