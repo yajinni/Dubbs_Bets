@@ -451,6 +451,14 @@ export async function recomputeLeaderboardCache(db) {
   try {
     await db.prepare(`
       INSERT OR REPLACE INTO leaderboard_cache
+        (id, name, total_points,
+         correct_winners, correct_ou, correct_scores,
+         correct_first_scorer, correct_total_cards, correct_highest_scoring_half, correct_clean_sheet,
+         correct_bets_count, total_bets_count,
+         correct_underdog,
+         points_winner, points_ou, points_score,
+         points_first_scorer, points_total_cards, points_highest_scoring_half, points_clean_sheet,
+         points_underdog)
       SELECT
         p.id,
         p.name,
@@ -495,10 +503,6 @@ export async function recomputeLeaderboardCache(db) {
       LEFT JOIN matches m ON pred.match_id = m.id
       GROUP BY p.id, p.name
     `).run();
-  } catch (err) {
-    console.error('[LeaderboardCache] Failed to recompute:', err.message);
-  }
-}
 
 export async function recomputeStatsCache(db) {
   try {
