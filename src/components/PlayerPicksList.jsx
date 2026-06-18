@@ -361,12 +361,14 @@ export default function PlayerPicksList({
               <div key={op.id} className="player-result-row" style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
+                alignItems: 'center',
                 gap: '6px', 
                 background: isSelf ? 'rgba(139, 92, 246, 0.08)' : 'rgba(255, 255, 255, 0.01)', 
                 borderRadius: '6px', 
                 border: '1px solid var(--glass-border)',
                 padding: '8px 12px'
               }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: 'max-content', maxWidth: '100%' }}>
                 {/* Name & Points (inline) */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
@@ -537,9 +539,10 @@ export default function PlayerPicksList({
                       None ⏳
                     </span>
                   )}
-                </div>
-              </div>
-            );
+                 </div>
+               </div>
+             </div>
+             );
           })
         )}
       </div>
