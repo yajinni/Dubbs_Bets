@@ -351,16 +351,16 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
               Match Winner (%)
             </div>
             <div className="analytics-labels">
-              <span>{homeName}: {m.home_win_pct}%</span>
-              <span>{awayName}: {m.away_win_pct}%</span>
+              <span>{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {m.home_win_pct}%</span>
+              <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {m.away_win_pct}%</span>
             </div>
-            <div className="win-pct-bar" style={{ marginBottom: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>
+              <span>Draw: {m.draw_pct}%</span>
+            </div>
+            <div className="win-pct-bar">
               <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
               <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
-              <span>Draw: {m.draw_pct}%</span>
             </div>
           </div>
 
@@ -370,16 +370,16 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
               Scored First (%)
             </div>
             <div className="analytics-labels">
-              <span>{homeName}: {homeFirstPct}%</span>
-              <span>{awayName}: {awayFirstPct}%</span>
+              <span>{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {homeFirstPct}%</span>
+              <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {awayFirstPct}%</span>
             </div>
-            <div className="win-pct-bar" style={{ marginBottom: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>
+              <span>No Goal: {noGoalPct}%</span>
+            </div>
+            <div className="win-pct-bar">
               <div className="win-pct-segment home" style={{ width: `${homeFirstPct}%` }}></div>
               <div className="win-pct-segment draw" style={{ width: `${noGoalPct}%` }}></div>
               <div className="win-pct-segment away" style={{ width: `${awayFirstPct}%` }}></div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
-              <span>No Goal: {noGoalPct}%</span>
             </div>
           </div>
 
@@ -411,9 +411,11 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
               
               const maxPct = Math.max(hw, aw, dp);
               const underdogs = [];
-              if (hw < maxPct) underdogs.push({ name: homeName, pct: hw });
+              const homeCode = m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase();
+              const awayCode = m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase();
+              if (hw < maxPct) underdogs.push({ name: homeCode, pct: hw });
               if (dp < maxPct) underdogs.push({ name: 'Draw', pct: dp });
-              if (aw < maxPct) underdogs.push({ name: awayName, pct: aw });
+              if (aw < maxPct) underdogs.push({ name: awayCode, pct: aw });
               
               if (underdogs.length === 0) {
                 return (
