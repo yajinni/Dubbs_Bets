@@ -77,6 +77,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
             <span className="hide-mobile">Winners</span>
             <span className="show-mobile-only">Win</span>
           </div>
+          <div className="stat-cell detailed-col" title="Correct Underdog Bonus">B</div>
           <div className="stat-cell detailed-col" title="Correct Over/Unders">O/U</div>
           <div className="stat-cell detailed-col" title="Correct Scored First">SF</div>
           <div className="stat-cell detailed-col" title="Correct Cards">
@@ -88,7 +89,6 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
             <span className="show-mobile-only">HH</span>
           </div>
           <div className="stat-cell detailed-col" title="Correct Clean Sheet">CS</div>
-          <div className="stat-cell detailed-col underdog-header" title="Correct Underdog Bonus">UD</div>
           <div className="stat-cell" title="Bet Accuracy %" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             %
           </div>
@@ -133,6 +133,10 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                   {isCount ? p.correct_winners : p.points_winner}
                 </div>
 
+                <div className="stat-cell detailed-col" style={{ color: p.correct_underdog > 0 ? '#fbbf24' : 'var(--text-muted)' }}>
+                  {isCount ? p.correct_underdog : p.points_underdog}
+                </div>
+
                 <div className="stat-cell detailed-col" style={{ color: p.correct_ou > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
                   {isCount ? p.correct_ou : p.points_ou}
                 </div>
@@ -151,10 +155,6 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_clean_sheet > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
                   {isCount ? p.correct_clean_sheet : p.points_clean_sheet}
-                </div>
-
-                <div className="stat-cell detailed-col underdog-header" style={{ color: p.correct_underdog > 0 ? '#fbbf24' : 'var(--text-muted)' }}>
-                  {isCount ? p.correct_underdog : p.points_underdog}
                 </div>
 
                 <div className="stat-cell" style={{ color: accuracy > 0 ? '#a855f7' : 'var(--text-muted)', fontWeight: '700' }}>
