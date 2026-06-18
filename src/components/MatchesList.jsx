@@ -458,50 +458,33 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
               <CheckCircle size={14} />
               Confirmed Match Results
             </div>
-            <div className="results-analytics-grid">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Winner</span>
-                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                  {displayHome > displayAway ? homeName : displayAway > displayHome ? awayName : 'Draw'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Scored First</span>
-                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                  {m.actual_first_scorer === 'home' ? homeName : m.actual_first_scorer === 'away' ? awayName : 'No Goal'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Goals O/U</span>
-                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                  {(displayHome + displayAway) > m.over_under_line ? 'Over' : 'Under'} {m.over_under_line}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Highest Half</span>
-                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                  {(() => {
-                    if (m.home_ht_score === null || m.home_ht_score === undefined || m.away_ht_score === null || m.away_ht_score === undefined) {
-                      return 'TBD';
-                    }
-                    const firstHalfGoals = m.home_ht_score + m.away_ht_score;
-                    const secondHalfGoals = (displayHome + displayAway) - firstHalfGoals;
-                    return firstHalfGoals > secondHalfGoals ? '1st Half' : secondHalfGoals > firstHalfGoals ? '2nd Half' : 'Equal';
-                  })()}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Clean Sheet</span>
-                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-                  {displayHome === 0 || displayAway === 0 ? 'Yes' : 'No'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Total Cards</span>
-                <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                  {m.actual_cards !== null ? `${m.actual_cards} cards` : 'N/A'}
-                </span>
-              </div>
+            <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+              <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
+                {displayHome > displayAway ? (m.home_code || homeName) : displayAway > displayHome ? (m.away_code || awayName) : 'Draw'}
+              </span>
+              <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
+                {displayHome}-{displayAway}
+              </span>
+              <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: (displayHome + displayAway) > m.over_under_line ? 'rgba(59, 130, 246, 0.25)' : 'rgba(251, 191, 36, 0.25)', border: (displayHome + displayAway) > m.over_under_line ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid rgba(251, 191, 36, 0.4)', whiteSpace: 'nowrap' }}>
+                {(displayHome + displayAway) > m.over_under_line ? 'O' : 'U'}
+              </span>
+              <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
+                {m.actual_first_scorer === 'home' ? (m.home_code || homeName) : m.actual_first_scorer === 'away' ? (m.away_code || awayName) : 'NG'}
+              </span>
+              <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
+                {m.actual_cards !== null ? m.actual_cards : '-'}
+              </span>
+              <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
+                {(() => {
+                  if (m.home_ht_score === null || m.away_ht_score === null) return '-';
+                  const firstHalfGoals = m.home_ht_score + m.away_ht_score;
+                  const secondHalfGoals = (displayHome + displayAway) - firstHalfGoals;
+                  return firstHalfGoals > secondHalfGoals ? '1H' : secondHalfGoals > firstHalfGoals ? '2H' : 'EQ';
+                })()}
+              </span>
+              <span style={{ padding: '2px 4px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ffffff', background: 'rgba(16, 185, 129, 0.25)', border: '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>
+                {displayHome === 0 || displayAway === 0 ? 'Y' : 'N'}
+              </span>
             </div>
           </div>
         )}
