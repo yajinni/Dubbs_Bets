@@ -1454,6 +1454,15 @@ h1, h2, h3, h4, h5, h6 {
   .player-result-row {
     padding: 8px 0 !important;
     text-align: center !important;
+    align-items: center !important;
+  }
+
+  .player-result-row > div {
+    justify-content: center !important;
+  }
+
+  .player-result-row > div[style*="overflow"] {
+    overflow-x: visible !important;
   }
   .hide-mobile {
     display: none !important;
