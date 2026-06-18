@@ -555,14 +555,13 @@ export async function recomputeStatsCache(db) {
       SELECT
         pr.participant_id,
         pr.match_id,
-        COALESCE(SUM(pr.total_points) OVER (
+        COALESCE(SUM(CASE WHEN m.finished = 1 THEN pr.total_points ELSE 0 END) OVER (
           PARTITION BY pr.participant_id
           ORDER BY m.local_date ASC, m.id ASC
           ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
         ), 0)
       FROM predictions pr
       INNER JOIN matches m ON pr.match_id = m.id
-      WHERE m.finished = 1
     `).run();
 
     // 2. Recompute per-participant stats (matching StatsView.jsx logic)
