@@ -92,8 +92,8 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
             <span className="show-mobile-only">Win</span>
           </div>
           <div className="stat-cell detailed-col" title="Correct Underdog Bonus">B</div>
-          <div className="stat-cell detailed-col" title="Correct Scored First" style={{ color: 'var(--success)' }}>SF</div>
-          <div className="stat-cell detailed-col" title="Correct Highest Half" style={{ color: 'var(--success)' }}>
+          <div className="stat-cell detailed-col" title="Correct Scored First">SF</div>
+          <div className="stat-cell detailed-col" title="Correct Highest Half">
             <span className="hide-mobile">Half</span>
             <span className="show-mobile-only">HH</span>
           </div>
@@ -149,7 +149,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                   {isCount ? p.correct_underdog : p.points_underdog}
                 </div>
 
-                <div className="stat-cell detailed-col" style={{ color: p.correct_first_scorer > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
+                <div className="stat-cell detailed-col" style={{ color: p.correct_first_scorer > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
                   {isCount ? p.correct_first_scorer : p.points_first_scorer}
                 </div>
 
