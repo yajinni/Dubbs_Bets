@@ -27,17 +27,8 @@ export async function checkAndInitDb(db) {
   try {
     // Clear any stale log buffer from previous requests
     _logBuffer = [];
-    // Fast path: skip migrations/consolidation if already initialized
-    if (_dbInitialized) return;
-    try {
-      const initialized = await db.prepare("SELECT value FROM settings WHERE key = 'db_initialized'").first();
-      if (initialized) {
-        _dbInitialized = true;
-        return;
-      }
-    } catch(e) {}
 
-    // Schema migrations: only ALTER columns that don't exist yet
+    // Always run schema migrations (ALTER TABLE) regardless of _dbInitialized
     const [matchCols, predCols, lbCols] = await Promise.all([
       db.prepare("PRAGMA table_info(matches)").all(),
       db.prepare("PRAGMA table_info(predictions)").all(),
@@ -104,6 +95,16 @@ export async function checkAndInitDb(db) {
         await db.prepare(`ALTER TABLE leaderboard_cache ADD COLUMN ${col} ${type}`).run();
       }
     }
+
+    // Fast path: skip full init/consolidation if already initialized
+    if (_dbInitialized) return;
+    try {
+      const initialized = await db.prepare("SELECT value FROM settings WHERE key = 'db_initialized'").first();
+      if (initialized) {
+        _dbInitialized = true;
+        return;
+      }
+    } catch(e) {}
 
     // Logs table for changes
     try {
@@ -482,8 +483,7 @@ export async function recomputeLeaderboardCache(db) {
           (CASE WHEN pred.predicted_first_scorer IS NOT NULL AND pred.predicted_first_scorer != '' THEN 1 ELSE 0 END) +
           (CASE WHEN pred.predicted_total_cards IS NOT NULL THEN 1 ELSE 0 END) +
           (CASE WHEN pred.predicted_highest_scoring_half IS NOT NULL AND pred.predicted_highest_scoring_half != '' THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_first_scorer IS NOT NULL AND pred.predicted_first_scorer != '' THEN 1 ELSE 0 END)
+          (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END)
         ELSE 0 END)
       FROM participants p
       LEFT JOIN predictions pred ON p.id = pred.participant_id
