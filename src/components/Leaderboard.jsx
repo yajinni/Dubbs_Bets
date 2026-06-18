@@ -71,9 +71,15 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
           <div className="hide-mobile">Rank</div>
           <div></div>
           <div className="stat-cell detailed-col" title="Correct Exact Scores">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
-              <rect x="2" y="4" width="20" height="16" rx="2" />
-              <line x1="2" y1="12" x2="22" y2="12" />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ verticalAlign: 'middle' }}>
+              <rect x="1" y="4" width="10" height="16" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+              <rect x="13" y="4" width="10" height="16" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+              <line x1="1" y1="12" x2="11" y2="12" stroke="currentColor" strokeWidth="1.5"/>
+              <line x1="13" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="1.5"/>
+              <rect x="3" y="1" width="2" height="4" rx="1"/>
+              <rect x="7" y="1" width="2" height="4" rx="1"/>
+              <rect x="15" y="1" width="2" height="4" rx="1"/>
+              <rect x="19" y="1" width="2" height="4" rx="1"/>
             </svg>
           </div>
           <div className="stat-cell detailed-col" title="Correct Winners">
