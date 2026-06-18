@@ -89,9 +89,6 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
             <span className="show-mobile-only">HH</span>
           </div>
           <div className="stat-cell detailed-col" title="Correct Clean Sheet">CS</div>
-          <div className="stat-cell" title="Bet Accuracy %" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            %
-          </div>
         </div>
 
         {/* Rows */}
@@ -103,9 +100,6 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
           leaderboard.map((p, index) => {
             const rank = index + 1;
             const isActive = p.id === activeParticipantId;
-            const accuracy = p.total_bets_count > 0
-              ? Math.round((p.correct_bets_count / p.total_bets_count) * 100)
-              : 0;
 
             const isCount = viewMode === 'count';
 
@@ -155,10 +149,6 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_clean_sheet > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
                   {isCount ? p.correct_clean_sheet : p.points_clean_sheet}
-                </div>
-
-                <div className="stat-cell" style={{ color: accuracy > 0 ? '#a855f7' : 'var(--text-muted)', fontWeight: '700' }}>
-                  {accuracy}%
                 </div>
               </div>
             );
