@@ -346,42 +346,30 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
         </div>
         <div className="analytics-grid">
           {/* Winner Probability */}
-          <div className="analytics-item" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-            <Trophy size={14} color="#fbbf24" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
-                Match Winner (%)
-              </div>
-              <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
-                <span>{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {m.home_win_pct}%</span>
-                <span>Draw: {m.draw_pct}%</span>
-                <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {m.away_win_pct}%</span>
-              </div>
-              <div className="win-pct-bar">
-                <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
-                <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
-                <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
-              </div>
+          <div className="analytics-item">
+            <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Trophy size={12} color="#fbbf24" />{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {m.home_win_pct}%</span>
+              <span>Draw: {m.draw_pct}%</span>
+              <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {m.away_win_pct}%</span>
+            </div>
+            <div className="win-pct-bar">
+              <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
+              <div className="win-pct-segment draw" style={{ width: `${m.draw_pct}%` }}></div>
+              <div className="win-pct-segment away" style={{ width: `${m.away_win_pct}%` }}></div>
             </div>
           </div>
 
           {/* First Team to Score Probability */}
-          <div className="analytics-item" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-            <Circle size={14} color="#ffffff" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
-                Scored First (%)
-              </div>
-              <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
-                <span>{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {homeFirstPct}%</span>
-                <span>No Goal: {noGoalPct}%</span>
-                <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {awayFirstPct}%</span>
-              </div>
-              <div className="win-pct-bar">
-                <div className="win-pct-segment home" style={{ width: `${homeFirstPct}%` }}></div>
-                <div className="win-pct-segment draw" style={{ width: `${noGoalPct}%` }}></div>
-                <div className="win-pct-segment away" style={{ width: `${awayFirstPct}%` }}></div>
-              </div>
+          <div className="analytics-item">
+            <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Circle size={12} color="#ffffff" fill="none" />{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {homeFirstPct}%</span>
+              <span>No Goal: {noGoalPct}%</span>
+              <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {awayFirstPct}%</span>
+            </div>
+            <div className="win-pct-bar">
+              <div className="win-pct-segment home" style={{ width: `${homeFirstPct}%` }}></div>
+              <div className="win-pct-segment draw" style={{ width: `${noGoalPct}%` }}></div>
+              <div className="win-pct-segment away" style={{ width: `${awayFirstPct}%` }}></div>
             </div>
           </div>
 
