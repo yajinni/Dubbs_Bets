@@ -1479,9 +1479,11 @@ h1, h2, h3, h4, h5, h6 {
   }
   .show-all-cols .leaderboard-row {
     grid-template-columns: 24px auto repeat(8, auto) !important;
+    column-gap: 2px !important;
   }
   .show-all-cols .leaderboard-row.header-row {
     grid-template-columns: 24px auto repeat(8, auto) !important;
+    column-gap: 2px !important;
   }
   .stat-cell {
     text-align: center !important;
