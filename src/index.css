@@ -930,6 +930,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Score display in predictions modal details */
 .prediction-badge-display {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-size: 13px;
@@ -1451,7 +1452,8 @@ h1, h2, h3, h4, h5, h6 {
     padding: 12px 2px !important;
   }
   .player-result-row {
-    padding: 8px 18px !important;
+    padding: 8px 12px !important;
+    overflow: hidden !important;
   }
   .hide-mobile {
     display: none !important;
