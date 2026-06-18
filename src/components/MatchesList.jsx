@@ -341,7 +341,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
           {/* Analytics Box */}
           <div className="match-analytics-box">
         <div className="analytics-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          3rd Party Match Analysis
+          3rd Party Analysis
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: m.odds_locked === 1 ? 'var(--success)' : 'var(--text-muted)', letterSpacing: '0.02em' }}>
             <Lock size={12} />
             {m.odds_locked === 1 ? 'Locked' : 'Unlocked'}
@@ -419,25 +419,6 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
             }
           </div>
 
-          {/* Synced/Locked Timestamp Status */}
-          {m.odds_updated_at && (
-            <div style={{ 
-              fontSize: '13px', 
-              color: '#10b981', 
-              marginTop: '12px',
-              paddingTop: '8px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-              display: 'flex',
-              justifyContent: 'center',
-              fontWeight: '500'
-            }}>
-              {m.odds_locked === 1 ? (
-                <span>Odds Locked: {new Date(m.odds_updated_at).toLocaleString()}</span>
-              ) : (
-                <span>Odds Synced: {new Date(m.odds_updated_at).toLocaleString()}</span>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Actual Match Results Box (Only when match is finished) */}
