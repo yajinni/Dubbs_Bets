@@ -350,12 +350,10 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
             <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
               Match Winner (%)
             </div>
-            <div className="analytics-labels">
+            <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
               <span>{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {m.home_win_pct}%</span>
-              <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {m.away_win_pct}%</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>
               <span>Draw: {m.draw_pct}%</span>
+              <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {m.away_win_pct}%</span>
             </div>
             <div className="win-pct-bar">
               <div className="win-pct-segment home" style={{ width: `${m.home_win_pct}%` }}></div>
@@ -369,12 +367,10 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
             <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
               Scored First (%)
             </div>
-            <div className="analytics-labels">
+            <div className="analytics-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
               <span>{(m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase())}: {homeFirstPct}%</span>
-              <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {awayFirstPct}%</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>
               <span>No Goal: {noGoalPct}%</span>
+              <span>{(m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase())}: {awayFirstPct}%</span>
             </div>
             <div className="win-pct-bar">
               <div className="win-pct-segment home" style={{ width: `${homeFirstPct}%` }}></div>
