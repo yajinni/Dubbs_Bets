@@ -88,7 +88,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
             <span className="show-mobile-only">HH</span>
           </div>
           <div className="stat-cell detailed-col" title="Correct Clean Sheet">CS</div>
-          <div className="stat-cell detailed-col underdog-header" title="Correct Underdog Bonus" style={{ color: '#fbbf24' }}>Dog</div>
+          <div className="stat-cell detailed-col underdog-header" title="Correct Underdog Bonus">UD</div>
           <div className="stat-cell" title="Bet Accuracy %" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             %
           </div>
