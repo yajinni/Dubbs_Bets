@@ -198,11 +198,15 @@ function normalizeTeamName(name) {
 
   if (n.includes('czech') || n === 'czechia') return 'czech';
   if (n.includes('korea')) return 'korea';
-  if (n.includes('united states') || n === 'usa') return 'usa';
+  if (n.includes('united states') || n === 'usa' || n.includes('usmnt')) return 'usa';
   if (n.includes('bosnia')) return 'bosnia';
   if (n.includes('turkey') || n.includes('turkiye')) return 'turkey';
   if (n.includes('congo') || n.includes('drc')) return 'congo';
   if (n.includes('curacao')) return 'curacao';
+  if (n.includes('ivory coast') || n.includes('ivoire') || n.includes('cote d')) return 'ivory coast';
+  if (n.includes('cape verde') || n.includes('cabo verde')) return 'cape verde';
+  if (n.includes('iran') && !n.includes('iraq')) return 'iran';
+  if (n.includes('saudi') || n === 'ksa') return 'saudi arabia';
   return n;
 }
 
@@ -602,8 +606,8 @@ async function handleLockMatchTask(db, matchId, apiKey) {
       
       if (oddsRes.status === 200) {
         const apiMatch = oddsData.find(m => 
-          m.home_team.toLowerCase() === match.home_team_name.toLowerCase() && 
-          m.away_team.toLowerCase() === match.away_team_name.toLowerCase()
+          normalizeTeamName(m.home_team) === normalizeTeamName(match.home_team_name) && 
+          normalizeTeamName(m.away_team) === normalizeTeamName(match.away_team_name)
         );
         
         if (apiMatch && apiMatch.bookmakers && apiMatch.bookmakers.length > 0) {
