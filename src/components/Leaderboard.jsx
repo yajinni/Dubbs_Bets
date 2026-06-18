@@ -115,7 +115,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span className="participant-name">{p.name} ({p.total_points})</span>
                 </div>
 
