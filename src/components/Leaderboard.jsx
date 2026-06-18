@@ -69,7 +69,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
         {/* Table Header */}
         <div className="leaderboard-row header-row">
           <div className="hide-mobile">Rank</div>
-          <div></div>
+          <div style={{ textAlign: 'left' }}></div>
           <div className="stat-cell detailed-col" title="Correct Exact Scores">S</div>
           <div className="stat-cell detailed-col" title="Correct Winners">
             <span className="hide-mobile">Winners</span>
