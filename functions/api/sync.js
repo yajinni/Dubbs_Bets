@@ -39,8 +39,9 @@ export async function onRequest(context) {
     const secFetchSite = request.headers.get('sec-fetch-site');
     const isSameOrigin = secFetchSite === 'same-origin' || secFetchSite === 'same-site';
     const isDiagnostic = url.searchParams.get('checkBets') === 'true' || url.searchParams.get('checkOddsFixture') !== null;
+    const isInternal = url.searchParams.get('midnightLock') === 'true' || url.searchParams.get('lockMatchId') || url.searchParams.get('scoreMatchId');
 
-    if (!isDiagnostic && env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
+    if (!isDiagnostic && !isInternal && env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid sync secret' }), { status: 401, headers });
     }
 
