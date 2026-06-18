@@ -404,7 +404,7 @@ export default function PlayerPicksList({
                       minWidth: 'max-content',
                       padding: '2px 0'
                     }}>
-                      {/* Winner */}
+                      {/* Score */}
                       <span style={{ 
                         padding: '2px 4px', 
                         borderRadius: '4px', 
@@ -414,10 +414,10 @@ export default function PlayerPicksList({
                         textAlign: 'center',
                         whiteSpace: 'nowrap',
                         flexShrink: 0,
-                        background: (m.finished === 1 || liveStats) ? (isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
-                        border: (m.finished === 1 || liveStats) ? (isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
+                        background: hasScorePred ? ((m.finished === 1 || liveStats) ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                        border: hasScorePred ? ((m.finished === 1 || liveStats) ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                       }}>
-                        {displayPred.predicted_winner === 'home' ? homeCode : displayPred.predicted_winner === 'away' ? awayCode : displayPred.predicted_winner === 'draw' ? 'Draw' : '-'}
+                        {hasScorePred ? `${displayPred.predicted_home_score}-${displayPred.predicted_away_score}` : '-'}
                       </span>
 
                       {/* O/U */}
@@ -436,7 +436,7 @@ export default function PlayerPicksList({
                         {displayPred.predicted_over_under === 'over' ? 'O' : displayPred.predicted_over_under === 'under' ? 'U' : '-'}
                       </span>
 
-                      {/* Score */}
+                      {/* Total Cards */}
                       <span style={{ 
                         padding: '2px 4px', 
                         borderRadius: '4px', 
@@ -446,10 +446,26 @@ export default function PlayerPicksList({
                         textAlign: 'center',
                         whiteSpace: 'nowrap',
                         flexShrink: 0,
-                        background: hasScorePred ? ((m.finished === 1 || liveStats) ? (isScoreCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                        border: hasScorePred ? ((m.finished === 1 || liveStats) ? (isScoreCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                        background: hasTotalCardsPred ? ((m.finished === 1 || liveStats) ? (isTotalCardsCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                        border: hasTotalCardsPred ? ((m.finished === 1 || liveStats) ? (isTotalCardsCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                       }}>
-                        {hasScorePred ? `${displayPred.predicted_home_score}-${displayPred.predicted_away_score}` : '-'}
+                        {displayPred.predicted_total_cards !== null && displayPred.predicted_total_cards !== undefined ? `TC:${displayPred.predicted_total_cards}` : '-'}
+                      </span>
+
+                      {/* Winner */}
+                      <span style={{ 
+                        padding: '2px 4px', 
+                        borderRadius: '4px', 
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        color: '#ffffff',
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: (m.finished === 1 || liveStats) ? (isWinnerCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)',
+                        border: (m.finished === 1 || liveStats) ? (isWinnerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)'
+                      }}>
+                        {displayPred.predicted_winner === 'home' ? homeCode : displayPred.predicted_winner === 'away' ? awayCode : displayPred.predicted_winner === 'draw' ? 'Draw' : '-'}
                       </span>
 
                       {/* Underdog Pick */}
@@ -482,22 +498,6 @@ export default function PlayerPicksList({
                         border: hasFirstScorerPred ? ((m.finished === 1 || liveStats) ? (isFirstScorerCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                       }}>
                         {hasFirstScorerPred ? `SF:${displayPred.predicted_first_scorer === 'home' ? homeCode : displayPred.predicted_first_scorer === 'away' ? awayCode : 'None'}` : '-'}
-                      </span>
-
-                      {/* Total Cards */}
-                      <span style={{ 
-                        padding: '2px 4px', 
-                        borderRadius: '4px', 
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        color: '#ffffff',
-                        textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                        background: hasTotalCardsPred ? ((m.finished === 1 || liveStats) ? (isTotalCardsCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
-                        border: hasTotalCardsPred ? ((m.finished === 1 || liveStats) ? (isTotalCardsCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
-                      }}>
-                        {displayPred.predicted_total_cards !== null && displayPred.predicted_total_cards !== undefined ? `TC:${displayPred.predicted_total_cards}` : '-'}
                       </span>
 
                       {/* Highest scoring half */}

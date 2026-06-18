@@ -22,7 +22,7 @@ export default function StatsView({ statsData, fetchStats }) {
   const [timeRange, setTimeRange] = React.useState('week');
   const [hiddenPlayers, setHiddenPlayers] = React.useState(new Set());
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
-  const [mobileStatTab, setMobileStatTab] = React.useState('win');
+  const [mobileStatTab, setMobileStatTab] = React.useState('score');
   const [statsPageTab, setStatsPageTab] = React.useState('stats');
   const [metricModal, setMetricModal] = React.useState(null);
   const [superStatsTab, setSuperStatsTab] = React.useState('match');
@@ -706,14 +706,14 @@ export default function StatsView({ statsData, fetchStats }) {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Player</th>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Win</th>
+              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⚽</th>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>O/U</th>
+              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>TC</th>
+              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Win</th>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Dog</th>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>SF</th>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>HH</th>
               <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>CS</th>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>⚽</th>
-              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>TC</th>
             </tr>
           </thead>
           <tbody>
@@ -722,16 +722,16 @@ export default function StatsView({ statsData, fetchStats }) {
                 <td style={{ padding: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
                   {row.name}
                 </td>
-                
-                {/* Winner Stat */}
+
+                {/* Exact Score Stat */}
                 <td style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.winnerPct}%</span>
-                      <span style={{ color: 'var(--text-muted)' }}>{row.correctWinners}/{row.totalFinishedPreds}</span>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.scorePct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctScores}/{row.totalFinishedPreds}</span>
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${row.winnerPct}%`, height: '100%', background: 'linear-gradient(90deg, #a855f7, #c084fc)', borderRadius: '3px' }}></div>
+                      <div style={{ width: `${row.scorePct}%`, height: '100%', background: 'linear-gradient(90deg, #eab308, #fde047)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
@@ -745,6 +745,32 @@ export default function StatsView({ statsData, fetchStats }) {
                     </div>
                     <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{ width: `${row.ouPct}%`, height: '100%', background: 'linear-gradient(90deg, #22c55e, #4ade80)', borderRadius: '3px' }}></div>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Exact Cards Stat */}
+                <td style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.exactCardsPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctExactCards}/{row.totalFinishedPreds}</span>
+                    </div>
+                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${row.exactCardsPct}%`, height: '100%', background: 'linear-gradient(90deg, #06b6d4, #67e8f9)', borderRadius: '3px' }}></div>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Winner Stat */}
+                <td style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.winnerPct}%</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{row.correctWinners}/{row.totalFinishedPreds}</span>
+                    </div>
+                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${row.winnerPct}%`, height: '100%', background: 'linear-gradient(90deg, #a855f7, #c084fc)', borderRadius: '3px' }}></div>
                     </div>
                   </div>
                 </td>
@@ -800,32 +826,6 @@ export default function StatsView({ statsData, fetchStats }) {
                     </div>
                   </div>
                 </td>
-
-                {/* Exact Score Stat */}
-                <td style={{ padding: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.scorePct}%</span>
-                      <span style={{ color: 'var(--text-muted)' }}>{row.correctScores}/{row.totalFinishedPreds}</span>
-                    </div>
-                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${row.scorePct}%`, height: '100%', background: 'linear-gradient(90deg, #eab308, #fde047)', borderRadius: '3px' }}></div>
-                    </div>
-                  </div>
-                </td>
-
-                {/* Exact Cards Stat */}
-                <td style={{ padding: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{row.exactCardsPct}%</span>
-                      <span style={{ color: 'var(--text-muted)' }}>{row.correctExactCards}/{row.totalFinishedPreds}</span>
-                    </div>
-                    <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${row.exactCardsPct}%`, height: '100%', background: 'linear-gradient(90deg, #06b6d4, #67e8f9)', borderRadius: '3px' }}></div>
-                    </div>
-                  </div>
-                </td>
               </tr>
             ))}
           </tbody>
@@ -839,14 +839,14 @@ export default function StatsView({ statsData, fetchStats }) {
         </h3>
         <div className="mobile-tab-bar">
           {[
-            { key: 'win', label: 'Win' },
+            { key: 'score', label: '⚽' },
             { key: 'ou', label: 'O/U' },
+            { key: 'cards', label: 'TC' },
+            { key: 'win', label: 'Win' },
             { key: 'dog', label: 'Dog' },
             { key: 'sf', label: 'SF' },
             { key: 'half', label: 'HH' },
             { key: 'cs', label: 'CS' },
-            { key: 'score', label: '⚽' },
-            { key: 'cards', label: 'TC' },
           ].map(tab => (
             <button
               key={tab.key}

@@ -507,6 +507,29 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
                   </div>
                 </div>
 
+                {/* Over/Under Select */}
+                <div className="prediction-col">
+                  <label>Score O/U (1 pt)</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${overUnder === 'over' ? 'active' : ''}`}
+                      onClick={() => setOverUnder('over')}
+                      disabled={saving}
+                    >
+                      Over {m.over_under_line}
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${overUnder === 'under' ? 'active' : ''}`}
+                      onClick={() => setOverUnder('under')}
+                      disabled={saving}
+                    >
+                      Under {m.over_under_line}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Total Cards exact input */}
                 <div className="prediction-col">
                   <label>Total Cards (3 pts)</label>
@@ -614,29 +637,6 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
                       disabled={saving}
                     >
                       2nd Half
-                    </button>
-                  </div>
-                </div>
-
-                {/* Over/Under Select */}
-                <div className="prediction-col">
-                  <label>Score O/U (1 pt)</label>
-                  <div className="inline-choice-group">
-                    <button
-                      type="button"
-                      className={`choice-btn ${overUnder === 'over' ? 'active' : ''}`}
-                      onClick={() => setOverUnder('over')}
-                      disabled={saving}
-                    >
-                      Over {m.over_under_line}
-                    </button>
-                    <button
-                      type="button"
-                      className={`choice-btn ${overUnder === 'under' ? 'active' : ''}`}
-                      onClick={() => setOverUnder('under')}
-                      disabled={saving}
-                    >
-                      Under {m.over_under_line}
                     </button>
                   </div>
                 </div>

@@ -82,17 +82,17 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
               <rect x="19" y="1" width="2" height="4" rx="1"/>
             </svg>
           </div>
+          <div className="stat-cell detailed-col" title="Correct Over/Unders">O/U</div>
+          <div className="stat-cell detailed-col" title="Correct Cards">
+            <span className="hide-mobile">Cards</span>
+            <span className="show-mobile-only">TC</span>
+          </div>
           <div className="stat-cell detailed-col" title="Correct Winners">
             <span className="hide-mobile">Winners</span>
             <span className="show-mobile-only">Win</span>
           </div>
           <div className="stat-cell detailed-col" title="Correct Underdog Bonus">B</div>
-          <div className="stat-cell detailed-col" title="Correct Over/Unders">O/U</div>
           <div className="stat-cell detailed-col" title="Correct Scored First" style={{ color: 'var(--success)' }}>SF</div>
-          <div className="stat-cell detailed-col" title="Correct Cards">
-            <span className="hide-mobile">Cards</span>
-            <span className="show-mobile-only">TC</span>
-          </div>
           <div className="stat-cell detailed-col" title="Correct Highest Half" style={{ color: 'var(--success)' }}>
             <span className="hide-mobile">Half</span>
             <span className="show-mobile-only">HH</span>
@@ -133,6 +133,14 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                   {isCount ? p.correct_scores : p.points_score}
                 </div>
 
+                <div className="stat-cell detailed-col" style={{ color: p.correct_ou > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
+                  {isCount ? p.correct_ou : p.points_ou}
+                </div>
+
+                <div className="stat-cell detailed-col" style={{ color: p.correct_total_cards > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
+                  {isCount ? p.correct_total_cards : p.points_total_cards}
+                </div>
+
                 <div className="stat-cell detailed-col" style={{ color: p.correct_winners > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
                   {isCount ? p.correct_winners : p.points_winner}
                 </div>
@@ -141,16 +149,8 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                   {isCount ? p.correct_underdog : p.points_underdog}
                 </div>
 
-                <div className="stat-cell detailed-col" style={{ color: p.correct_ou > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
-                  {isCount ? p.correct_ou : p.points_ou}
-                </div>
-
                 <div className="stat-cell detailed-col" style={{ color: p.correct_first_scorer > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
                   {isCount ? p.correct_first_scorer : p.points_first_scorer}
-                </div>
-
-                <div className="stat-cell detailed-col" style={{ color: p.correct_total_cards > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
-                  {isCount ? p.correct_total_cards : p.points_total_cards}
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_highest_scoring_half > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
