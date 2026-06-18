@@ -1453,7 +1453,6 @@ h1, h2, h3, h4, h5, h6 {
   }
   .player-result-row {
     padding: 8px 0 !important;
-    align-items: flex-start !important;
     border: none !important;
     background: transparent !important;
   }
