@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Lock, HelpCircle, Save, Users, CheckCircle, Radio, ChevronDown, ChevronUp } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 import LiveFeed from './LiveFeed';
@@ -340,9 +340,12 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
         <>
           {/* Analytics Box */}
           <div className="match-analytics-box">
-        <div className="analytics-title">
-          <TrendingUp size={14} />
+        <div className="analytics-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           3rd Party Match Analysis
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: m.odds_locked === 1 ? 'var(--success)' : 'var(--text-muted)', letterSpacing: '0.02em' }}>
+            <Lock size={12} />
+            {m.odds_locked === 1 ? 'Locked' : 'Unlocked'}
+          </span>
         </div>
         <div className="analytics-grid">
           {/* Winner Probability */}
