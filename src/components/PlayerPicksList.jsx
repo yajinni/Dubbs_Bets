@@ -271,7 +271,7 @@ export default function PlayerPicksList({
   const showsLiveTitle = showLiveResults;
 
   return (
-    <div style={{ marginTop: '16px', borderTop: '1px dashed var(--glass-border)', paddingTop: '12px' }}>
+    <div style={{ marginTop: '4px', borderTop: '1px dashed var(--glass-border)', paddingTop: '8px' }}>
       <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Users size={12} strokeWidth={2.5} />

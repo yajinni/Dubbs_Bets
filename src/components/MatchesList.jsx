@@ -311,8 +311,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
         ) : (
           <>
             <div className="team-container home">
-              <span className="team-name">{homeName}</span>
               {m.home_flag && <img src={m.home_flag} alt={`${homeName} flag`} className="flag-icon" />}
+              <span className="team-name">{homeName}</span>
             </div>
             <div className="match-info-center">
               {m.status === 'scheduled' ? (
@@ -344,7 +344,9 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
           3rd Party Analysis
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: m.odds_locked === 1 ? 'var(--success)' : 'var(--text-muted)', letterSpacing: '0.02em' }}>
             <Lock size={12} />
-            {m.odds_locked === 1 ? 'Locked' : 'Unlocked'}
+            {m.odds_locked === 1 && m.odds_updated_at
+              ? `Locked ${new Date(m.odds_updated_at).toLocaleDateString()}`
+              : `Synced ${m.odds_updated_at ? new Date(m.odds_updated_at).toLocaleDateString() : ''}`}
           </span>
         </div>
         <div className="analytics-grid">
