@@ -1453,21 +1453,11 @@ h1, h2, h3, h4, h5, h6 {
   }
   .player-result-row {
     padding: 8px 0 !important;
-    text-align: center !important;
-    align-items: center !important;
+    align-items: flex-start !important;
   }
 
-  .player-result-row > div {
-    justify-content: center !important;
-  }
-
-  .player-result-row > div[style*="overflow"] {
-    overflow-x: visible !important;
-  }
-
-  .player-result-row .prediction-badge-display,
   .player-result-row > div > div {
-    justify-content: center !important;
+    justify-content: flex-start !important;
     flex-wrap: wrap !important;
     min-width: 0 !important;
   }
