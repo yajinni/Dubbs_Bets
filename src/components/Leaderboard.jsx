@@ -88,12 +88,12 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
           </div>
           <div className="stat-cell detailed-col" title="Correct Underdog Bonus">B</div>
           <div className="stat-cell detailed-col" title="Correct Over/Unders">O/U</div>
-          <div className="stat-cell detailed-col" title="Correct Scored First">SF</div>
+          <div className="stat-cell detailed-col" title="Correct Scored First" style={{ color: 'var(--success)' }}>SF</div>
           <div className="stat-cell detailed-col" title="Correct Cards">
             <span className="hide-mobile">Cards</span>
             <span className="show-mobile-only">TC</span>
           </div>
-          <div className="stat-cell detailed-col" title="Correct Highest Half">
+          <div className="stat-cell detailed-col" title="Correct Highest Half" style={{ color: 'var(--success)' }}>
             <span className="hide-mobile">Half</span>
             <span className="show-mobile-only">HH</span>
           </div>
@@ -125,7 +125,7 @@ export default function Leaderboard({ leaderboard, activeParticipantId }) {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
-                  <span className="participant-name">{p.name} ({p.total_points})</span>
+                  <span className="participant-name">{p.name}</span> <span style={{ color: 'var(--primary-hover)', fontWeight: '700', fontSize: '13px' }}>({p.total_points} pts)</span>
                 </div>
 
                 <div className="stat-cell detailed-col" style={{ color: p.correct_scores > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
