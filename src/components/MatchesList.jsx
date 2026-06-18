@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Lock, TrendingUp, HelpCircle, Save, Users, CheckCircle, Radio, ChevronDown, ChevronUp, Trophy, Circle } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 import LiveFeed from './LiveFeed';
@@ -346,8 +346,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
         </div>
         <div className="analytics-grid">
           {/* Winner Probability */}
-          <div className="analytics-item" style={{ display: 'flex', gap: '8px' }}>
-            <div style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', transform: 'rotate(180deg)', flexShrink: 0 }}>WIN</div>
+          <div className="analytics-item" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <Trophy size={14} color="#fbbf24" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
                 Match Winner (%)
@@ -366,8 +366,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
           </div>
 
           {/* First Team to Score Probability */}
-          <div className="analytics-item" style={{ display: 'flex', gap: '8px' }}>
-            <div style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', transform: 'rotate(180deg)', flexShrink: 0 }}>SF</div>
+          <div className="analytics-item" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <Circle size={14} color="#ffffff" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px', fontWeight: '700' }}>
                 Scored First (%)
