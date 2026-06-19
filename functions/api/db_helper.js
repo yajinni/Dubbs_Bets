@@ -163,18 +163,6 @@ export async function checkAndInitDb(db) {
     } catch(e){}
 
 
-    // Events table for SSE real-time notifications
-    try {
-      await db.prepare(`
-        CREATE TABLE IF NOT EXISTS events (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          type TEXT NOT NULL,
-          created_at TEXT DEFAULT (datetime('now'))
-        )
-      `).run();
-    } catch(e){}
-
-
     // Stats cache table
     try {
       await db.prepare(`
@@ -339,11 +327,7 @@ export async function flushLogs(db) {
 }
 
 export async function emitEvent(db, type) {
-  try {
-    await db.prepare("INSERT INTO events (type) VALUES (?)").bind(type).run();
-  } catch (err) {
-    console.error('Failed to emit event:', err);
-  }
+  // No-op: events table and SSE polling are replaced with client-side version polling
 }
 
 export function formatOuPct(overOdds, underOdds) {

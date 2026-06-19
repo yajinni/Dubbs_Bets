@@ -612,26 +612,13 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [hasLiveMatches, checkVersionsAndRefresh]);
 
-  // SSE: real-time update events from server
+  // Smart version polling check (replaces SSE)
   useEffect(() => {
-    const evtSource = new EventSource('/api/events');
+    const intervalId = setInterval(() => {
+      checkVersionsAndRefresh();
+    }, 10000); // Poll every 10 seconds
 
-    evtSource.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type !== 'done' && data.type !== 'heartbeat') {
-          checkVersionsAndRefresh();
-        }
-      } catch (err) {
-        console.error('SSE parse error:', err);
-      }
-    };
-
-    evtSource.onerror = () => {};
-
-    return () => {
-      evtSource.close();
-    };
+    return () => clearInterval(intervalId);
   }, [checkVersionsAndRefresh]);
 
   const forceSync = async () => {
