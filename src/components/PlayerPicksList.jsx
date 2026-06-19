@@ -290,11 +290,11 @@ export default function PlayerPicksList({
           <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px' }}>No players yet.</span>
         ) : (
           leaderboard.map(op => {
-            const opPred = matchPredictions?.find(ap => ap.participant_id === op.id);
-            const isSelf = op.id === activeParticipantId;
+              const opPred = matchPredictions?.find(ap => ap.participant_id === op.id);
+              const isSelf = op.id === activeParticipantId;
 
-            // Construct displaying predictions: if it is self and we have local state overrides, use them
-            let displayPred = opPred;
+              // Construct displaying predictions: if it is self and we have local state overrides, use them
+              let displayPred = opPred && opPred.id ? opPred : null;
             if (isSelf && Object.keys(winnerLocalState).length > 0) {
               displayPred = {
                 predicted_winner: winnerLocalState.winner || null,

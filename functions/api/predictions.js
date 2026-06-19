@@ -30,12 +30,33 @@ export async function onRequest(context) {
 
       if (matchIdParam) {
         const { results } = await env.db.prepare(`
-          SELECT pr.*, p.name AS participant_name, COALESCE(rpc.total_points, 0) AS running_total
-          FROM predictions pr
-          INNER JOIN participants p ON pr.participant_id = p.id
-          LEFT JOIN running_points_cache rpc ON rpc.participant_id = pr.participant_id AND rpc.match_id = pr.match_id
-          WHERE pr.match_id = ?
-        `).bind(parseInt(matchIdParam)).all();
+          SELECT 
+            p.id AS participant_id,
+            p.name AS participant_name,
+            pr.id AS id,
+            pr.match_id,
+            pr.predicted_winner,
+            pr.predicted_over_under,
+            pr.predicted_home_score,
+            pr.predicted_away_score,
+            pr.predicted_total_cards,
+            pr.predicted_first_scorer,
+            pr.predicted_highest_scoring_half,
+            pr.predicted_clean_sheet,
+            COALESCE(pr.total_points, 0) AS total_points,
+            COALESCE(pr.points_winner, 0) AS points_winner,
+            COALESCE(pr.points_ou, 0) AS points_ou,
+            COALESCE(pr.points_score, 0) AS points_score,
+            COALESCE(pr.points_first_scorer, 0) AS points_first_scorer,
+            COALESCE(pr.points_total_cards, 0) AS points_total_cards,
+            COALESCE(pr.points_highest_scoring_half, 0) AS points_highest_scoring_half,
+            COALESCE(pr.points_clean_sheet, 0) AS points_clean_sheet,
+            COALESCE(pr.points_cards_ou, 0) AS points_cards_ou,
+            COALESCE(rpc.total_points, 0) AS running_total
+          FROM participants p
+          LEFT JOIN predictions pr ON pr.participant_id = p.id AND pr.match_id = ?
+          LEFT JOIN running_points_cache rpc ON rpc.participant_id = p.id AND rpc.match_id = ?
+        `).bind(parseInt(matchIdParam), parseInt(matchIdParam)).all();
         return new Response(JSON.stringify(results), { status: 200, headers });
       }
 
