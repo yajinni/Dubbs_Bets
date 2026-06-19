@@ -1,5 +1,5 @@
 // Cloudflare Pages Functions: API route to manage participants (GET, POST, DELETE)
-import { checkAndInitDb, emitEvent } from './db_helper.js';
+import { checkAndInitDb, emitEvent, recomputeAllCaches } from './db_helper.js';
 
 // CORS headers
 const headers = {
@@ -41,6 +41,7 @@ export async function onRequest(context) {
       
       try {
         await env.db.prepare('INSERT INTO participants (name) VALUES (?)').bind(cleanName).run();
+        await recomputeAllCaches(env.db);
         await emitEvent(env.db, 'participants_updated');
         const newParticipant = await env.db.prepare('SELECT * FROM participants WHERE name = ?').bind(cleanName).first();
         return new Response(JSON.stringify(newParticipant), { status: 201, headers });
@@ -61,6 +62,7 @@ export async function onRequest(context) {
       }
 
       const res = await env.db.prepare('DELETE FROM participants WHERE id = ?').bind(parseInt(id)).run();
+      await recomputeAllCaches(env.db);
       await emitEvent(env.db, 'participants_updated');
       return new Response(JSON.stringify({ success: true, changes: res.meta.changes }), { status: 200, headers });
     }

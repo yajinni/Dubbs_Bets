@@ -334,22 +334,27 @@ export default function App() {
         );
       }
 
-      // Check predictions (only if activeParticipantId is selected)
-      const predictionsChanged = activeParticipantId && (force || 
-        serverVersions.predictions !== loadedVersionsRef.current.predictions || 
-        activeParticipantId !== loadedVersionsRef.current.participantId
-      );
+      // Check predictions
+      const serverPredsVersionChanged = serverVersions.predictions !== loadedVersionsRef.current.predictions;
+      const participantChanged = activeParticipantId !== loadedVersionsRef.current.participantId;
+      const predictionsChanged = force || serverPredsVersionChanged || participantChanged;
+
       if (predictionsChanged) {
-        promises.push(
-          fetch(`/api/predictions?participantId=${activeParticipantId}`)
-            .then(r => r.json())
-            .then(data => {
-              setPredictions(data);
-              updatedVersions.predictions = serverVersions.predictions;
-              updatedVersions.participantId = activeParticipantId;
-              setMatchPredictionsCache({}); // clear detailed match predictions cache on predictions change
-            })
-        );
+        setMatchPredictionsCache({}); // clear detailed match predictions cache
+        updatedVersions.predictions = serverVersions.predictions;
+        updatedVersions.participantId = activeParticipantId;
+
+        if (activeParticipantId) {
+          promises.push(
+            fetch(`/api/predictions?participantId=${activeParticipantId}`)
+              .then(r => r.json())
+              .then(data => {
+                setPredictions(data);
+              })
+          );
+        } else {
+          setPredictions([]);
+        }
       }
 
       // Check stats (only if activeTab is stats or statsData is already loaded)
@@ -947,6 +952,8 @@ export default function App() {
                   selectedMatchId={selectedMatchId}
                   onClearSelectedMatch={() => setSelectedMatchId(null)}
                   onRefresh={refreshAllData}
+                  matchPredictionsCache={matchPredictionsCache}
+                  getMatchPredictions={getMatchPredictions}
                 />
              </div>
            )}

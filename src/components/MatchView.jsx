@@ -3,23 +3,13 @@ import { Calendar } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 
-export default function MatchView({ matches, statsData, fetchStats, leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch, onRefresh }) {
+export default function MatchView({ matches, statsData, fetchStats, leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch, onRefresh, matchPredictionsCache = {}, getMatchPredictions }) {
   const [filterStage, setFilterStage] = useState('all');
-  const [localPredCache, setLocalPredCache] = useState({});
 
   // Lazy-load stats (force refresh to clear stale error state)
   useEffect(() => {
     if (fetchStats) fetchStats(true);
   }, []);
-
-  const getMatchPredictions = async (matchId) => {
-    if (localPredCache[matchId]) return;
-    try {
-      const res = await fetch(`/api/predictions?matchId=${matchId}`);
-      const data = await res.json();
-      setLocalPredCache(prev => ({ ...prev, [matchId]: data }));
-    } catch (_) {}
-  };
 
   // Stage tab definitions
   const stages = [
@@ -118,7 +108,7 @@ export default function MatchView({ matches, statsData, fetchStats, leaderboard 
           </div>
         ) : (
           filteredMatches.map(m => {
-            const matchPreds = localPredCache[m.id];
+            const matchPreds = matchPredictionsCache[m.id];
             if (!matchPreds && (m.finished === 1 || m.status === 'live')) {
               getMatchPredictions(m.id);
             }

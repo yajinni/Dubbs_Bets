@@ -443,13 +443,28 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
     fetchFeed(false);
   }, [fetchFeed, isScheduled]);
 
-  // Poll every 30s when live
+  // Poll every 30s when live, and reload immediately on tab focus
   useEffect(() => {
     if (!isLive) return;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchFeed(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
     intervalRef.current = setInterval(() => {
-      fetchFeed(false);
+      if (document.visibilityState === 'visible') {
+        fetchFeed(false);
+      }
     }, POLL_INTERVAL_MS);
-    return () => clearInterval(intervalRef.current);
+
+    return () => {
+      clearInterval(intervalRef.current);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [isLive, fetchFeed]);
 
   // ---- Scheduled match ----
