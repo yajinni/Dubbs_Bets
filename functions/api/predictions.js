@@ -57,7 +57,17 @@ export async function onRequest(context) {
         `).bind(parseInt(matchIdParam)).all();
 
         const runningPointsSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_running_points'").first();
-        const runningPointsMap = runningPointsSetting ? JSON.parse(runningPointsSetting.value) : {};
+        let runningPointsMap = {};
+        if (runningPointsSetting && runningPointsSetting.value) {
+          try {
+            const parsed = JSON.parse(runningPointsSetting.value);
+            if (parsed && typeof parsed === 'object') {
+              runningPointsMap = parsed;
+            }
+          } catch (e) {
+            console.error('Failed to parse cached_running_points:', e);
+          }
+        }
 
         const mappedResults = results.map(row => ({
           ...row,
