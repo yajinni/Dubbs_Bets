@@ -1,0 +1,26 @@
+# Optimization and Real-Time Sync Task List
+
+- [x] Backend: Database helper (`db_helper.js`) upgrades
+  - [x] Add `bumpVersion` helper
+  - [x] Optimize `checkAndInitDb` to bypass migrations when version matches
+  - [x] Implement `db.batch()` in `scoreAllPredictionsForMatch`
+  - [x] Precalculate stats in `recomputeStatsCache` and save to settings `'cached_stats_payload'`
+  - [x] Combine cache recomputation and version bumps into `recomputeAllCaches`
+- [x] Backend: API Endpoint adjustments
+  - [x] Create `/api/versions` endpoint (`versions.js` [NEW])
+  - [x] Update `/api/stats` to serve cached payload
+  - [x] Update `/api/matches` to support `activeOnly=true` filter
+  - [x] Update `/api/predictions` to bump predictions version on POST
+  - [x] Update `/api/sync` to batch updates and use version bumps/recompute cache
+  - [x] Update `/api/recalculate_all` to use `recomputeAllCaches`
+- [x] Frontend: React application (`App.jsx` & components) upgrades
+  - [x] Implement parallel loading on startup in `initialize()`
+  - [x] Lazy-load Stats tab data (only fetch when tab is 'stats')
+  - [x] Lazy-load Results tab data (fetch all matches dynamically)
+  - [x] Add `loadedVersionsRef` and version checking logic (`checkVersionsAndRefresh`)
+  - [x] Integrate version checking with SSE, tab focus, and interval fallback
+  - [x] Clean up redundant fetches (e.g. remove StatsView fetch on mount)
+- [x] Verification and Testing
+  - [x] Verify local database initializes
+  - [x] Test parallel load and lazy loading transitions
+  - [x] Test real-time synchronization between tabs
