@@ -342,56 +342,70 @@ async function syncFromESPN(db) {
       // Get display clock from ESPN
       const displayClock = comp.status?.displayClock || null;
 
-       // Update D1 database
-      matchUpdates.push(
-        db.prepare(`
-          UPDATE matches
-          SET
-            home_score = ?,
-            away_score = ?,
-            home_ht_score = ?,
-            away_ht_score = ?,
-            status = ?,
-            finished = ?,
-            actual_cards = ?,
-            actual_first_scorer = ?,
-            espn_event_id = ?,
-            local_date = ?,
-            display_clock = ?
-          WHERE id = ?
-        `).bind(
-          homeScore,
-          awayScore,
-          homeHtScore,
-          awayHtScore,
-          status,
-          finished,
-          actualCards,
-          actualFirstScorer,
-          event.id,
-          newLocalDate,
-          displayClock,
-          dbMatch.id
-        )
-      );
-      
-      if (finished === 1 && dbMatch.finished !== 1) {
-        finishedDuringSync++;
-        await scoreAllPredictionsForMatch(db, dbMatch.id, {
-          home_score: homeScore,
-          away_score: awayScore,
-          over_under_line: dbMatch.over_under_line,
-          home_win_pct: dbMatch.home_win_pct,
-          away_win_pct: dbMatch.away_win_pct,
-          draw_pct: dbMatch.draw_pct,
-          actual_cards: actualCards,
-          actual_first_scorer: actualFirstScorer,
-          home_ht_score: homeHtScore,
-          away_ht_score: awayHtScore,
-        });
+      const hasChanged = 
+        dbMatch.home_score !== homeScore ||
+        dbMatch.away_score !== awayScore ||
+        dbMatch.home_ht_score !== homeHtScore ||
+        dbMatch.away_ht_score !== awayHtScore ||
+        dbMatch.status !== status ||
+        dbMatch.finished !== finished ||
+        dbMatch.actual_cards !== actualCards ||
+        dbMatch.actual_first_scorer !== actualFirstScorer ||
+        dbMatch.espn_event_id !== event.id ||
+        dbMatch.local_date !== newLocalDate ||
+        dbMatch.display_clock !== displayClock;
+
+      if (hasChanged) {
+        matchUpdates.push(
+          db.prepare(`
+            UPDATE matches
+            SET
+              home_score = ?,
+              away_score = ?,
+              home_ht_score = ?,
+              away_ht_score = ?,
+              status = ?,
+              finished = ?,
+              actual_cards = ?,
+              actual_first_scorer = ?,
+              espn_event_id = ?,
+              local_date = ?,
+              display_clock = ?
+            WHERE id = ?
+          `).bind(
+            homeScore,
+            awayScore,
+            homeHtScore,
+            awayHtScore,
+            status,
+            finished,
+            actualCards,
+            actualFirstScorer,
+            event.id,
+            newLocalDate,
+            displayClock,
+            dbMatch.id
+          )
+        );
+        
+        if (finished === 1 && dbMatch.finished !== 1) {
+          finishedDuringSync++;
+          await scoreAllPredictionsForMatch(db, dbMatch.id, {
+            home_score: homeScore,
+            away_score: awayScore,
+            over_under_line: dbMatch.over_under_line,
+            home_win_pct: dbMatch.home_win_pct,
+            away_win_pct: dbMatch.away_win_pct,
+            draw_pct: dbMatch.draw_pct,
+            actual_cards: actualCards,
+            actual_first_scorer: actualFirstScorer,
+            home_ht_score: homeHtScore,
+            away_ht_score: awayHtScore,
+          });
+        }
+        
+        matchesUpdated++;
       }
-      
-      matchesUpdated++;
     }
   }
 

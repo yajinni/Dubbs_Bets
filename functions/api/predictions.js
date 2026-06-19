@@ -205,22 +205,25 @@ export async function onRequest(context) {
       }
 
       if (existing) {
-        const updateQuery = `
-          UPDATE predictions 
-          SET 
-            predicted_winner = ?, 
-            predicted_over_under = ?, 
-            predicted_home_score = ?, 
-            predicted_away_score = ?,
-            predicted_total_cards = ?,
-            predicted_first_scorer = ?,
-            predicted_highest_scoring_half = ?,
-            predicted_clean_sheet = ?
-          WHERE participant_id = ? AND match_id = ?
-        `;
-        await env.db.prepare(updateQuery)
-          .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, participantId, matchId)
-          .run();
+        if (changes.length > 0) {
+          const updateQuery = `
+            UPDATE predictions 
+            SET 
+              predicted_winner = ?, 
+              predicted_over_under = ?, 
+              predicted_home_score = ?, 
+              predicted_away_score = ?,
+              predicted_total_cards = ?,
+              predicted_first_scorer = ?,
+              predicted_highest_scoring_half = ?,
+              predicted_clean_sheet = ?
+            WHERE participant_id = ? AND match_id = ?
+          `;
+          await env.db.prepare(updateQuery)
+            .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, participantId, matchId)
+            .run();
+          await bumpVersion(env.db, 'predictions');
+        }
       } else {
         const insertQuery = `
           INSERT INTO predictions (
@@ -239,9 +242,8 @@ export async function onRequest(context) {
         await env.db.prepare(insertQuery)
           .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick)
           .run();
+        await bumpVersion(env.db, 'predictions');
       }
-
-      await bumpVersion(env.db, 'predictions');
 
       // 4. Immediately calculate points for this prediction if the match is already finished
       if (match.finished === 1) {
