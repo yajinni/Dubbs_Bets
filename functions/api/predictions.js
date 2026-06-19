@@ -33,7 +33,7 @@ export async function onRequest(context) {
           SELECT 
             p.id AS participant_id,
             p.name AS participant_name,
-            pr.id AS id,
+            pr.participant_id AS id,
             pr.match_id,
             pr.predicted_winner,
             pr.predicted_over_under,
