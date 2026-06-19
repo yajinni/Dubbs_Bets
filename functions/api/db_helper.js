@@ -545,21 +545,44 @@ export async function recomputeLeaderboardCache(db) {
 
 export async function recomputeStatsCache(db) {
   try {
-    // 1. Recompute running_points_cache in a single query using window function
-    await db.prepare(`DELETE FROM running_points_cache`).run();
-    await db.prepare(`
-      INSERT OR REPLACE INTO running_points_cache (participant_id, match_id, total_points)
-      SELECT
-        pr.participant_id,
-        pr.match_id,
-        COALESCE(SUM(CASE WHEN m.finished = 1 THEN pr.total_points ELSE 0 END) OVER (
-          PARTITION BY pr.participant_id
-          ORDER BY m.local_date ASC, m.id ASC
-          ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
-        ), 0)
+    // 1. Calculate running points in memory
+    const { results: allPreds } = await db.prepare(`
+      SELECT pr.participant_id, pr.match_id, pr.total_points, m.finished, m.local_date, m.id AS match_id
       FROM predictions pr
       INNER JOIN matches m ON pr.match_id = m.id
-    `).run();
+    `).all();
+
+    const predsByParticipantForRunning = {};
+    for (const pr of allPreds || []) {
+      if (!predsByParticipantForRunning[pr.participant_id]) {
+        predsByParticipantForRunning[pr.participant_id] = [];
+      }
+      predsByParticipantForRunning[pr.participant_id].push(pr);
+    }
+
+    const runningPointsMap = {};
+    for (const pid in predsByParticipantForRunning) {
+      const list = predsByParticipantForRunning[pid];
+      list.sort((a, b) => {
+        const dA = new Date(a.local_date).getTime();
+        const dB = new Date(b.local_date).getTime();
+        if (dA !== dB) return dA - dB;
+        return a.match_id - b.match_id;
+      });
+
+      let runningSum = 0;
+      for (const pr of list) {
+        runningPointsMap[`${pr.participant_id}_${pr.match_id}`] = runningSum;
+        if (pr.finished === 1) {
+          runningSum += (pr.total_points || 0);
+        }
+      }
+    }
+
+    // Save running points map to settings as JSON
+    await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('cached_running_points', ?)")
+      .bind(JSON.stringify(runningPointsMap))
+      .run();
 
     // 2. Recompute per-participant stats (matching StatsView.jsx logic)
     const { results: participants } = await db.prepare('SELECT id, name FROM participants').all();
@@ -822,14 +845,7 @@ export async function recomputeStatsCache(db) {
       }
     }
 
-    // Running points
-    const { results: runningPoints } = await db.prepare(`
-      SELECT participant_id, match_id, total_points FROM running_points_cache
-    `).all();
-    const runningPointsMap = {};
-    for (const rp of runningPoints || []) {
-      runningPointsMap[`${rp.participant_id}_${rp.match_id}`] = rp.total_points;
-    }
+    // Running points (already calculated in memory at step 1)
 
     // Super Stats
     const gamePointsMap = {};

@@ -51,13 +51,20 @@ export async function onRequest(context) {
             COALESCE(pr.points_total_cards, 0) AS points_total_cards,
             COALESCE(pr.points_highest_scoring_half, 0) AS points_highest_scoring_half,
             COALESCE(pr.points_clean_sheet, 0) AS points_clean_sheet,
-            COALESCE(pr.points_cards_ou, 0) AS points_cards_ou,
-            COALESCE(rpc.total_points, 0) AS running_total
+            COALESCE(pr.points_cards_ou, 0) AS points_cards_ou
           FROM participants p
           LEFT JOIN predictions pr ON pr.participant_id = p.id AND pr.match_id = ?
-          LEFT JOIN running_points_cache rpc ON rpc.participant_id = p.id AND rpc.match_id = ?
-        `).bind(parseInt(matchIdParam), parseInt(matchIdParam)).all();
-        return new Response(JSON.stringify(results), { status: 200, headers });
+        `).bind(parseInt(matchIdParam)).all();
+
+        const runningPointsSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_running_points'").first();
+        const runningPointsMap = runningPointsSetting ? JSON.parse(runningPointsSetting.value) : {};
+
+        const mappedResults = results.map(row => ({
+          ...row,
+          running_total: runningPointsMap[`${row.participant_id}_${matchIdParam}`] || 0
+        }));
+
+        return new Response(JSON.stringify(mappedResults), { status: 200, headers });
       }
 
       if (!participantId) {
