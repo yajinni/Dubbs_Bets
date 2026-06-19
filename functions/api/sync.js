@@ -47,7 +47,7 @@ export async function onRequest(context) {
 
 
 
-    // Handle QStash task webhooks
+    // Handle automated task webhooks
     const lockMatchId = url.searchParams.get('lockMatchId');
     if (lockMatchId) {
       const apiKeyOdds = env.THE_ODDS_API_KEY;

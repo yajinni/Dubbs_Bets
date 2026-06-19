@@ -66,9 +66,6 @@ export async function checkAndInitDb(db) {
       ['away_ht_score', 'INTEGER DEFAULT NULL'],
       ['espn_event_id', 'TEXT DEFAULT NULL'],
       ['odds_locked', 'INTEGER DEFAULT 0'],
-      ['qstash_scheduled', 'INTEGER DEFAULT 0'],
-      ['qstash_lock_msg_id', 'TEXT DEFAULT NULL'],
-      ['qstash_score_msg_id', 'TEXT DEFAULT NULL'],
       ['odds_updated_at', 'TEXT DEFAULT NULL'],
       ['display_clock', 'TEXT DEFAULT NULL'],
     ];
