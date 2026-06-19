@@ -107,34 +107,16 @@ export async function onRequest(context) {
       return new Response(JSON.stringify(oddsData), { status: 200, headers });
     }
 
-    // 1. Check if we should sync
-    const lastSyncSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'last_sync'").first();
-    const lastSyncTime = lastSyncSetting ? new Date(lastSyncSetting.value).getTime() : 0;
-    const currentTime = Date.now();
-    const twentyFourHoursInMs = 24 * 60 * 60 * 1000; // 24 hours
-    const skipOdds = url.searchParams.get('skipOdds') === 'true';
-
-    // We allow sync if forced, if 24 hours have passed, or if we are only syncing scores (skipOdds = true)
-    let shouldSync = force || skipOdds || (currentTime - lastSyncTime >= twentyFourHoursInMs);
-    let reason = 'Sync skipped. Updated within the last 24 hours.';
-
-    if (!shouldSync) {
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: reason,
-        last_sync: lastSyncSetting ? lastSyncSetting.value : null
-      }), { status: 200, headers });
-    }
-
-    // 2. Perform Sync
+    // 1. Perform Sync
     const apiKeyOdds = env.THE_ODDS_API_KEY;
     const skipOdds = url.searchParams.get('skipOdds') === 'true';
     let syncResults = { source: 'espn', matchesUpdated: 0, oddsUpdated: 0 };
 
-    // Run actual sync. If it fails, let the error propagate.
+    // Run actual sync from ESPN. If it fails, let the error propagate.
     syncResults = await syncFromESPN(env.db);
 
-    if (!skipOdds && apiKeyOdds && apiKeyOdds !== '') {
+    // Only fetch odds if forced (since midnightLock cron task at 12:05 handles standard daily odds update)
+    if (force && !skipOdds && apiKeyOdds && apiKeyOdds !== '') {
       try {
         const oddsResults = await syncFromTheOddsAPI(env.db, apiKeyOdds);
         syncResults.oddsUpdated = oddsResults.oddsUpdated;
@@ -145,11 +127,9 @@ export async function onRequest(context) {
       }
     }
 
-    // 3. Update last sync time (only for full syncs that include odds)
+    // 2. Update last sync time
     const isoString = new Date().toISOString();
-    if (!skipOdds) {
-      await env.db.prepare("UPDATE settings SET value = ? WHERE key = 'last_sync'").bind(isoString).run();
-    }
+    await env.db.prepare("UPDATE settings SET value = ? WHERE key = 'last_sync'").bind(isoString).run();
 
     const logDetails = `Started: ${startTime} | Updated: ${syncResults.matchesUpdated} matches, ${syncResults.oddsUpdated} odds.` + (syncResults.oddsError ? ` Odds Error: ${syncResults.oddsError}` : '');
     await logChange(env.db, 'system', null, null, '✅ ESPN Live MatchPulse', null, logDetails);
