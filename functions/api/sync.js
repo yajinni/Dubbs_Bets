@@ -111,24 +111,12 @@ export async function onRequest(context) {
     const lastSyncSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'last_sync'").first();
     const lastSyncTime = lastSyncSetting ? new Date(lastSyncSetting.value).getTime() : 0;
     const currentTime = Date.now();
-    const sixHoursInMs = 6 * 60 * 60 * 1000; // 6 hours
+    const twentyFourHoursInMs = 24 * 60 * 60 * 1000; // 24 hours
+    const skipOdds = url.searchParams.get('skipOdds') === 'true';
 
-    let shouldSync = force || (currentTime - lastSyncTime >= sixHoursInMs);
-    let reason = 'Sync skipped. Updated within the last 6 hours.';
-
-    if (!shouldSync) {
-      const { results: dbMatches } = await env.db.prepare('SELECT local_date, finished FROM matches WHERE finished = 0').all();
-      const activeMatchInWindow = dbMatches.some(m => {
-        const matchTime = new Date(m.local_date).getTime();
-        const elapsedMinutes = (currentTime - matchTime) / (60 * 1000);
-        return elapsedMinutes >= 0 && elapsedMinutes < 300;
-      });
-
-      if (activeMatchInWindow) {
-        shouldSync = true;
-        reason = 'Sync triggered: Active match in the 0 to 300-minute post-start window.';
-      }
-    }
+    // We allow sync if forced, if 24 hours have passed, or if we are only syncing scores (skipOdds = true)
+    let shouldSync = force || skipOdds || (currentTime - lastSyncTime >= twentyFourHoursInMs);
+    let reason = 'Sync skipped. Updated within the last 24 hours.';
 
     if (!shouldSync) {
       return new Response(JSON.stringify({ 
@@ -157,9 +145,11 @@ export async function onRequest(context) {
       }
     }
 
-    // 3. Update last sync time
+    // 3. Update last sync time (only for full syncs that include odds)
     const isoString = new Date().toISOString();
-    await env.db.prepare("UPDATE settings SET value = ? WHERE key = 'last_sync'").bind(isoString).run();
+    if (!skipOdds) {
+      await env.db.prepare("UPDATE settings SET value = ? WHERE key = 'last_sync'").bind(isoString).run();
+    }
 
     const logDetails = `Started: ${startTime} | Updated: ${syncResults.matchesUpdated} matches, ${syncResults.oddsUpdated} odds.` + (syncResults.oddsError ? ` Odds Error: ${syncResults.oddsError}` : '');
     await logChange(env.db, 'system', null, null, '✅ ESPN Live MatchPulse', null, logDetails);
