@@ -131,6 +131,15 @@ export async function checkAndInitDb(db) {
       }
     }
 
+    // Migration: ensure indexes exist
+    try {
+      await db.prepare("CREATE INDEX IF NOT EXISTS idx_predictions_match_id ON predictions(match_id)").run();
+      await db.prepare("CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp DESC, id DESC)").run();
+      await db.prepare("CREATE INDEX IF NOT EXISTS idx_logs_match_id ON logs(match_id)").run();
+    } catch (e) {
+      console.error('[Migration] Failed to create indexes:', e.message);
+    }
+
     // Save schema version
     try {
       await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_version', ?)").bind(CURRENT_SCHEMA_VERSION).run();

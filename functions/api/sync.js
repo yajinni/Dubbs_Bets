@@ -999,5 +999,13 @@ async function handleMidnightLock(db, apiKey) {
   await logChange(db, 'system', null, null, '🌙 Midnight Odds Lock', null, `Updated: ${updated}, Locked Today: ${locked}`);
   console.log(`[Midnight Lock] Updated ${updated} matches, locked ${locked} today's matches.`);
 
+  // Prune logs older than 14 days to keep database size clean
+  try {
+    const pruneResult = await db.prepare("DELETE FROM logs WHERE timestamp < datetime('now', '-14 days')").run();
+    console.log(`[Midnight Lock] Pruned logs older than 14 days. Changes: ${pruneResult.meta?.changes || 0}`);
+  } catch (err) {
+    console.error('[Midnight Lock] Failed to prune old logs:', err.message);
+  }
+
   return { updated, locked };
 }

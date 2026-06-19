@@ -83,3 +83,8 @@ CREATE TABLE IF NOT EXISTS logs (
   FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE SET NULL,
   FOREIGN KEY (participant_id) REFERENCES participants(id) ON DELETE SET NULL
 );
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_predictions_match_id ON predictions(match_id);
+CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_logs_match_id ON logs(match_id);
