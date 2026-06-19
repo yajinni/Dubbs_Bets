@@ -449,6 +449,23 @@ async function syncFromTheOddsAPI(db, apiKey) {
       if (dbMatch.odds_locked === 1) {
         continue;
       }
+      // Date filter: only update odds for matches scheduled for today and the next 2 days
+      let isWithinWindow = false;
+      if (dbMatch.local_date) {
+        try {
+          const tzFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+          const matchDateStr = tzFormatter.format(new Date(dbMatch.local_date));
+          const todayDateStr = tzFormatter.format(new Date());
+          const diffTime = new Date(`${matchDateStr}T00:00:00`) - new Date(`${todayDateStr}T00:00:00`);
+          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays >= 0 && diffDays <= 2) {
+            isWithinWindow = true;
+          }
+        } catch (_) {}
+      }
+      if (!isWithinWindow) {
+        continue;
+      }
       let homePct = dbMatch.home_win_pct;
       let awayPct = dbMatch.away_win_pct;
       let drawPct = dbMatch.draw_pct;
@@ -860,6 +877,24 @@ async function handleMidnightLock(db, apiKey) {
     );
 
     if (!dbMatch) continue;
+
+    // Date filter: only update odds for matches scheduled for today and the next 2 days
+    let isWithinWindow = false;
+    if (dbMatch.local_date) {
+      try {
+        const tzFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+        const matchDateStr = tzFormatter.format(new Date(dbMatch.local_date));
+        const todayDateStr = tzFormatter.format(new Date());
+        const diffTime = new Date(`${matchDateStr}T00:00:00`) - new Date(`${todayDateStr}T00:00:00`);
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays <= 2) {
+          isWithinWindow = true;
+        }
+      } catch (_) {}
+    }
+    if (!isWithinWindow) {
+      continue;
+    }
 
     let homePct = dbMatch.home_win_pct;
     let awayPct = dbMatch.away_win_pct;
