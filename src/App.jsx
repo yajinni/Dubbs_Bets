@@ -590,11 +590,12 @@ export default function App() {
     }
   }, [activeTab, hasFullMatches, loadAllMatchesArchive, checkVersionsAndRefresh]);
 
-  // Live score sync check from ESPN (only if live matches are running)
+  // Live score sync check from ESPN (only if live matches are running and tab is active)
   useEffect(() => {
     if (!hasLiveMatches) return;
 
     const performSync = async () => {
+      if (document.visibilityState !== 'visible') return; // Pause polling when tab is hidden/locked
       try {
         const syncRes = await fetch('/api/sync?skipOdds=true');
         const syncData = await syncRes.json();
@@ -612,9 +613,10 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [hasLiveMatches, checkVersionsAndRefresh]);
 
-  // Smart version polling check (replaces SSE)
+  // Smart version polling check (replaces SSE, only active when tab is visible)
   useEffect(() => {
     const intervalId = setInterval(() => {
+      if (document.visibilityState !== 'visible') return; // Pause polling when tab is hidden/locked
       checkVersionsAndRefresh();
     }, 10000); // Poll every 10 seconds
 
