@@ -321,8 +321,8 @@ export default function StatsView({ statsData, fetchStats }) {
               </g>
             ))}
 
-            {/* Selected Date Box Highlight */}
-            {hoveredIndex !== null && (
+            {/* Selected Date Box Highlight (only in week mode) */}
+            {hoveredIndex !== null && timeRange === 'week' && (
               <rect
                 x={getX(hoveredIndex) - 27}
                 y={paddingTop + chartHeight + 4}
@@ -337,8 +337,8 @@ export default function StatsView({ statsData, fetchStats }) {
               />
             )}
 
-            {/* X Labels */}
-            {dates.map((date, i) => (
+            {/* X Labels (week mode only) */}
+            {timeRange === 'week' && dates.map((date, i) => (
               <text
                 key={i}
                 x={getX(i)}
@@ -349,7 +349,7 @@ export default function StatsView({ statsData, fetchStats }) {
                 fontWeight="500"
                 style={{ cursor: 'pointer' }}
                 onClick={(e) => {
-                  e.stopPropagation(); // prevent triggering parent SVG click
+                  e.stopPropagation();
                   setHoveredIndex(i);
                 }}
               >
@@ -473,8 +473,41 @@ export default function StatsView({ statsData, fetchStats }) {
           )}
         </div>
 
+        {/* Clickable Date Grid (All mode) */}
+        {timeRange === 'all' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {dates.map((date, i) => {
+                const isHovered = hoveredIndex === i;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setHoveredIndex(isHovered ? null : i)}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '11px',
+                      fontWeight: isHovered ? '700' : '500',
+                      border: '1px solid',
+                      borderColor: isHovered ? '#22c55e' : 'var(--glass-border)',
+                      background: isHovered ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                      color: isHovered ? '#22c55e' : 'var(--text-muted)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      minWidth: '60px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {formatLabelDate(date)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', opacity: 0.8, marginTop: '8px' }}>
-          Click on the dates to see values for that day
+          {timeRange === 'all' ? 'Click a date to see the points for that day' : 'Click on the dates to see values for that day'}
         </div>
       </div>
     );
