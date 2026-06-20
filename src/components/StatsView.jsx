@@ -88,9 +88,8 @@ export default function StatsView({ statsData, fetchStats }) {
   const paddingLeft = 40;
   const paddingRight = 40;
   const paddingTop = 30;
-  const paddingBottom = 40;
-  const svgWidth = chartWidth + paddingLeft + paddingRight;
-  const svgHeight = chartHeight + paddingTop + paddingBottom;
+  const datesPerRow = 5;
+  const dateLabelRowHeight = 20;
 
   let chartContent = null;
 
@@ -103,6 +102,12 @@ export default function StatsView({ statsData, fetchStats }) {
   } else {
     const { dates: allDates, playerProgress } = chartData;
     const dates = timeRange === 'week' ? allDates.slice(-7) : allDates;
+
+    // Compute dynamic padding for multi-row date labels
+    const dateLabelRows = Math.ceil(dates.length / datesPerRow);
+    const paddingBottom = 40 + (dateLabelRows - 1) * dateLabelRowHeight;
+    const svgWidth = chartWidth + paddingLeft + paddingRight;
+    const svgHeight = chartHeight + paddingTop + paddingBottom;
     
     // Determine the max Y value based on active player scores
     let maxY = 10;
@@ -329,7 +334,7 @@ export default function StatsView({ statsData, fetchStats }) {
             {hoveredIndex !== null && (
               <rect
                 x={getX(hoveredIndex) - 27}
-                y={paddingTop + chartHeight + 4}
+                y={paddingTop + chartHeight + 4 + Math.floor(hoveredIndex / datesPerRow) * dateLabelRowHeight}
                 width={54}
                 height={24}
                 rx={6}
@@ -341,25 +346,39 @@ export default function StatsView({ statsData, fetchStats }) {
               />
             )}
 
-            {/* X Labels */}
-            {dates.map((date, i) => (
-              <text
-                key={i}
-                x={getX(i)}
-                y={paddingTop + chartHeight + 20}
-                className="chart-axis-label"
-                textAnchor="middle"
-                fill="var(--text-muted)"
-                fontWeight="500"
-                style={{ cursor: 'pointer' }}
-                onClick={(e) => {
-                  e.stopPropagation(); // prevent triggering parent SVG click
-                  setHoveredIndex(i);
-                }}
-              >
-                {formatLabelDate(date)}
-              </text>
-            ))}
+            {/* X Labels - 5 per row when showing all */}
+            {(() => {
+              const rows = [];
+              for (let r = 0; r < dateLabelRows; r++) {
+                const rowDates = dates.slice(r * datesPerRow, (r + 1) * datesPerRow);
+                rows.push(
+                  <g key={`row-${r}`}>
+                    {rowDates.map((date, ri) => {
+                      const i = r * datesPerRow + ri;
+                      return (
+                        <text
+                          key={i}
+                          x={getX(i)}
+                          y={paddingTop + chartHeight + 20 + r * dateLabelRowHeight}
+                          className="chart-axis-label"
+                          textAnchor="middle"
+                          fill="var(--text-muted)"
+                          fontWeight="500"
+                          style={{ cursor: 'pointer' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setHoveredIndex(i);
+                          }}
+                        >
+                          {formatLabelDate(date)}
+                        </text>
+                      );
+                    })}
+                  </g>
+                );
+              }
+              return rows;
+            })()}
 
             {/* Hover Line */}
             {hoveredIndex !== null && (
