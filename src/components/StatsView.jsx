@@ -52,14 +52,18 @@ export default function StatsView({ statsData, fetchStats }) {
     return { dates, playerProgress };
   }, [chartDataRaw, stats]);
 
-  // Top performers from pre-computed stats
+  // Top performers from pre-computed stats (show all tied players)
   const hasFinishedPreds = stats.some(s => s.totalFinishedPreds > 0);
-  let topWinner = null, topCards = null, topScore = null, topExactCards = null;
+  let topWinners = [], topCardss = [], topScores = [], topExactCardss = [];
   if (hasFinishedPreds) {
-    topWinner = [...stats].sort((a, b) => b.winnerPct - a.winnerPct || b.correctWinners - a.correctWinners)[0];
-    topCards = [...stats].sort((a, b) => b.underdogPct - a.underdogPct || b.underdogCorrect - a.underdogCorrect)[0];
-    topScore = [...stats].sort((a, b) => b.scorePct - a.scorePct || b.correctScores - a.correctScores)[0];
-    topExactCards = [...stats].sort((a, b) => b.exactCardsPct - a.exactCardsPct || b.correctExactCards - a.correctExactCards)[0];
+    const sortedWinners = [...stats].sort((a, b) => b.winnerPct - a.winnerPct || b.correctWinners - a.correctWinners);
+    topWinners = sortedWinners.filter(s => s.winnerPct === sortedWinners[0]?.winnerPct && s.correctWinners === sortedWinners[0]?.correctWinners);
+    const sortedUnderdog = [...stats].sort((a, b) => b.underdogPct - a.underdogPct || b.underdogCorrect - a.underdogCorrect);
+    topCardss = sortedUnderdog.filter(s => s.underdogPct === sortedUnderdog[0]?.underdogPct && s.underdogCorrect === sortedUnderdog[0]?.underdogCorrect);
+    const sortedScores = [...stats].sort((a, b) => b.scorePct - a.scorePct || b.correctScores - a.correctScores);
+    topScores = sortedScores.filter(s => s.scorePct === sortedScores[0]?.scorePct && s.correctScores === sortedScores[0]?.correctScores);
+    const sortedExactCards = [...stats].sort((a, b) => b.exactCardsPct - a.exactCardsPct || b.correctExactCards - a.correctExactCards);
+    topExactCardss = sortedExactCards.filter(s => s.exactCardsPct === sortedExactCards[0]?.exactCardsPct && s.correctExactCards === sortedExactCards[0]?.correctExactCards);
   }
 
   // Stats rows already have median/max from cache
@@ -938,12 +942,14 @@ export default function StatsView({ statsData, fetchStats }) {
               </div>
               <div style={{ flex: 1 }}>
                 <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Winner Predictor King 👑</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topWinner?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topWinner?.winnerPct}% Accuracy ({topWinner?.correctWinners}/{topWinner?.totalFinishedPreds})
-                  </span>
-                </div>
+                {topWinners.map((w, i) => (
+                  <div key={w.participant_id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{w.name}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {w.winnerPct}% Accuracy ({w.correctWinners}/{w.totalFinishedPreds})
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -953,12 +959,14 @@ export default function StatsView({ statsData, fetchStats }) {
               </div>
               <div style={{ flex: 1 }}>
                 <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>CARD SHARK 🦈</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topExactCards?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topExactCards?.exactCardsPct}% Accuracy ({topExactCards?.correctExactCards}/{topExactCards?.totalFinishedPreds})
-                  </span>
-                </div>
+                {topExactCardss.map((w, i) => (
+                  <div key={w.participant_id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{w.name}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {w.exactCardsPct}% Accuracy ({w.correctExactCards}/{w.totalFinishedPreds})
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -968,12 +976,14 @@ export default function StatsView({ statsData, fetchStats }) {
               </div>
               <div style={{ flex: 1 }}>
                 <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Underdog Whisperer 🐉</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topCards?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topCards?.underdogPct}% Accuracy ({topCards?.underdogCorrect}/{topCards?.underdogAttempts})
-                  </span>
-                </div>
+                {topCardss.map((w, i) => (
+                  <div key={w.participant_id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{w.name}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {w.underdogPct}% Accuracy ({w.underdogCorrect}/{w.underdogAttempts})
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -983,12 +993,14 @@ export default function StatsView({ statsData, fetchStats }) {
               </div>
               <div style={{ flex: 1 }}>
                 <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Exact Score Sniper 🎯</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topScore?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topScore?.scorePct}% Accuracy ({topScore?.correctScores}/{topScore?.totalFinishedPreds})
-                  </span>
-                </div>
+                {topScores.map((w, i) => (
+                  <div key={w.participant_id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{w.name}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {w.scorePct}% Accuracy ({w.correctScores}/{w.totalFinishedPreds})
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -998,12 +1010,14 @@ export default function StatsView({ statsData, fetchStats }) {
               </div>
               <div style={{ flex: 1 }}>
                 <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Cheat Code 🎮</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topSingleGame?.participant_name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topSingleGame?.total_points} pts {topSingleGame ? `(${shortenTeamName(topSingleGame.home_team_name)} ${topSingleGame.home_score}-${topSingleGame.away_score} ${shortenTeamName(topSingleGame.away_team_name)})` : ''}
-                  </span>
-                </div>
+                {(Array.isArray(topSingleGame) ? topSingleGame : topSingleGame ? [topSingleGame] : []).map((g, i) => (
+                  <div key={g.match_id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{g.participant_name}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {g.total_points} pts {g ? `(${shortenTeamName(g.home_team_name)} ${g.home_score}-${g.away_score} ${shortenTeamName(g.away_team_name)})` : ''}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -1013,12 +1027,14 @@ export default function StatsView({ statsData, fetchStats }) {
               </div>
               <div style={{ flex: 1 }}>
                 <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.05em' }}>Lotto Winner 🍀</h4>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{topSingleDay?.name}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {topSingleDay?.points} pts {topSingleDay?.date ? `(${new Date(topSingleDay.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })})` : ''}
-                  </span>
-                </div>
+                {(Array.isArray(topSingleDay) ? topSingleDay : topSingleDay ? [topSingleDay] : []).map((d, i) => (
+                  <div key={`${d.name}-${d.date}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)' }}>{d.name}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {d.points} pts {d.date ? `(${new Date(d.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })})` : ''}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
 
