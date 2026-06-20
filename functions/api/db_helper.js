@@ -769,7 +769,7 @@ export async function recomputeStatsCache(db) {
     }
 
     // Top Single Game
-    let topSingleGame = null;
+    let topSingleGame = [];
     let maxGamePoints = -1;
     const nameMap = {};
     for (const p of participants || []) nameMap[p.id] = p.name;
@@ -777,7 +777,7 @@ export async function recomputeStatsCache(db) {
     for (const pred of finishedPreds || []) {
       if (pred.total_points > maxGamePoints) {
         maxGamePoints = pred.total_points;
-        topSingleGame = {
+        topSingleGame = [{
           participant_name: nameMap[pred.participant_id] || `Player ${pred.participant_id}`,
           total_points: pred.total_points,
           home_team_name: pred.home_team_name,
@@ -785,12 +785,22 @@ export async function recomputeStatsCache(db) {
           home_score: pred.home_score,
           away_score: pred.away_score,
           match_id: pred.match_id,
-        };
+        }];
+      } else if (pred.total_points === maxGamePoints && maxGamePoints > 0) {
+        topSingleGame.push({
+          participant_name: nameMap[pred.participant_id] || `Player ${pred.participant_id}`,
+          total_points: pred.total_points,
+          home_team_name: pred.home_team_name,
+          away_team_name: pred.away_team_name,
+          home_score: pred.home_score,
+          away_score: pred.away_score,
+          match_id: pred.match_id,
+        });
       }
     }
 
     // Top Single Day
-    let topSingleDay = null;
+    let topSingleDay = [];
     let maxDayPts = 0;
     const dayPointsSumMap = {};
     for (const p of finishedPreds || []) {
@@ -803,11 +813,18 @@ export async function recomputeStatsCache(db) {
       if (pts > maxDayPts) {
         maxDayPts = pts;
         const [pId, dateStr] = key.split('_');
-        topSingleDay = {
+        topSingleDay = [{
           name: nameMap[parseInt(pId)] || `Player ${pId}`,
           points: pts,
           date: dateStr
-        };
+        }];
+      } else if (pts === maxDayPts && maxDayPts > 0) {
+        const [pId, dateStr] = key.split('_');
+        topSingleDay.push({
+          name: nameMap[parseInt(pId)] || `Player ${pId}`,
+          points: pts,
+          date: dateStr
+        });
       }
     }
 
