@@ -8,7 +8,7 @@ import StatsView from './components/StatsView';
 import LogsView from './components/LogsView';
 import InfoView from './components/InfoView';
 import NavCustomizerModal from './components/NavCustomizerModal';
-import { Calendar, Award, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp, Menu, X, Info, BarChart2, List, RefreshCw, Clock } from 'lucide-react';
+import { Calendar, Award, Trophy, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp, Menu, X, Info, BarChart2, List, RefreshCw, Clock } from 'lucide-react';
 import { shortenTeamName } from './utils/teamNames';
 
 // ─── Nav Layout Helpers ───────────────────────────────────────────────────────
@@ -1180,6 +1180,46 @@ export default function App() {
           <ArrowUp size={20} strokeWidth={2.5} />
         </button>
       )}
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="mobile-bottom-nav">
+        <button
+          className={`mobile-bottom-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => handleTabChange('dashboard')}
+        >
+          <Trophy size={20} />
+          <span>Dashboard</span>
+        </button>
+        <button
+          className={`mobile-bottom-nav-item ${activeTab === 'matches' ? 'active' : ''}`}
+          onClick={() => handleTabChange('matches')}
+        >
+          <Calendar size={20} />
+          <span>Bets</span>
+        </button>
+        <button
+          className={`mobile-bottom-nav-item ${activeTab === 'live' ? 'active' : ''}`}
+          onClick={() => handleTabChange('live')}
+          style={{ position: 'relative' }}
+        >
+          <Clock size={20} />
+          {hasLiveMatches && <span className="mobile-live-dot" />}
+          <span>Live</span>
+        </button>
+        <button
+          className={`mobile-bottom-nav-item ${activeTab === 'match-view' ? 'active' : ''}`}
+          onClick={() => handleTabChange('match-view')}
+        >
+          <Award size={20} />
+          <span>Results</span>
+        </button>
+        <button
+          className="mobile-bottom-nav-item"
+          onClick={() => setSidebarOpen(true)}
+        >
+          <Menu size={20} />
+          <span>More</span>
+        </button>
+      </div>
     </>
   );
 }
