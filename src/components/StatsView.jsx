@@ -56,10 +56,10 @@ export default function StatsView({ statsData, fetchStats }) {
   const hasFinishedPreds = stats.some(s => s.totalFinishedPreds > 0);
   let topWinner = null, topCards = null, topScore = null, topExactCards = null;
   if (hasFinishedPreds) {
-    topWinner = [...stats].sort((a, b) => b.winner_pct - a.winner_pct || b.correct_winners - a.correct_winners)[0];
-    topCards = [...stats].sort((a, b) => b.underdog_pct - a.underdog_pct || b.underdog_correct - a.underdog_correct)[0];
-    topScore = [...stats].sort((a, b) => b.score_pct - a.score_pct || b.correct_scores - a.correct_scores)[0];
-    topExactCards = [...stats].sort((a, b) => b.exact_cards_pct - a.exact_cards_pct || b.correct_exact_cards - a.correct_exact_cards)[0];
+    topWinner = [...stats].sort((a, b) => b.winnerPct - a.winnerPct || b.correctWinners - a.correctWinners)[0];
+    topCards = [...stats].sort((a, b) => b.underdogPct - a.underdogPct || b.underdogCorrect - a.underdogCorrect)[0];
+    topScore = [...stats].sort((a, b) => b.scorePct - a.scorePct || b.correctScores - a.correctScores)[0];
+    topExactCards = [...stats].sort((a, b) => b.exactCardsPct - a.exactCardsPct || b.correctExactCards - a.correctExactCards)[0];
   }
 
   // Stats rows already have median/max from cache
