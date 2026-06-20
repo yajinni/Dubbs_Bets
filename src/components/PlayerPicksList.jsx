@@ -72,12 +72,16 @@ export default function PlayerPicksList({
   const awayCode = m.away_code || 'A';
 
   const [liveStats, setLiveStats] = useState(null);
+  const [cardMismatch, setCardMismatch] = useState(null);
 
   // Only poll live data for actually live matches when in the Live tab
   const isLive = showLiveResults && m.espn_event_id;
 
   useEffect(() => {
-    if (!isLive || !m.espn_event_id) return;
+    if (!m.espn_event_id) {
+      setCardMismatch(null);
+      return;
+    }
 
     const fetchLiveStats = async () => {
       try {
@@ -86,135 +90,147 @@ export default function PlayerPicksList({
         if (!res.ok) return;
         const data = await res.json();
 
-        const competitions = data.header?.competitions || [];
-        if (competitions.length > 0) {
-          const comp = competitions[0];
-          const homeTeam = comp.competitors?.find(c => c.homeAway === 'home');
-          const awayTeam = comp.competitors?.find(c => c.homeAway === 'away');
-          if (homeTeam && awayTeam) {
-            const hScore = parseInt(homeTeam.score) || 0;
-            const aScore = parseInt(awayTeam.score) || 0;
+        // 1. Calculate cards from boxscore
+        let homeYellow = 0, awayYellow = 0, homeRed = 0, awayRed = 0;
+        if (data.boxscore && data.boxscore.teams) {
+          const bHome = data.boxscore.teams.find(t => t.homeAway === 'home');
+          const bAway = data.boxscore.teams.find(t => t.homeAway === 'away');
+          if (bHome && bHome.statistics) {
+            const yStat = bHome.statistics.find(st => st.name === 'yellowCards');
+            const rStat = bHome.statistics.find(st => st.name === 'redCards');
+            if (yStat) homeYellow = parseInt(yStat.displayValue) || 0;
+            if (rStat) homeRed = parseInt(rStat.displayValue) || 0;
+          }
+          if (bAway && bAway.statistics) {
+            const yStat = bAway.statistics.find(st => st.name === 'yellowCards');
+            const rStat = bAway.statistics.find(st => st.name === 'redCards');
+            if (yStat) awayYellow = parseInt(yStat.displayValue) || 0;
+            if (rStat) awayRed = parseInt(rStat.displayValue) || 0;
+          }
+        }
+        const boxscoreTotalCards = homeYellow + awayYellow + homeRed + awayRed;
 
-            const cleanSheet = (hScore === 0 || aScore === 0) ? 'yes' : 'no';
+        if (m.actual_cards !== null && m.actual_cards !== undefined && boxscoreTotalCards !== m.actual_cards) {
+          setCardMismatch(`Card Count Mismatch: Database shows ${m.actual_cards} cards, but ESPN box score statistics show ${boxscoreTotalCards} cards.`);
+        } else {
+          setCardMismatch(null);
+        }
 
-            const homeTeamId = homeTeam.id || homeTeam.team?.id;
-            const awayTeamId = awayTeam.id || awayTeam.team?.id;
+        // 2. Only poll details if live
+        if (isLive) {
+          const competitions = data.header?.competitions || [];
+          if (competitions.length > 0) {
+            const comp = competitions[0];
+            const homeTeam = comp.competitors?.find(c => c.homeAway === 'home');
+            const awayTeam = comp.competitors?.find(c => c.homeAway === 'away');
+            if (homeTeam && awayTeam) {
+              const hScore = parseInt(homeTeam.score) || 0;
+              const aScore = parseInt(awayTeam.score) || 0;
 
-            // Total Cards from boxscore
-            let homeYellow = 0, awayYellow = 0, homeRed = 0, awayRed = 0;
-            if (data.boxscore && data.boxscore.teams) {
-              const bHome = data.boxscore.teams.find(t => t.homeAway === 'home');
-              const bAway = data.boxscore.teams.find(t => t.homeAway === 'away');
-              if (bHome && bHome.statistics) {
-                const yStat = bHome.statistics.find(st => st.name === 'yellowCards');
-                const rStat = bHome.statistics.find(st => st.name === 'redCards');
-                if (yStat) homeYellow = parseInt(yStat.displayValue) || 0;
-                if (rStat) homeRed = parseInt(rStat.displayValue) || 0;
-              }
-              if (bAway && bAway.statistics) {
-                const yStat = bAway.statistics.find(st => st.name === 'yellowCards');
-                const rStat = bAway.statistics.find(st => st.name === 'redCards');
-                if (yStat) awayYellow = parseInt(yStat.displayValue) || 0;
-                if (rStat) awayRed = parseInt(rStat.displayValue) || 0;
-              }
-            }
-            const totalCards = homeYellow + awayYellow + homeRed + awayRed;
+              const cleanSheet = (hScore === 0 || aScore === 0) ? 'yes' : 'no';
 
-            // First Scorer & Highest Scoring Half
-            let firstGoalTime = Infinity;
-            let firstScorer = 'none';
-            let firstHalfGoals = 0;
+              const homeTeamId = homeTeam.id || homeTeam.team?.id;
+              const awayTeamId = awayTeam.id || awayTeam.team?.id;
 
-            const currentPeriod = comp.status?.period || 1;
+              // First Scorer & Highest Scoring Half
+              let firstGoalTime = Infinity;
+              let firstScorer = 'none';
+              let firstHalfGoals = 0;
 
-            const details = comp.details || [];
-            const rawPlays = data.plays || [];
+              const currentPeriod = comp.status?.period || 1;
 
-            if (details.length > 0) {
-              for (const detail of details) {
-                const isGoal = detail.scoringPlay || (detail.type && detail.type.text?.toLowerCase().includes('goal'));
-                if (isGoal) {
-                  const detailTeamId = detail.team?.id;
-                  const isHome = detailTeamId && homeTeamId && String(detailTeamId) === String(homeTeamId);
-                  const isAway = detailTeamId && awayTeamId && String(detailTeamId) === String(awayTeamId);
+              const details = comp.details || [];
+              const rawPlays = data.plays || [];
 
-                  const clockVal = detail.clock?.value || 0;
+              if (details.length > 0) {
+                for (const detail of details) {
+                  const isGoal = detail.scoringPlay || (detail.type && detail.type.text?.toLowerCase().includes('goal'));
+                  if (isGoal) {
+                    const detailTeamId = detail.team?.id;
+                    const isHome = detailTeamId && homeTeamId && String(detailTeamId) === String(homeTeamId);
+                    const isAway = detailTeamId && awayTeamId && String(detailTeamId) === String(awayTeamId);
 
-                  // First Scorer
-                  if (clockVal < firstGoalTime && (isHome || isAway)) {
-                    firstGoalTime = clockVal;
-                    firstScorer = isHome ? 'home' : 'away';
+                    const clockVal = detail.clock?.value || 0;
+
+                    // First Scorer
+                    if (clockVal < firstGoalTime && (isHome || isAway)) {
+                      firstGoalTime = clockVal;
+                      firstScorer = isHome ? 'home' : 'away';
+                    }
+
+                    // Halftime goals
+                    const periodNum = detail.period?.number || (clockVal <= 2700 ? 1 : 2);
+                    if (periodNum === 1) {
+                      firstHalfGoals++;
+                    }
                   }
+                }
+              } else {
+                for (const p of rawPlays) {
+                  const isGoal = p.scoringPlay || (p.type && p.type.text?.toLowerCase().includes('goal'));
+                  if (isGoal) {
+                    const pTeamId = p.team?.id;
+                    const isHome = pTeamId && homeTeamId && String(pTeamId) === String(homeTeamId);
+                    const isAway = pTeamId && awayTeamId && String(pTeamId) === String(awayTeamId);
 
-                  // Halftime goals
-                  const periodNum = detail.period?.number || (clockVal <= 2700 ? 1 : 2);
-                  if (periodNum === 1) {
-                    firstHalfGoals++;
+                    const clockVal = p.clock?.value || 0;
+
+                    // First Scorer
+                    if (clockVal < firstGoalTime && (isHome || isAway)) {
+                      firstGoalTime = clockVal;
+                      firstScorer = isHome ? 'home' : 'away';
+                    }
+
+                    // Halftime goals
+                    const periodNum = p.period?.number || (clockVal <= 2700 ? 1 : 2);
+                    if (periodNum === 1) {
+                      firstHalfGoals++;
+                    }
                   }
                 }
               }
-            } else {
-              for (const p of rawPlays) {
-                const isGoal = p.scoringPlay || (p.type && p.type.text?.toLowerCase().includes('goal'));
-                if (isGoal) {
-                  const pTeamId = p.team?.id;
-                  const isHome = pTeamId && homeTeamId && String(pTeamId) === String(homeTeamId);
-                  const isAway = pTeamId && awayTeamId && String(pTeamId) === String(awayTeamId);
 
-                  const clockVal = p.clock?.value || 0;
-
-                  // First Scorer
-                  if (clockVal < firstGoalTime && (isHome || isAway)) {
-                    firstGoalTime = clockVal;
-                    firstScorer = isHome ? 'home' : 'away';
-                  }
-
-                  // Halftime goals
-                  const periodNum = p.period?.number || (clockVal <= 2700 ? 1 : 2);
-                  if (periodNum === 1) {
-                    firstHalfGoals++;
-                  }
+              // Fallback for First Scorer if plays are missing but goals exist
+              if (firstScorer === 'none') {
+                if (hScore > 0 && aScore === 0) {
+                  firstScorer = 'home';
+                } else if (aScore > 0 && hScore === 0) {
+                  firstScorer = 'away';
                 }
               }
-            }
 
-            // Fallback for First Scorer if plays are missing but goals exist
-            if (firstScorer === 'none') {
-              if (hScore > 0 && aScore === 0) {
-                firstScorer = 'home';
-              } else if (aScore > 0 && hScore === 0) {
-                firstScorer = 'away';
+              // Halftime score fallback/logic
+              if (currentPeriod === 1) {
+                firstHalfGoals = hScore + aScore;
               }
+              const secondHalfGoals = Math.max(0, (hScore + aScore) - firstHalfGoals);
+
+              let highestScoringHalf = 'equal';
+              if (firstHalfGoals > secondHalfGoals) highestScoringHalf = 'first';
+              else if (secondHalfGoals > firstHalfGoals) highestScoringHalf = 'second';
+              else highestScoringHalf = 'equal';
+
+              setLiveStats({
+                homeScore: hScore,
+                awayScore: aScore,
+                totalCards: boxscoreTotalCards,
+                firstScorer,
+                highestScoringHalf,
+                cleanSheet,
+              });
             }
-
-            // Halftime score fallback/logic
-            if (currentPeriod === 1) {
-              firstHalfGoals = hScore + aScore;
-            }
-            const secondHalfGoals = Math.max(0, (hScore + aScore) - firstHalfGoals);
-
-            let highestScoringHalf = 'equal';
-            if (firstHalfGoals > secondHalfGoals) highestScoringHalf = 'first';
-            else if (secondHalfGoals > firstHalfGoals) highestScoringHalf = 'second';
-            else highestScoringHalf = 'equal';
-
-            setLiveStats({
-              homeScore: hScore,
-              awayScore: aScore,
-              totalCards,
-              firstScorer,
-              highestScoringHalf,
-              cleanSheet,
-            });
           }
         }
       } catch (_) {}
     };
 
     fetchLiveStats();
-    const interval = setInterval(fetchLiveStats, 30000);
-    return () => clearInterval(interval);
-  }, [isLive, m.espn_event_id]);
+
+    if (isLive) {
+      const interval = setInterval(fetchLiveStats, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isLive, m.espn_event_id, m.actual_cards]);
 
   const handleScroll = (e, matchId) => {
     const scrollLeft = e.target.scrollLeft;
@@ -285,6 +301,20 @@ export default function PlayerPicksList({
           <RefreshCw size={12} />
         </button>
       </div>
+      {cardMismatch && (
+        <div style={{ 
+          margin: '4px 0 8px 0', 
+          padding: '8px 12px', 
+          borderRadius: '6px', 
+          background: 'rgba(239, 68, 68, 0.12)', 
+          border: '1px solid rgba(239, 68, 68, 0.3)', 
+          color: '#fca5a5', 
+          fontSize: '12px', 
+          fontWeight: '600'
+        }}>
+          ⚠️ {cardMismatch}
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {leaderboard.length === 0 ? (
           <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px' }}>No players yet.</span>

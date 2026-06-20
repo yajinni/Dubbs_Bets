@@ -285,8 +285,8 @@ async function syncFromESPN(db) {
       
       const details = comp.details || [];
       for (const detail of details) {
-        // Count cards
-        if (detail.yellowCard || detail.redCard) {
+        // Count cards (only if a player name/athlete is associated, filtering out ESPN placeholder ghost events)
+        if ((detail.yellowCard || detail.redCard) && detail.athletesInvolved && detail.athletesInvolved.length > 0) {
           actualCards++;
         }
         
@@ -776,7 +776,7 @@ async function handleScoreMatchTask(db, matchId) {
       
       const details = comp.details || [];
       for (const detail of details) {
-        if (detail.yellowCard || detail.redCard) {
+        if ((detail.yellowCard || detail.redCard) && detail.athletesInvolved && detail.athletesInvolved.length > 0) {
           actualCards++;
         }
         
