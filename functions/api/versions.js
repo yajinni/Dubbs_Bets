@@ -47,6 +47,15 @@ export async function onRequest(context) {
       await env.db.batch(batch);
     }
 
+    const counts = await env.db.prepare(`
+      SELECT 
+        SUM(CASE WHEN status = 'live' THEN 1 ELSE 0 END) as live,
+        SUM(CASE WHEN finished = 1 THEN 1 ELSE 0 END) as finished,
+        SUM(CASE WHEN status = 'scheduled' AND finished = 0 THEN 1 ELSE 0 END) as scheduled
+      FROM matches
+    `).first();
+    versions.matchCounts = counts || { live: 0, finished: 0, scheduled: 0 };
+
     return new Response(JSON.stringify(versions), { status: 200, headers });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });

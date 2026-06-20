@@ -16,9 +16,11 @@ export default function NavCustomizerModal({ navLayout, playerName, isSyncing = 
   const [savedToCloud, setSavedToCloud] = useState(false);
 
   const toggleHeader = (id) => {
-    setItems(prev => prev.map(item =>
-      item.id === id ? { ...item, inHeader: !item.inHeader } : item
-    ));
+    setItems(prev => {
+      const target = prev.find(i => i.id === id);
+      if (!target.inHeader && prev.filter(i => i.inHeader).length >= 5) return prev;
+      return prev.map(i => i.id === id ? { ...i, inHeader: !i.inHeader } : i);
+    });
   };
 
   const moveUp = (idx) => {
@@ -49,7 +51,7 @@ export default function NavCustomizerModal({ navLayout, playerName, isSyncing = 
 
   const handleReset = () => {
     setItems([
-      { id: 'dashboard',  label: 'Dashboard', inHeader: true  },
+      { id: 'dashboard',  label: 'Main',       inHeader: true  },
       { id: 'matches',    label: 'Bets',       inHeader: true  },
       { id: 'live',       label: 'Live',        inHeader: true  },
       { id: 'match-view', label: 'Results',    inHeader: false },

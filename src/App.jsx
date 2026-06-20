@@ -13,7 +13,7 @@ import { shortenTeamName } from './utils/teamNames';
 
 // ─── Nav Layout Helpers ───────────────────────────────────────────────────────
 const DEFAULT_NAV_LAYOUT = [
-  { id: 'dashboard',  label: 'Dashboard', inHeader: true  },
+  { id: 'dashboard',  label: 'Main',       inHeader: true  },
   { id: 'matches',    label: 'Bets',       inHeader: true  },
   { id: 'live',       label: 'Live',        inHeader: true  },
   { id: 'match-view', label: 'Results',    inHeader: false },
@@ -83,6 +83,7 @@ export default function App() {
     return Math.min(6, Math.max(1, week));
   });
   const [matchPredictionsCache, setMatchPredictionsCache] = useState({});
+  const [matchCounts, setMatchCounts] = useState({ live: 0, finished: 0, scheduled: 0 });
   const [statsData, setStatsData] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -121,7 +122,7 @@ export default function App() {
 
   // Compute mobile bottom nav items based on user custom layout settings
   const mobileNavItems = useMemo(() => {
-    return navLayout.filter(item => item.inHeader).slice(0, 4);
+    return navLayout.filter(item => item.inHeader).slice(0, 5);
   }, [navLayout]);
 
   // Load layout from server when player changes; fall back to localStorage instantly
@@ -318,6 +319,10 @@ export default function App() {
       const vRes = await fetch('/api/versions');
       if (!vRes.ok) return;
       const serverVersions = await vRes.json();
+      
+      if (serverVersions.matchCounts) {
+        setMatchCounts(serverVersions.matchCounts);
+      }
       
       const promises = [];
       const updatedVersions = { ...loadedVersionsRef.current };
@@ -529,6 +534,9 @@ export default function App() {
             participantId: activeParticipantId,
             hasFullMatches: false
           };
+          if (vData.matchCounts) {
+            setMatchCounts(vData.matchCounts);
+          }
         }
       } catch (err) {
         console.error('Initial load failed:', err);
@@ -665,11 +673,6 @@ export default function App() {
     }
   };
 
-  // Helper stats for dashboard
-  const getLiveAndFinishedMatches = () => {
-    return matches.filter(m => m.status === 'live' || m.finished === 1);
-  };
-
   const formatMatchDate = (isoString) => {
     if (!isoString) return '';
     let normalized = isoString.replace(' ', 'T');
@@ -797,7 +800,7 @@ export default function App() {
                   <div>
                     <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Played / Live</h4>
                     <span style={{ fontSize: '32px', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'var(--success)' }}>
-                      {getLiveAndFinishedMatches().length}
+                      {matchCounts.live + matchCounts.finished}
                     </span>
                   </div>
                   <div>
