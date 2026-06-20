@@ -154,7 +154,7 @@ export default function NavCustomizerModal({ navLayout, playerName, isSyncing = 
             }}>
               <Check size={10} color="var(--primary)" strokeWidth={3} />
             </div>
-            Shows in header nav
+            Shows in header / bottom bar
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
             <div style={{

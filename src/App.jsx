@@ -22,6 +22,16 @@ const DEFAULT_NAV_LAYOUT = [
   { id: 'info',       label: 'Info',        inHeader: false },
 ];
 
+const NAV_ICONS = {
+  dashboard: Trophy,
+  matches: Calendar,
+  live: Clock,
+  'match-view': Award,
+  stats: BarChart2,
+  logs: List,
+  info: Info,
+};
+
 function getNavLayoutKey(playerName) {
   return `nav_layout_${playerName || 'default'}`;
 }
@@ -108,6 +118,11 @@ export default function App() {
 
   const [navLayout, setNavLayout] = useState(() => loadNavLayout(null));
   const [navLayoutSyncing, setNavLayoutSyncing] = useState(false);
+
+  // Compute mobile bottom nav items based on user custom layout settings
+  const mobileNavItems = useMemo(() => {
+    return navLayout.filter(item => item.inHeader).slice(0, 4);
+  }, [navLayout]);
 
   // Load layout from server when player changes; fall back to localStorage instantly
   useEffect(() => {
@@ -1182,36 +1197,22 @@ export default function App() {
       )}
       {/* Mobile Bottom Navigation Bar */}
       <div className="mobile-bottom-nav">
-        <button
-          className={`mobile-bottom-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => handleTabChange('dashboard')}
-        >
-          <Trophy size={20} />
-          <span>Dashboard</span>
-        </button>
-        <button
-          className={`mobile-bottom-nav-item ${activeTab === 'matches' ? 'active' : ''}`}
-          onClick={() => handleTabChange('matches')}
-        >
-          <Calendar size={20} />
-          <span>Bets</span>
-        </button>
-        <button
-          className={`mobile-bottom-nav-item ${activeTab === 'live' ? 'active' : ''}`}
-          onClick={() => handleTabChange('live')}
-          style={{ position: 'relative' }}
-        >
-          <Clock size={20} />
-          {hasLiveMatches && <span className="mobile-live-dot" />}
-          <span>Live</span>
-        </button>
-        <button
-          className={`mobile-bottom-nav-item ${activeTab === 'match-view' ? 'active' : ''}`}
-          onClick={() => handleTabChange('match-view')}
-        >
-          <Award size={20} />
-          <span>Results</span>
-        </button>
+        {mobileNavItems.map(item => {
+          const IconComponent = NAV_ICONS[item.id] || Info;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              className={`mobile-bottom-nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => handleTabChange(item.id)}
+              style={item.id === 'live' ? { position: 'relative' } : undefined}
+            >
+              <IconComponent size={20} />
+              {item.id === 'live' && hasLiveMatches && <span className="mobile-live-dot" />}
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
         <button
           className="mobile-bottom-nav-item"
           onClick={() => setSidebarOpen(true)}
