@@ -272,7 +272,7 @@ export default function App() {
   const fetchStats = useCallback(async (force) => {
     try {
       if (force) setStatsData(null);
-      const res = await fetch('/api/stats');
+      const res = await fetch(`/api/stats${force ? '?force=true' : ''}`);
       const data = await res.json();
       if (!res.ok) { setStatsData(null); return; }
       setStatsData(data);

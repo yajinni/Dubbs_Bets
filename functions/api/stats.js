@@ -21,14 +21,16 @@ export async function onRequest(context) {
 
     await checkAndInitDb(env.db);
 
-    // Fetch the precalculated stats payload from cache
-    let cachedStatsRow = await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_stats_payload'").first();
+    const url = new URL(request.url);
+    const force = url.searchParams.get('force') === 'true';
 
-    if (!cachedStatsRow || !cachedStatsRow.value) {
-      // Recompute stats cache if missing (e.g. first run)
+    // Recompute if forced or cache is missing
+    if (force || !(await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_stats_payload'").first())) {
       await recomputeStatsCache(env.db);
-      cachedStatsRow = await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_stats_payload'").first();
     }
+
+    // Fetch the precalculated stats payload from cache
+    const cachedStatsRow = await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_stats_payload'").first();
 
     if (!cachedStatsRow || !cachedStatsRow.value) {
       return new Response(JSON.stringify({ error: 'Stats payload not cached and failed to recompute.' }), { status: 500, headers });
