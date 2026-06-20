@@ -88,8 +88,6 @@ export default function StatsView({ statsData, fetchStats }) {
   const paddingLeft = 40;
   const paddingRight = 40;
   const paddingTop = 30;
-  const datesPerRow = 5;
-  const dateLabelRowHeight = 20;
 
   let chartContent = null;
 
@@ -103,9 +101,7 @@ export default function StatsView({ statsData, fetchStats }) {
     const { dates: allDates, playerProgress } = chartData;
     const dates = timeRange === 'week' ? allDates.slice(-7) : allDates;
 
-    // Compute dynamic padding for multi-row date labels
-    const dateLabelRows = Math.ceil(dates.length / datesPerRow);
-    const paddingBottom = 40 + (dateLabelRows - 1) * dateLabelRowHeight;
+    const paddingBottom = 40;
     const svgWidth = chartWidth + paddingLeft + paddingRight;
     const svgHeight = chartHeight + paddingTop + paddingBottom;
     
@@ -331,10 +327,10 @@ export default function StatsView({ statsData, fetchStats }) {
             ))}
 
             {/* Selected Date Box Highlight (only in week mode) */}
-            {hoveredIndex !== null && timeRange === 'week' && (
+            {hoveredIndex !== null && (
               <rect
                 x={getX(hoveredIndex) - 27}
-                y={paddingTop + chartHeight + 4 + Math.floor(hoveredIndex / datesPerRow) * dateLabelRowHeight}
+                y={paddingTop + chartHeight + 4}
                 width={54}
                 height={24}
                 rx={6}
@@ -346,8 +342,8 @@ export default function StatsView({ statsData, fetchStats }) {
               />
             )}
 
-            {/* X Labels - single row for week, 5 per row for all */}
-            {timeRange === 'week' ? dates.map((date, i) => (
+            {/* X Labels */}
+            {timeRange === 'week' && dates.map((date, i) => (
               <text
                 key={i}
                 x={getX(i)}
@@ -364,38 +360,7 @@ export default function StatsView({ statsData, fetchStats }) {
               >
                 {formatLabelDate(date)}
               </text>
-            )) : (() => {
-              const rows = [];
-              for (let r = 0; r < dateLabelRows; r++) {
-                const rowDates = dates.slice(r * datesPerRow, (r + 1) * datesPerRow);
-                rows.push(
-                  <g key={`row-${r}`}>
-                    {rowDates.map((date, ri) => {
-                      const i = r * datesPerRow + ri;
-                      return (
-                        <text
-                          key={i}
-                          x={getX(i)}
-                          y={paddingTop + chartHeight + 20 + r * dateLabelRowHeight}
-                          className="chart-axis-label"
-                          textAnchor="middle"
-                          fill="var(--text-muted)"
-                          fontWeight="500"
-                          style={{ cursor: 'pointer' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setHoveredIndex(i);
-                          }}
-                        >
-                          {formatLabelDate(date)}
-                        </text>
-                      );
-                    })}
-                  </g>
-                );
-              }
-              return rows;
-            })()}
+            ))}
 
             {/* Hover Line */}
             {hoveredIndex !== null && (
@@ -516,7 +481,7 @@ export default function StatsView({ statsData, fetchStats }) {
         {/* Clickable Date Grid (All mode) */}
         {timeRange === 'all' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
               {dates.map((date, i) => {
                 const isHovered = hoveredIndex === i;
                 return (
@@ -534,7 +499,6 @@ export default function StatsView({ statsData, fetchStats }) {
                       borderRadius: '6px',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
-                      minWidth: '60px',
                       textAlign: 'center'
                     }}
                   >
