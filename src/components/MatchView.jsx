@@ -6,9 +6,9 @@ import PlayerPicksList from './PlayerPicksList';
 export default function MatchView({ matches, statsData, fetchStats, leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch, onRefresh, matchPredictionsCache = {}, getMatchPredictions }) {
   const [filterStage, setFilterStage] = useState('all');
 
-  // Lazy-load stats (force refresh to clear stale error state)
+  // Lazy-load stats on mount
   useEffect(() => {
-    if (fetchStats) fetchStats(true);
+    if (fetchStats) fetchStats();
   }, []);
 
   // Stage tab definitions
