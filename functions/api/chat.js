@@ -158,6 +158,11 @@ Rank | Name | Total Points | Correct Scores | Correct Winners | Correct Cards O/
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }]
       })),
+      tools: [
+        {
+          googleSearch: {}
+        }
+      ],
       systemInstruction: {
         parts: [{ text: systemPrompt }]
       },

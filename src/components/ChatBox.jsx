@@ -3,13 +3,45 @@ import { Send, Bot, User, Sparkles, Trash2, AlertCircle, XCircle } from 'lucide-
 
 const renderMessageContent = (text) => {
   if (!text) return null;
-  // Split by **bold** patterns to render as bold HTML
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={index} style={{ fontWeight: '800', color: '#ffffff' }}>{part.slice(2, -2)}</strong>;
+
+  // 1. Split by bold first
+  const boldParts = text.split(/(\*\*[^*]+\*\*)/g);
+
+  return boldParts.map((part, boldIdx) => {
+    const isBold = part.startsWith('**') && part.endsWith('**');
+    const content = isBold ? part.slice(2, -2) : part;
+
+    // 2. Split by markdown link pattern [text](url)
+    const linkParts = content.split(/(\[[^\]]+\]\([^)]+\))/g);
+
+    const renderedLinkParts = linkParts.map((subPart, linkIdx) => {
+      const match = subPart.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      if (match) {
+        const linkText = match[1];
+        const linkUrl = match[2];
+        return (
+          <a
+            key={`${boldIdx}-${linkIdx}`}
+            href={linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--primary-hover)', textDecoration: 'underline', fontWeight: '600' }}
+          >
+            {linkText}
+          </a>
+        );
+      }
+      return subPart;
+    });
+
+    if (isBold) {
+      return (
+        <strong key={boldIdx} style={{ fontWeight: '800', color: '#ffffff' }}>
+          {renderedLinkParts}
+        </strong>
+      );
     }
-    return part;
+    return <React.Fragment key={boldIdx}>{renderedLinkParts}</React.Fragment>;
   });
 };
 
