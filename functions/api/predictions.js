@@ -111,7 +111,8 @@ export async function onRequest(context) {
         predictedTotalCards,     // integer or null
         predictedFirstScorer,     // 'home', 'away', or 'none'
         predictedHighestScoringHalf, // 'first', 'second', or 'equal'
-        predictedCleanSheet      // 'yes' or 'no'
+        predictedCleanSheet,      // 'yes' or 'no'
+        force                     // bypass lock check
       } = body;
 
       if (!participantId || !matchId) {
@@ -131,12 +132,14 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
       }
 
-      // 2. Lock prediction if match has started
-      const matchStartTime = new Date(match.local_date).getTime();
-      const currentTime = Date.now();
+      // 2. Lock prediction if match has started (skip if force=true)
+      if (!force) {
+        const matchStartTime = new Date(match.local_date).getTime();
+        const currentTime = Date.now();
 
-      if (currentTime >= matchStartTime || match.status !== 'scheduled' || match.finished === 1) {
-        return new Response(JSON.stringify({ error: 'Predictions are locked. This match has already started or finished.' }), { status: 403, headers });
+        if (currentTime >= matchStartTime || match.status !== 'scheduled' || match.finished === 1) {
+          return new Response(JSON.stringify({ error: 'Predictions are locked. This match has already started or finished.' }), { status: 403, headers });
+        }
       }
 
       // Validate inputs
