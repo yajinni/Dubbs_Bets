@@ -63,8 +63,10 @@ function saveNavLayout(playerName, layout) {
 }
 
 export default function App() {
+  const [chatOpen, setChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     const hash = window.location.hash.slice(1).split(':')[0];
+    if (hash === 'chat') return 'dashboard';
     return hash || 'dashboard';
   });
   const [matches, setMatches] = useState([]);
@@ -557,6 +559,11 @@ export default function App() {
     hashRestoredRef.current = true;
 
     const hash = window.location.hash.slice(1).split(':')[0];
+    if (hash === 'chat') {
+      setChatOpen(true);
+      window.location.hash = activeTab;
+      return;
+    }
     if (!hash || hash === 'dashboard') return;
 
     // Run match-selection logic for tabs that need it
@@ -581,17 +588,22 @@ export default function App() {
         setSelectedMatchId(completedMatches[0].id);
       }
     }
-  }, [loading, matches, predictions, activeParticipantId]);
+  }, [loading, matches, predictions, activeParticipantId, activeTab]);
 
   // Listen for browser back/forward hash changes
   useEffect(() => {
     const handler = () => {
       const hash = window.location.hash.slice(1).split(':')[0];
-      if (hash) setActiveTab(hash);
+      if (hash === 'chat') {
+        setChatOpen(true);
+        window.location.hash = activeTab;
+      } else if (hash) {
+        setActiveTab(hash);
+      }
     };
     window.addEventListener('hashchange', handler);
     return () => window.removeEventListener('hashchange', handler);
-  }, []);
+  }, [activeTab]);
 
   // Polling fallback check for new versions (every 15 seconds)
   useEffect(() => {
@@ -730,6 +742,10 @@ export default function App() {
   };
 
   const handleTabChange = (tab) => {
+    if (tab === 'chat') {
+      setChatOpen(true);
+      return;
+    }
     if (tab === 'matches') {
       if (activeParticipantId) {
         // Find upcoming matches that have no predictions by the user yet
@@ -1018,6 +1034,15 @@ export default function App() {
         </main>
       )}
 
+      {/* Floating Chat Bubble Button */}
+      <button
+        className={`chat-bubble-trigger ${chatOpen ? 'active' : ''}`}
+        title="AI Chat Assistant"
+        onClick={() => setChatOpen(prev => !prev)}
+      >
+        <MessageSquare size={20} />
+      </button>
+
       {/* Floating Hamburger Menu Button — click = sidebar, hold 3s = customizer */}
       <button
         className="hamburger-btn"
@@ -1234,6 +1259,13 @@ export default function App() {
           <span>More</span>
         </button>
       </div>
+
+      {/* Floating Chat Window */}
+      {chatOpen && (
+        <div className="floating-chat-window">
+          <ChatBox onClose={() => setChatOpen(false)} />
+        </div>
+      )}
     </>
   );
 }

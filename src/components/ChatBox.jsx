@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Trash2, AlertCircle } from 'lucide-react';
 
-export default function ChatBox() {
+export default function ChatBox({ onClose }) {
   const [messages, setMessages] = useState(() => {
     try {
       const saved = sessionStorage.getItem('dubbs_chat_history');
@@ -126,7 +126,7 @@ export default function ChatBox() {
   }
 
   return (
-    <div className="chat-container glass-panel" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 160px)', minHeight: '450px', maxHeight: '720px', padding: '0', overflow: 'hidden' }}>
+    <div className="chat-container glass-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '100%', maxHeight: '100%', padding: '0', overflow: 'hidden', border: 'none' }}>
       
       {/* Chat Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--glass-border)', background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(99,102,241,0.04) 100%)' }}>
@@ -144,17 +144,30 @@ export default function ChatBox() {
           </div>
         </div>
 
-        {messages.length > 0 && (
-          <button 
-            onClick={clearChat}
-            style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
-            title="Clear Chat History"
-            className="chat-clear-btn"
-          >
-            <Trash2 size={13} />
-            <span className="hide-mobile">Clear</span>
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {messages.length > 0 && (
+            <button 
+              onClick={clearChat}
+              style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
+              title="Clear Chat History"
+              className="chat-clear-btn"
+            >
+              <Trash2 size={13} />
+              <span className="hide-mobile">Clear</span>
+            </button>
+          )}
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)', borderRadius: '8px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyPosition: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+              title="Close Chat"
+              className="chat-close-btn"
+            >
+              <XCircle size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Messages Pane */}
