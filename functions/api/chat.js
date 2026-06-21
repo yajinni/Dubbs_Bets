@@ -15,6 +15,23 @@ export async function onRequest(context) {
   const { request, env } = context;
 
   if (request.method === 'GET') {
+    const url = new URL(request.url);
+    const listModels = url.searchParams.get('listModels') === 'true';
+
+    if (listModels) {
+      const apiKey = env.GEMINI_API_KEY;
+      if (!apiKey || apiKey === '') {
+        return new Response(JSON.stringify({ error: 'GEMINI_API_KEY is not configured.' }), { status: 400, headers });
+      }
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const data = await res.json();
+        return new Response(JSON.stringify(data), { status: res.status, headers });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });
+      }
+    }
+
     const config = {
       enabled: !!env.GEMINI_API_KEY && env.GEMINI_API_KEY !== '',
       model: env.GEMINI_MODEL || 'gemini-2.5-flash'
