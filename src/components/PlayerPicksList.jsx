@@ -285,13 +285,25 @@ export default function PlayerPicksList({
   const drawIsUnderdog = m.home_win_pct != null && m.away_win_pct != null && m.draw_pct != null && m.draw_pct < Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
 
   const showsLiveTitle = showLiveResults;
+  
+  const playersTotalPoints = matchPredictions
+    ? matchPredictions.reduce((sum, pred) => sum + (pred.total_points || 0), 0)
+    : 0;
 
   return (
     <div style={{ marginTop: '0', borderTop: '1px dashed var(--glass-border)', paddingTop: '6px' }}>
       <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Users size={12} strokeWidth={2.5} />
-          {showsLiveTitle ? "Results Based on Current Time" : "Players' Picks"}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Users size={12} strokeWidth={2.5} />
+            {showsLiveTitle ? "Results Based on Current Time" : "Players' Picks"}
+          </div>
+          {matchPredictions && matchPredictions.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'none', color: 'var(--primary-hover)' }}>
+              <span>Players Total:</span>
+              <span style={{ color: '#ffffff', fontWeight: '800' }}>{playersTotalPoints}</span>
+            </div>
+          )}
         </div>
         <button
           onClick={onRefresh}
