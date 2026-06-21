@@ -2258,7 +2258,9 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 768px) {
   .chat-bubble-trigger {
-    display: none !important; /* Hide floating chat bubble on mobile since they have tab navigation and less screen space */
+    display: flex !important;
+    top: 16px;
+    right: 16px;
   }
   
   .floating-chat-window {
