@@ -1,6 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Trash2, AlertCircle, XCircle } from 'lucide-react';
 
+const renderMessageContent = (text) => {
+  if (!text) return null;
+  // Split by **bold** patterns to render as bold HTML
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index} style={{ fontWeight: '800', color: '#ffffff' }}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+};
+
 export default function ChatBox({ onClose }) {
   const [messages, setMessages] = useState(() => {
     try {
@@ -211,7 +223,7 @@ export default function ChatBox({ onClose }) {
                     }}
                     className={isUser ? 'chat-bubble-user' : 'chat-bubble-assistant'}
                   >
-                    {msg.content}
+                    {renderMessageContent(msg.content)}
                   </div>
                 </div>
               );
