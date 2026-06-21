@@ -96,35 +96,6 @@ export default function ChatBox({ onClose }) {
     }
   };
 
-  if (configLoading) {
-    return (
-      <div className="chat-container glass-panel" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 160px)', minHeight: '450px', maxHeight: '720px', padding: '40px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <div className="btn-secondary animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid var(--glass-border)', borderTopColor: 'var(--primary)', background: 'transparent' }}></div>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>Initializing AI Assistant...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (config && !config.enabled) {
-    return (
-      <div className="chat-container glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 160px)', minHeight: '450px', maxHeight: '720px', padding: '40px', textAlign: 'center' }}>
-        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', marginBottom: '24px', boxShadow: '0 0 20px rgba(239, 68, 68, 0.1)' }}>
-          <AlertCircle size={32} />
-        </div>
-        <h3 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 12px 0' }}>AI Assistant Disabled</h3>
-        <p style={{ fontSize: '14px', color: 'var(--text-muted)', maxWidth: '360px', lineHeight: '1.6', margin: '0 0 24px 0' }}>
-          The Gemini AI chat box requires a Google AI Studio API Key to be configured in your Cloudflare dashboard environment variables.
-        </p>
-        <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '16px 20px', textAlign: 'left', maxWidth: '440px', fontSize: '13px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
-          <span style={{ color: 'var(--primary)', fontWeight: '700' }}># Environment variables to set:</span><br />
-          GEMINI_API_KEY="AIzaSy..."
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="chat-container glass-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '100%', maxHeight: '100%', padding: '0', overflow: 'hidden', border: 'none' }}>
       
@@ -139,13 +110,13 @@ export default function ChatBox({ onClose }) {
               Dubbs AI Assistant
             </h3>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Powered by {config?.model === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : (config?.model || 'Gemini Flash')}
+              {!configLoading && config?.model ? `Powered by ${config.model === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : config.model}` : 'Powered by Gemini'}
             </span>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {messages.length > 0 && (
+          {!configLoading && config?.enabled && messages.length > 0 && (
             <button 
               onClick={clearChat}
               style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
@@ -160,7 +131,7 @@ export default function ChatBox({ onClose }) {
           {onClose && (
             <button
               onClick={onClose}
-              style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)', borderRadius: '8px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyPosition: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+              style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)', borderRadius: '8px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
               title="Close Chat"
               className="chat-close-btn"
             >
@@ -170,152 +141,176 @@ export default function ChatBox({ onClose }) {
         </div>
       </div>
 
-      {/* Messages Pane */}
-      <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }} className="chat-messages-pane">
-        
-        {messages.length === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px', padding: '20px 0', textAlign: 'center' }}>
-            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', boxShadow: '0 0 20px rgba(139,92,246,0.15)' }}>
-              <Bot size={30} />
-            </div>
-            <div>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '800' }}>Ask about our pool!</h4>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', maxWidth: '280px', lineHeight: '1.5' }}>
-                Ask me who is winning, who got exact scores, which games were the most hard-fought, or how many goals a team scored.
-              </p>
-            </div>
+      {configLoading ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+            <div className="btn-secondary animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid var(--glass-border)', borderTopColor: 'var(--primary)', background: 'transparent' }}></div>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>Initializing AI Assistant...</span>
           </div>
-        )}
-
-        {messages.map((msg, index) => {
-          const isUser = msg.role === 'user';
-          return (
-            <div 
-              key={index}
-              style={{ 
-                display: 'flex', 
-                gap: '12px', 
-                flexDirection: isUser ? 'row-reverse' : 'row',
-                alignItems: 'flex-start',
-                maxWidth: '85%',
-                alignSelf: isUser ? 'flex-end' : 'flex-start'
-              }}
-            >
-              {/* Avatar */}
-              <div 
-                style={{ 
-                  width: '32px', 
-                  height: '32px', 
-                  borderRadius: '50%', 
-                  background: isUser ? 'rgba(99,102,241,0.15)' : 'rgba(139,92,246,0.15)',
-                  border: isUser ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(139,92,246,0.3)',
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  color: isUser ? 'var(--secondary)' : 'var(--primary)',
-                  flexShrink: 0
-                }}
-              >
-                {isUser ? <User size={14} /> : <Bot size={14} />}
-              </div>
-
-              {/* Bubble */}
-              <div 
-                style={{ 
-                  background: isUser 
-                    ? 'linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(99,102,241,0.2) 100%)' 
-                    : 'rgba(255,255,255,0.03)',
-                  border: isUser 
-                    ? '1px solid rgba(139,92,246,0.3)' 
-                    : '1px solid var(--glass-border)',
-                  borderRadius: isUser ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
-                  padding: '12px 16px',
-                  fontSize: '14px',
-                  lineHeight: '1.5',
-                  color: 'var(--text-primary)',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  boxShadow: isUser ? 'var(--shadow-glow)' : 'none'
-                }}
-                className={isUser ? 'chat-bubble-user' : 'chat-bubble-assistant'}
-              >
-                {msg.content}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Typing Loader */}
-        {loading && (
-          <div style={{ display: 'flex', gap: '12px', alignSelf: 'flex-start', alignItems: 'center' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
-              <Bot size={14} />
-            </div>
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', borderRadius: '16px 16px 16px 2px', padding: '12px 20px', display: 'flex', gap: '6px', alignItems: 'center' }}>
-              <span className="chat-dot" style={{ width: '6px', height: '6px', background: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'chatDotBounce 1.4s infinite ease-in-out both' }}></span>
-              <span className="chat-dot" style={{ width: '6px', height: '6px', background: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'chatDotBounce 1.4s infinite ease-in-out both', animationDelay: '0.2s' }}></span>
-              <span className="chat-dot" style={{ width: '6px', height: '6px', background: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'chatDotBounce 1.4s infinite ease-in-out both', animationDelay: '0.4s' }}></span>
-            </div>
-          </div>
-        )}
-
-        {/* Error Alert */}
-        {error && (
-          <div className="glass-panel" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', padding: '14px 16px', display: 'flex', gap: '12px', alignItems: 'flex-start', color: '#ef4444', alignSelf: 'stretch', fontSize: '13px' }}>
-            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
-            <div style={{ flex: 1 }}>
-              <strong style={{ display: 'block', marginBottom: '4px' }}>Chat Error</strong>
-              {error}
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Suggestion Chips */}
-      {messages.length === 0 && (
-        <div style={{ padding: '0 20px 10px 20px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          {suggestionChips.map((chip, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSend(chip.text)}
-              className="chat-suggestion-chip"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', borderRadius: '10px', padding: '8px 12px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
-            >
-              <span>{chip.icon}</span>
-              <span>{chip.text}</span>
-            </button>
-          ))}
         </div>
+      ) : config && !config.enabled ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center', overflowY: 'auto' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', marginBottom: '24px', boxShadow: '0 0 20px rgba(239, 68, 68, 0.1)', flexShrink: 0 }}>
+            <AlertCircle size={32} />
+          </div>
+          <h3 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 12px 0' }}>AI Assistant Disabled</h3>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)', maxWidth: '360px', lineHeight: '1.6', margin: '0 0 24px 0' }}>
+            The Gemini AI chat box requires a Google AI Studio API Key to be configured in your Cloudflare dashboard environment variables.
+          </p>
+          <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '16px 20px', textAlign: 'left', maxWidth: '440px', fontSize: '13px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+            <span style={{ color: 'var(--primary)', fontWeight: '700' }}># Environment variables to set:</span><br />
+            GEMINI_API_KEY="AIzaSy..."
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Messages Pane */}
+          <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }} className="chat-messages-pane">
+            
+            {messages.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px', padding: '20px 0', textAlign: 'center' }}>
+                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', boxShadow: '0 0 20px rgba(139,92,246,0.15)' }}>
+                  <Bot size={30} />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '800' }}>Ask about our pool!</h4>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', maxWidth: '280px', lineHeight: '1.5' }}>
+                    Ask me who is winning, who got exact scores, which games were the most hard-fought, or how many goals a team scored.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {messages.map((msg, index) => {
+              const isUser = msg.role === 'user';
+              return (
+                <div 
+                  key={index}
+                  style={{ 
+                    display: 'flex', 
+                    gap: '12px', 
+                    flexDirection: isUser ? 'row-reverse' : 'row',
+                    alignItems: 'flex-start',
+                    maxWidth: '85%',
+                    alignSelf: isUser ? 'flex-end' : 'flex-start'
+                  }}
+                >
+                  {/* Avatar */}
+                  <div 
+                    style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '50%', 
+                      background: isUser ? 'rgba(99,102,241,0.15)' : 'rgba(139,92,246,0.15)',
+                      border: isUser ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(139,92,246,0.3)',
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      color: isUser ? 'var(--secondary)' : 'var(--primary)',
+                      flexShrink: 0
+                    }}
+                  >
+                    {isUser ? <User size={14} /> : <Bot size={14} />}
+                  </div>
+
+                  {/* Bubble */}
+                  <div 
+                    style={{ 
+                      background: isUser 
+                        ? 'linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(99,102,241,0.2) 100%)' 
+                        : 'rgba(255,255,255,0.03)',
+                      border: isUser 
+                        ? '1px solid rgba(139,92,246,0.3)' 
+                        : '1px solid var(--glass-border)',
+                      borderRadius: isUser ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
+                      padding: '12px 16px',
+                      fontSize: '14px',
+                      lineHeight: '1.5',
+                      color: 'var(--text-primary)',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      boxShadow: isUser ? 'var(--shadow-glow)' : 'none'
+                    }}
+                    className={isUser ? 'chat-bubble-user' : 'chat-bubble-assistant'}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Typing Loader */}
+            {loading && (
+              <div style={{ display: 'flex', gap: '12px', alignSelf: 'flex-start', alignItems: 'center' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
+                  <Bot size={14} />
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', borderRadius: '16px 16px 16px 2px', padding: '12px 20px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <span className="chat-dot" style={{ width: '6px', height: '6px', background: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'chatDotBounce 1.4s infinite ease-in-out both' }}></span>
+                  <span className="chat-dot" style={{ width: '6px', height: '6px', background: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'chatDotBounce 1.4s infinite ease-in-out both', animationDelay: '0.2s' }}></span>
+                  <span className="chat-dot" style={{ width: '6px', height: '6px', background: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'chatDotBounce 1.4s infinite ease-in-out both', animationDelay: '0.4s' }}></span>
+                </div>
+              </div>
+            )}
+
+            {/* Error Alert */}
+            {error && (
+              <div className="glass-panel" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '12px', padding: '14px 16px', display: 'flex', gap: '12px', alignItems: 'flex-start', color: '#ef4444', alignSelf: 'stretch', fontSize: '13px' }}>
+                <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
+                <div style={{ flex: 1 }}>
+                  <strong style={{ display: 'block', marginBottom: '4px' }}>Chat Error</strong>
+                  {error}
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Suggestion Chips */}
+          {messages.length === 0 && (
+            <div style={{ padding: '0 20px 10px 20px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {suggestionChips.map((chip, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSend(chip.text)}
+                  className="chat-suggestion-chip"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', borderRadius: '10px', padding: '8px 12px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
+                >
+                  <span>{chip.icon}</span>
+                  <span>{chip.text}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Input Bar */}
+          <div style={{ padding: '16px 20px 20px 20px', borderTop: '1px solid var(--glass-border)', background: 'rgba(9,6,20,0.5)' }}>
+            <form 
+              onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+              style={{ display: 'flex', gap: '10px', alignItems: 'center' }}
+            >
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask AI about predictions or match results..."
+                disabled={loading}
+                style={{ flex: 1, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', transition: 'border-color 0.2s' }}
+                className="chat-input-field"
+              />
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                style={{ width: '44px', height: '44px', borderRadius: '10px', background: (!input.trim() || loading) ? 'rgba(255,255,255,0.03)' : 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', border: 'none', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (!input.trim() || loading) ? 'default' : 'pointer', transition: 'all 0.25s', boxShadow: (!input.trim() || loading) ? 'none' : '0 4px 14px rgba(139, 92, 246, 0.4), var(--shadow-glow)' }}
+                className="chat-submit-btn"
+              >
+                <Send size={16} />
+              </button>
+            </form>
+          </div>
+        </>
       )}
-
-      {/* Input Bar */}
-      <div style={{ padding: '16px 20px 20px 20px', borderTop: '1px solid var(--glass-border)', background: 'rgba(9,6,20,0.5)' }}>
-        <form 
-          onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-          style={{ display: 'flex', gap: '10px', alignItems: 'center' }}
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask AI about predictions or match results..."
-            disabled={loading}
-            style={{ flex: 1, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '10px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', transition: 'border-color 0.2s' }}
-            className="chat-input-field"
-          />
-          <button
-            type="submit"
-            disabled={loading || !input.trim()}
-            style={{ width: '44px', height: '44px', borderRadius: '10px', background: (!input.trim() || loading) ? 'rgba(255,255,255,0.03)' : 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', border: 'none', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (!input.trim() || loading) ? 'default' : 'pointer', transition: 'all 0.25s', boxShadow: (!input.trim() || loading) ? 'none' : '0 4px 14px rgba(139, 92, 246, 0.4), var(--shadow-glow)' }}
-            className="chat-submit-btn"
-          >
-            <Send size={16} />
-          </button>
-        </form>
-      </div>
-
     </div>
   );
 }

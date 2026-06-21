@@ -2243,6 +2243,12 @@ h1, h2, h3, h4, h5, h6 {
   animation: chatSlideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  background: rgba(9, 6, 20, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 @keyframes chatSlideIn {
