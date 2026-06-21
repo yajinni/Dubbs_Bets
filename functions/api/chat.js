@@ -7,6 +7,53 @@ const headers = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+async function searchWeb(query) {
+  try {
+    const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    
+    if (!response.ok) return [];
+    const html = await response.text();
+    
+    const results = [];
+    const resultBlocks = html.split('<div class="result');
+    
+    for (let i = 1; i < Math.min(6, resultBlocks.length); i++) {
+      const block = resultBlocks[i];
+      const titleMatch = block.match(/<a class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
+      const snippetMatch = block.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/);
+      
+      if (titleMatch) {
+        let url = titleMatch[1];
+        if (url.includes('uddg=')) {
+          const params = new URLSearchParams(url.split('?')[1]);
+          url = params.get('uddg') || url;
+        }
+        
+        const title = titleMatch[2].replace(/<[^>]+>/g, '').trim();
+        const snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+        
+        results.push({ title, url, snippet });
+      }
+    }
+    
+    return results;
+  } catch (err) {
+    console.error('Web search error:', err);
+    return [];
+  }
+}
+
+function detectQueryIntent(query) {
+  const q = query.toLowerCase();
+  const poolKeywords = ['pool', 'leaderboard', 'standings', 'exact score', 'correct score', 'predicted', 'prediction', 'picks', 'points', 'clean sheet', 'clean sheets', 'first scorer', 'cards line', 'over under'];
+  return poolKeywords.some(kw => q.includes(kw));
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers });
 }
@@ -150,6 +197,24 @@ Rank | Name | Total Points | Correct Scores | Correct Winners | Correct Cards O/
       return new Response(JSON.stringify({ error: 'Invalid payload: messages array required' }), { status: 400, headers });
     }
 
+    const latestMessage = messages[messages.length - 1];
+    const userQuery = latestMessage?.role === 'user' ? latestMessage.content : '';
+
+    let webSearchResultsContext = '';
+    if (userQuery && !detectQueryIntent(userQuery)) {
+      console.log(`Performing custom web search for: "${userQuery}"...`);
+      const searchResults = await searchWeb(userQuery);
+      if (searchResults.length > 0) {
+        webSearchResultsContext = `\n\n--- LIVE WEB SEARCH RESULTS (Current Real-World Info) ---\n`;
+        searchResults.forEach((res, index) => {
+          webSearchResultsContext += `[${index + 1}] Title: ${res.title}\n    URL: ${res.url}\n    Snippet: ${res.snippet}\n\n`;
+        });
+        webSearchResultsContext += `Use the above search results to answer the user's query if it requires external real-world information. Cite the source URLs inline as markdown links (e.g. [Source Name](url)) when referencing this search context.\n`;
+      }
+    }
+
+    const finalSystemPrompt = systemPrompt + webSearchResultsContext;
+
     const modelName = env.GEMINI_MODEL || 'gemini-2.5-flash';
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
@@ -159,7 +224,7 @@ Rank | Name | Total Points | Correct Scores | Correct Winners | Correct Cards O/
         parts: [{ text: msg.content }]
       })),
       systemInstruction: {
-        parts: [{ text: systemPrompt }]
+        parts: [{ text: finalSystemPrompt }]
       },
       generationConfig: {
         temperature: 0.3,
