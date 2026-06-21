@@ -3,7 +3,7 @@ import { checkAndInitDb } from './db_helper.js';
 const headers = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -13,6 +13,15 @@ export async function onRequestOptions() {
 
 export async function onRequest(context) {
   const { request, env } = context;
+
+  if (request.method === 'GET') {
+    const config = {
+      enabled: !!env.GEMINI_API_KEY && env.GEMINI_API_KEY !== '',
+      model: env.GEMINI_MODEL || 'gemini-2.5-flash',
+      email: env.GEMINI_ACCOUNT_EMAIL || null
+    };
+    return new Response(JSON.stringify(config), { status: 200, headers });
+  }
 
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });

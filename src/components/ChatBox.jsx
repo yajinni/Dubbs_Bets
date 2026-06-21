@@ -13,8 +13,28 @@ export default function ChatBox() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [config, setConfig] = useState(null);
+  const [configLoading, setConfigLoading] = useState(true);
 
   const messagesEndRef = useRef(null);
+
+  // Fetch config on mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch('/api/chat');
+        if (res.ok) {
+          const data = await res.json();
+          setConfig(data);
+        }
+      } catch (err) {
+        console.error('Error fetching chat config:', err);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   const suggestionChips = [
     { text: "Which games did we do the worst on?", icon: "📉" },
@@ -76,6 +96,36 @@ export default function ChatBox() {
     }
   };
 
+  if (configLoading) {
+    return (
+      <div className="chat-container glass-panel" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 160px)', minHeight: '450px', maxHeight: '720px', padding: '40px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div className="btn-secondary animate-spin" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid var(--glass-border)', borderTopColor: 'var(--primary)', background: 'transparent' }}></div>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>Initializing AI Assistant...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (config && !config.enabled) {
+    return (
+      <div className="chat-container glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 160px)', minHeight: '450px', maxHeight: '720px', padding: '40px', textAlign: 'center' }}>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', marginBottom: '24px', boxShadow: '0 0 20px rgba(239, 68, 68, 0.1)' }}>
+          <AlertCircle size={32} />
+        </div>
+        <h3 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 12px 0' }}>AI Assistant Disabled</h3>
+        <p style={{ fontSize: '14px', color: 'var(--text-muted)', maxWidth: '360px', lineHeight: '1.6', margin: '0 0 24px 0' }}>
+          The Gemini AI chat box requires a Google AI Studio API Key to be configured in your Cloudflare dashboard environment variables.
+        </p>
+        <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '16px 20px', textAlign: 'left', maxWidth: '440px', fontSize: '13px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+          <span style={{ color: 'var(--primary)', fontWeight: '700' }}># Environment variables to set:</span><br />
+          GEMINI_API_KEY="AIzaSy..."<br />
+          GEMINI_ACCOUNT_EMAIL="your-email@gmail.com" <span style={{ color: 'var(--text-muted)' }}>(Optional)</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="chat-container glass-panel" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 160px)', minHeight: '450px', maxHeight: '720px', padding: '0', overflow: 'hidden' }}>
       
@@ -89,7 +139,9 @@ export default function ChatBox() {
             <h3 style={{ fontSize: '15px', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
               Dubbs AI Assistant
             </h3>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Powered by Gemini Flash</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Powered by {config?.model === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : (config?.model || 'Gemini Flash')} {config?.email ? `(${config.email})` : ''}
+            </span>
           </div>
         </div>
 
