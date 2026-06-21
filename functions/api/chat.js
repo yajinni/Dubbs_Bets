@@ -17,8 +17,7 @@ export async function onRequest(context) {
   if (request.method === 'GET') {
     const config = {
       enabled: !!env.GEMINI_API_KEY && env.GEMINI_API_KEY !== '',
-      model: env.GEMINI_MODEL || 'gemini-2.5-flash',
-      email: env.GEMINI_ACCOUNT_EMAIL || null
+      model: env.GEMINI_MODEL || 'gemini-2.5-flash'
     };
     return new Response(JSON.stringify(config), { status: 200, headers });
   }

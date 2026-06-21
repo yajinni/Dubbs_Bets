@@ -119,8 +119,7 @@ export default function ChatBox() {
         </p>
         <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '16px 20px', textAlign: 'left', maxWidth: '440px', fontSize: '13px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
           <span style={{ color: 'var(--primary)', fontWeight: '700' }}># Environment variables to set:</span><br />
-          GEMINI_API_KEY="AIzaSy..."<br />
-          GEMINI_ACCOUNT_EMAIL="your-email@gmail.com" <span style={{ color: 'var(--text-muted)' }}>(Optional)</span>
+          GEMINI_API_KEY="AIzaSy..."
         </div>
       </div>
     );
@@ -140,7 +139,7 @@ export default function ChatBox() {
               Dubbs AI Assistant
             </h3>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Powered by {config?.model === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : (config?.model || 'Gemini Flash')} {config?.email ? `(${config.email})` : ''}
+              Powered by {config?.model === 'gemini-2.5-flash' ? 'Gemini 2.5 Flash' : (config?.model || 'Gemini Flash')}
             </span>
           </div>
         </div>
