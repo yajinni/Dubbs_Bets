@@ -8,7 +8,8 @@ import StatsView from './components/StatsView';
 import LogsView from './components/LogsView';
 import InfoView from './components/InfoView';
 import NavCustomizerModal from './components/NavCustomizerModal';
-import { Calendar, Award, Trophy, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp, Menu, X, Info, BarChart2, List, RefreshCw, Clock } from 'lucide-react';
+import ChatBox from './components/ChatBox';
+import { Calendar, Award, Trophy, MessageSquare, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp, Menu, X, Info, BarChart2, List, RefreshCw, Clock } from 'lucide-react';
 import { shortenTeamName } from './utils/teamNames';
 
 // ─── Nav Layout Helpers ───────────────────────────────────────────────────────
@@ -18,6 +19,7 @@ const DEFAULT_NAV_LAYOUT = [
   { id: 'live',       label: 'Live',        inHeader: true  },
   { id: 'match-view', label: 'Results',    inHeader: false },
   { id: 'stats',      label: 'Stats',       inHeader: false },
+  { id: 'chat',       label: 'AI Chat',     inHeader: false },
   { id: 'logs',       label: 'Logs',        inHeader: false },
   { id: 'info',       label: 'Info',        inHeader: false },
 ];
@@ -28,6 +30,7 @@ const NAV_ICONS = {
   live: Clock,
   'match-view': Award,
   stats: BarChart2,
+  chat: MessageSquare,
   logs: List,
   info: Info,
 };
@@ -985,6 +988,12 @@ export default function App() {
              </div>
            )}
 
+            {activeTab === 'chat' && (
+              <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+                <ChatBox />
+              </div>
+            )}
+
            {activeTab === 'logs' && (
              <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
                <LogsView />
@@ -1108,6 +1117,7 @@ export default function App() {
                   )}
                   {item.id === 'match-view' && <Award size={18} />}
                   {item.id === 'stats'      && <BarChart2 size={18} />}
+                  {item.id === 'chat'       && <MessageSquare size={18} />}
                   {item.id === 'logs'       && <List size={18} />}
                   {item.id === 'info'       && <Info size={18} />}
                   {item.label}

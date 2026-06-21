@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ChevronUp, ChevronDown, Check, LayoutDashboard, Ticket, Radio, Award, BarChart2, List, Info, Cloud, CloudOff } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, Check, LayoutDashboard, Ticket, Radio, Award, BarChart2, List, Info, MessageSquare, Cloud, CloudOff } from 'lucide-react';
 
 const ICONS = {
   dashboard: LayoutDashboard,
@@ -7,6 +7,7 @@ const ICONS = {
   live: Radio,
   'match-view': Award,
   stats: BarChart2,
+  chat: MessageSquare,
   logs: List,
   info: Info,
 };
