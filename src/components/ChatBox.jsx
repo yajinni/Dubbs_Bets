@@ -187,32 +187,10 @@ export default function ChatBox({ onClose }) {
                 <div 
                   key={index}
                   style={{ 
-                    display: 'flex', 
-                    gap: '12px', 
-                    flexDirection: isUser ? 'row-reverse' : 'row',
-                    alignItems: 'flex-start',
-                    maxWidth: '85%',
+                    maxWidth: '92%',
                     alignSelf: isUser ? 'flex-end' : 'flex-start'
                   }}
                 >
-                  {/* Avatar */}
-                  <div 
-                    style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      borderRadius: '50%', 
-                      background: isUser ? 'rgba(99,102,241,0.15)' : 'rgba(139,92,246,0.15)',
-                      border: isUser ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(139,92,246,0.3)',
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      color: isUser ? 'var(--secondary)' : 'var(--primary)',
-                      flexShrink: 0
-                    }}
-                  >
-                    {isUser ? <User size={14} /> : <Bot size={14} />}
-                  </div>
-
                   {/* Bubble */}
                   <div 
                     style={{ 
@@ -241,10 +219,7 @@ export default function ChatBox({ onClose }) {
 
             {/* Typing Loader */}
             {loading && (
-              <div style={{ display: 'flex', gap: '12px', alignSelf: 'flex-start', alignItems: 'center' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
-                  <Bot size={14} />
-                </div>
+              <div style={{ alignSelf: 'flex-start' }}>
                 <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', borderRadius: '16px 16px 16px 2px', padding: '12px 20px', display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <span className="chat-dot" style={{ width: '6px', height: '6px', background: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'chatDotBounce 1.4s infinite ease-in-out both' }}></span>
                   <span className="chat-dot" style={{ width: '6px', height: '6px', background: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'chatDotBounce 1.4s infinite ease-in-out both', animationDelay: '0.2s' }}></span>
