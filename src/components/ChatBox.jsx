@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Trash2, AlertCircle } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Trash2, AlertCircle, XCircle } from 'lucide-react';
 
 export default function ChatBox({ onClose }) {
   const [messages, setMessages] = useState(() => {
