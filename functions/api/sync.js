@@ -187,7 +187,7 @@ function normalizeTeamName(name) {
 async function syncFromESPN(db) {
   console.log('Syncing from ESPN Scoreboard API...');
   
-  const { results: dbMatches } = await db.prepare('SELECT * FROM matches').all();
+  const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at FROM matches').all();
   const matchUpdates = [];
   
   const datesToFetch = new Set();
@@ -218,7 +218,7 @@ async function syncFromESPN(db) {
       }
     }
   }
-  
+
   let events = [];
   const fetchedEventIds = new Set();
   
@@ -243,6 +243,13 @@ async function syncFromESPN(db) {
   let matchesUpdated = 0;
   let finishedDuringSync = 0;
   
+  // Pre-build lookup map for O(1) match matching
+  const matchesByKey = new Map();
+  for (const m of dbMatches) {
+    const key = normalizeTeamName(m.home_team_name) + '|' + normalizeTeamName(m.away_team_name);
+    matchesByKey.set(key, m);
+  }
+
   for (const event of events) {
     const comp = event.competitions[0];
     if (!comp) continue;
@@ -254,14 +261,9 @@ async function syncFromESPN(db) {
     const homeName = homeCompetitor.team.name;
     const awayName = awayCompetitor.team.name;
     
-    // Find matching match in the database
-    const dbMatch = dbMatches.find(m => {
-      const dbHome = normalizeTeamName(m.home_team_name);
-      const dbAway = normalizeTeamName(m.away_team_name);
-      const espnHome = normalizeTeamName(homeName);
-      const espnAway = normalizeTeamName(awayName);
-      return (dbHome === espnHome && dbAway === espnAway);
-    });
+    // Find matching match in the database using O(1) map lookup
+    const espnKey = normalizeTeamName(homeName) + '|' + normalizeTeamName(awayName);
+    const dbMatch = matchesByKey.get(espnKey);
     
     if (dbMatch) {
       const homeScore = parseInt(homeCompetitor.score) || 0;
@@ -443,7 +445,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
   
   
   const { results: dbMatches } = await db.prepare(`
-    SELECT m.*, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+    SELECT m.id, m.home_team_name, m.away_team_name, m.local_date, m.finished, m.home_win_pct, m.away_win_pct, m.draw_pct, m.over_under_line, m.over_odds, m.under_odds, m.cards_line, m.cards_over_odds, m.cards_under_odds, m.odds_locked, m.odds_updated_at, t1.fifa_code AS home_code, t2.fifa_code AS away_code
     FROM matches m
     LEFT JOIN teams t1 ON m.home_team_id = t1.id
     LEFT JOIN teams t2 ON m.away_team_id = t2.id
@@ -453,11 +455,15 @@ async function syncFromTheOddsAPI(db, apiKey) {
   const oddsUpdates = [];
   
   // 1. Process Odds and Schedules (loop over all matches returned in oddsData)
+  // Pre-build lookup map for O(1) match matching
+  const matchesByKey2 = new Map();
+  for (const m of dbMatches) {
+    const key = normalizeTeamName(m.home_team_name) + '|' + normalizeTeamName(m.away_team_name);
+    matchesByKey2.set(key, m);
+  }
+
   for (const match of oddsData) {
-    const dbMatch = dbMatches.find(m => 
-      normalizeTeamName(m.home_team_name) === normalizeTeamName(match.home_team) && 
-      normalizeTeamName(m.away_team_name) === normalizeTeamName(match.away_team)
-    );
+    const dbMatch = matchesByKey2.get(normalizeTeamName(match.home_team) + '|' + normalizeTeamName(match.away_team));
     
     if (dbMatch) {
       if (dbMatch.odds_locked === 1) {
@@ -884,11 +890,15 @@ async function handleMidnightLock(db, apiKey) {
   let locked = 0;
   const midnightUpdates = [];
 
+  // Pre-build lookup map for O(1) match matching
+  const matchesByKey3 = new Map();
+  for (const m of matches) {
+    const key = normalizeTeamName(m.home_team_name) + '|' + normalizeTeamName(m.away_team_name);
+    matchesByKey3.set(key, m);
+  }
+
   for (const match of oddsData) {
-    const dbMatch = matches.find(m =>
-      normalizeTeamName(m.home_team_name) === normalizeTeamName(match.home_team) &&
-      normalizeTeamName(m.away_team_name) === normalizeTeamName(match.away_team)
-    );
+    const dbMatch = matchesByKey3.get(normalizeTeamName(match.home_team) + '|' + normalizeTeamName(match.away_team));
 
     if (!dbMatch) continue;
 

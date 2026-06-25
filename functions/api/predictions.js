@@ -3,6 +3,7 @@ import { checkAndInitDb, logChange, emitEvent, bumpVersion, recomputeAllCaches, 
 
 const headers = {
   'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',

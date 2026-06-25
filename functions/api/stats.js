@@ -2,6 +2,7 @@ import { checkAndInitDb, recomputeStatsCache } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
@@ -24,13 +25,13 @@ export async function onRequest(context) {
     const url = new URL(request.url);
     const force = url.searchParams.get('force') === 'true';
 
-    // Recompute if forced or cache is missing
-    if (force || !(await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_stats_payload'").first())) {
-      await recomputeStatsCache(env.db);
-    }
+    let cachedStatsRow = force ? null : await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_stats_payload'").first();
 
-    // Fetch the precalculated stats payload from cache
-    const cachedStatsRow = await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_stats_payload'").first();
+    // Recompute if forced or cache is missing
+    if (force || !cachedStatsRow) {
+      await recomputeStatsCache(env.db);
+      cachedStatsRow = await env.db.prepare("SELECT value FROM settings WHERE key = 'cached_stats_payload'").first();
+    }
 
     if (!cachedStatsRow || !cachedStatsRow.value) {
       return new Response(JSON.stringify({ error: 'Stats payload not cached and failed to recompute.' }), { status: 500, headers });

@@ -5,6 +5,9 @@ let _dbInitialized = false;
 let _matchesCache = null;
 let _matchesCacheTime = 0;
 const MATCHES_CACHE_TTL = 30000;
+let _versionsCache = null;
+let _versionsCacheTime = 0;
+const VERSIONS_CACHE_TTL = 2000;
 
 export function getMatchesCache() {
   if (_matchesCache && Date.now() - _matchesCacheTime < MATCHES_CACHE_TTL) {
@@ -21,6 +24,23 @@ export function setMatchesCache(data) {
 export function clearMatchesCache() {
   _matchesCache = null;
   _matchesCacheTime = 0;
+}
+
+export function getVersionsCache() {
+  if (_versionsCache && Date.now() - _versionsCacheTime < VERSIONS_CACHE_TTL) {
+    return _versionsCache;
+  }
+  return null;
+}
+
+export function setVersionsCache(data) {
+  _versionsCache = data;
+  _versionsCacheTime = Date.now();
+}
+
+export function clearVersionsCache() {
+  _versionsCache = null;
+  _versionsCacheTime = 0;
 }
 
 export async function checkAndInitDb(db) {
@@ -133,9 +153,17 @@ export async function checkAndInitDb(db) {
 
     // Migration: ensure indexes exist
     try {
-      await db.prepare("CREATE INDEX IF NOT EXISTS idx_predictions_match_id ON predictions(match_id)").run();
-      await db.prepare("CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp DESC, id DESC)").run();
-      await db.prepare("CREATE INDEX IF NOT EXISTS idx_logs_match_id ON logs(match_id)").run();
+      await db.batch([
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_predictions_match_id ON predictions(match_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_predictions_participant_id ON predictions(participant_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_matches_finished ON matches(finished)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_matches_odds_locked ON matches(odds_locked, finished)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_matches_local_date ON matches(local_date)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp DESC, id DESC)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_logs_match_id ON logs(match_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_logs_category ON logs(category)"),
+      ]);
     } catch (e) {
       console.error('[Migration] Failed to create indexes:', e.message);
     }
@@ -625,6 +653,10 @@ export async function recomputeStatsCache(db) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
+    // Pre-build matches lookup map for O(1) access
+    const matchesById = new Map();
+    for (const m of (matches || [])) matchesById.set(m.id, m);
+
     for (const p of participants || []) {
       const pPreds = predsByParticipant[p.id] || [];
       const totalFinishedPreds = pPreds.length;
@@ -634,7 +666,7 @@ export async function recomputeStatsCache(db) {
       const underdogCorrect = pPreds.filter(pred => pred.points_cards_ou > 0).length;
       const underdogAttempts = pPreds.filter(pred => {
         if (!pred.predicted_winner) return false;
-        const m = (matches || []).find(mt => mt.id === pred.match_id);
+        const m = matchesById.get(pred.match_id);
         if (!m || m.home_win_pct == null || m.away_win_pct == null || m.draw_pct == null) return false;
         const maxPct = Math.max(m.home_win_pct, m.away_win_pct, m.draw_pct);
         if (pred.predicted_winner === 'home' && m.home_win_pct < maxPct) return true;
@@ -661,7 +693,7 @@ export async function recomputeStatsCache(db) {
       const perMatch = pPreds.map(pred => pred.total_points || 0);
       const dayMap = {};
       pPreds.forEach(pred => {
-        const m = (matches || []).find(mt => mt.id === pred.match_id);
+        const m = matchesById.get(pred.match_id);
         if (m && m.local_date) {
           const ds = toDateStr(m.local_date);
           dayMap[ds] = (dayMap[ds] || 0) + (pred.total_points || 0);
@@ -1052,6 +1084,7 @@ export async function scoreAllPredictionsForMatch(db, matchId, match) {
 
 export async function bumpVersion(db, key) {
   const timestamp = new Date().toISOString();
+  clearVersionsCache();
   try {
     await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").bind(`version_${key}`, timestamp).run();
   } catch (err) {

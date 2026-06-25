@@ -1,7 +1,8 @@
-import { checkAndInitDb } from './db_helper.js';
+import { checkAndInitDb, getVersionsCache, setVersionsCache } from './db_helper.js';
 
 const headers = {
   'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
@@ -21,21 +22,33 @@ export async function onRequest(context) {
 
     await checkAndInitDb(env.db);
 
+    const cached = getVersionsCache();
+    if (cached) {
+      return new Response(JSON.stringify(cached), { status: 200, headers });
+    }
+
     const keys = ['version_matches', 'version_predictions', 'version_leaderboard', 'version_stats'];
-    const rows = await env.db.prepare(
-      `SELECT key, value FROM settings WHERE key IN ('version_matches', 'version_predictions', 'version_leaderboard', 'version_stats')`
-    ).all();
+    const row = await env.db.prepare(`
+      SELECT
+        (SELECT value FROM settings WHERE key = 'version_matches') AS matches,
+        (SELECT value FROM settings WHERE key = 'version_predictions') AS predictions,
+        (SELECT value FROM settings WHERE key = 'version_leaderboard') AS leaderboard,
+        (SELECT value FROM settings WHERE key = 'version_stats') AS stats,
+        (SELECT COUNT(*) FROM matches WHERE status = 'live') AS live,
+        (SELECT COUNT(*) FROM matches WHERE finished = 1) AS finished,
+        (SELECT COUNT(*) FROM matches WHERE status = 'scheduled' AND finished = 0) AS scheduled
+    `).first();
 
     const versions = {};
     const missingKeys = [];
 
     for (const key of keys) {
-      const row = (rows.results || []).find(r => r.key === key);
-      if (row) {
-        versions[key.replace('version_', '')] = row.value;
+      const shortKey = key.replace('version_', '');
+      if (row?.[shortKey]) {
+        versions[shortKey] = row[shortKey];
       } else {
         const defaultTime = new Date().toISOString();
-        versions[key.replace('version_', '')] = defaultTime;
+        versions[shortKey] = defaultTime;
         missingKeys.push(key);
       }
     }
@@ -47,14 +60,13 @@ export async function onRequest(context) {
       await env.db.batch(batch);
     }
 
-    const counts = await env.db.prepare(`
-      SELECT 
-        SUM(CASE WHEN status = 'live' THEN 1 ELSE 0 END) as live,
-        SUM(CASE WHEN finished = 1 THEN 1 ELSE 0 END) as finished,
-        SUM(CASE WHEN status = 'scheduled' AND finished = 0 THEN 1 ELSE 0 END) as scheduled
-      FROM matches
-    `).first();
-    versions.matchCounts = counts || { live: 0, finished: 0, scheduled: 0 };
+    versions.matchCounts = {
+      live: row?.live || 0,
+      finished: row?.finished || 0,
+      scheduled: row?.scheduled || 0,
+    };
+
+    setVersionsCache(versions);
 
     return new Response(JSON.stringify(versions), { status: 200, headers });
   } catch (error) {

@@ -291,10 +291,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/predictions?matchId=${matchId}`);
       const data = await res.json();
-      setMatchPredictionsCache(prev => {
-        if (prev[matchId]) return prev;
-        return { ...prev, [matchId]: data };
-      });
+      setMatchPredictionsCache(prev => ({ ...prev, [matchId]: data }));
     } catch (err) {
       console.error('Failed to load match predictions:', err);
     }
@@ -319,89 +316,108 @@ export default function App() {
     }
   }, []);
 
+  const isFetchingRef = useRef(false);
+  const pendingForceRefreshRef = useRef(false);
+
   const checkVersionsAndRefresh = useCallback(async (force = false) => {
+    if (isFetchingRef.current) {
+      if (force) pendingForceRefreshRef.current = true;
+      return;
+    }
+
+    isFetchingRef.current = true;
+    let shouldForce = force;
+
     try {
-      const vRes = await fetch('/api/versions');
-      if (!vRes.ok) return;
-      const serverVersions = await vRes.json();
-      
-      if (serverVersions.matchCounts) {
-        setMatchCounts(serverVersions.matchCounts);
-      }
-      
-      const promises = [];
-      const updatedVersions = { ...loadedVersionsRef.current };
+      do {
+        pendingForceRefreshRef.current = false;
 
-      // Check matches
-      const matchesChanged = force || serverVersions.matches !== loadedVersionsRef.current.matches;
-      if (matchesChanged) {
-        const url = loadedVersionsRef.current.hasFullMatches ? '/api/matches' : '/api/matches?activeOnly=true';
-        promises.push(
-          fetch(url)
-            .then(r => r.json())
-            .then(data => {
-              setMatches(data);
-              updatedVersions.matches = serverVersions.matches;
-            })
-        );
-      }
+        const vRes = await fetch('/api/versions');
+        if (!vRes.ok) break;
+        const serverVersions = await vRes.json();
 
-      // Check leaderboard
-      const leaderboardChanged = force || serverVersions.leaderboard !== loadedVersionsRef.current.leaderboard;
-      if (leaderboardChanged) {
-        promises.push(
-          fetch('/api/leaderboard')
-            .then(r => r.json())
-            .then(data => {
-              setLeaderboard(data);
-              updatedVersions.leaderboard = serverVersions.leaderboard;
-            })
-        );
-      }
+        if (serverVersions.matchCounts) {
+          setMatchCounts(serverVersions.matchCounts);
+        }
 
-      // Check predictions
-      const serverPredsVersionChanged = serverVersions.predictions !== loadedVersionsRef.current.predictions;
-      const participantChanged = activeParticipantId !== loadedVersionsRef.current.participantId;
-      const predictionsChanged = force || serverPredsVersionChanged || participantChanged;
+        const promises = [];
+        const updatedVersions = { ...loadedVersionsRef.current };
 
-      if (predictionsChanged) {
-        setMatchPredictionsCache({}); // clear detailed match predictions cache
-        updatedVersions.predictions = serverVersions.predictions;
-        updatedVersions.participantId = activeParticipantId;
-
-        if (activeParticipantId) {
+        // Check matches
+        const matchesChanged = shouldForce || serverVersions.matches !== loadedVersionsRef.current.matches;
+        if (matchesChanged) {
+          const url = loadedVersionsRef.current.hasFullMatches ? '/api/matches' : '/api/matches?activeOnly=true';
           promises.push(
-            fetch(`/api/predictions?participantId=${activeParticipantId}`)
+            fetch(url)
               .then(r => r.json())
               .then(data => {
-                setPredictions(data);
+                setMatches(data);
+                updatedVersions.matches = serverVersions.matches;
               })
           );
-        } else {
-          setPredictions([]);
         }
-      }
 
-      // Check stats (only if activeTab is stats or statsData is already loaded)
-      const isStatsTab = activeTab === 'stats';
-      const statsChanged = (isStatsTab || statsData) && (force || serverVersions.stats !== loadedVersionsRef.current.stats || !statsData);
-      if (statsChanged) {
-        promises.push(
-          fetch('/api/stats')
-            .then(r => r.json())
-            .then(data => {
-              setStatsData(data);
-              updatedVersions.stats = serverVersions.stats;
-            })
-        );
-      }
+        // Check leaderboard
+        const leaderboardChanged = shouldForce || serverVersions.leaderboard !== loadedVersionsRef.current.leaderboard;
+        if (leaderboardChanged) {
+          promises.push(
+            fetch('/api/leaderboard')
+              .then(r => r.json())
+              .then(data => {
+                setLeaderboard(data);
+                updatedVersions.leaderboard = serverVersions.leaderboard;
+              })
+          );
+        }
 
-      if (promises.length > 0) {
-        await Promise.all(promises);
+        // Check predictions
+        const serverPredsVersionChanged = serverVersions.predictions !== loadedVersionsRef.current.predictions;
+        const participantChanged = activeParticipantId !== loadedVersionsRef.current.participantId;
+        const predictionsChanged = shouldForce || serverPredsVersionChanged || participantChanged;
+
+        if (predictionsChanged) {
+          setMatchPredictionsCache({}); // clear detailed match predictions cache
+          updatedVersions.predictions = serverVersions.predictions;
+          updatedVersions.participantId = activeParticipantId;
+
+          if (activeParticipantId) {
+            promises.push(
+              fetch(`/api/predictions?participantId=${activeParticipantId}`)
+                .then(r => r.json())
+                .then(data => {
+                  setPredictions(data);
+                })
+            );
+          } else {
+            setPredictions([]);
+          }
+        }
+
+        // Check stats (only if activeTab is stats or statsData is already loaded)
+        const isStatsTab = activeTab === 'stats';
+        const statsChanged = (isStatsTab || statsData) && (shouldForce || serverVersions.stats !== loadedVersionsRef.current.stats || !statsData);
+        if (statsChanged) {
+          promises.push(
+            fetch('/api/stats')
+              .then(r => r.json())
+              .then(data => {
+                setStatsData(data);
+                updatedVersions.stats = serverVersions.stats;
+              })
+          );
+        }
+
+        if (promises.length > 0) {
+          await Promise.all(promises);
+        }
         loadedVersionsRef.current = updatedVersions;
-      }
+
+        shouldForce = true;
+      } while (pendingForceRefreshRef.current);
     } catch (err) {
       console.error('Failed to check versions and refresh:', err);
+    } finally {
+      isFetchingRef.current = false;
     }
   }, [activeParticipantId, activeTab, statsData]);
 
@@ -605,23 +621,24 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handler);
   }, [activeTab]);
 
-  // Polling fallback check for new versions (every 15 seconds)
+  // Refresh stale open tabs immediately when the user comes back to the app.
   useEffect(() => {
-    const interval = setInterval(() => {
-      checkVersionsAndRefresh();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [checkVersionsAndRefresh]);
-
-  // Visibility focus check (auto refresh when tab gains focus)
-  useEffect(() => {
-    const handleVisibility = () => {
+    const refreshIfVisible = () => {
       if (document.visibilityState === 'visible') {
         checkVersionsAndRefresh();
       }
     };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    window.addEventListener('focus', refreshIfVisible);
+    window.addEventListener('online', refreshIfVisible);
+    window.addEventListener('pageshow', refreshIfVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+      window.removeEventListener('focus', refreshIfVisible);
+      window.removeEventListener('online', refreshIfVisible);
+      window.removeEventListener('pageshow', refreshIfVisible);
+    };
   }, [checkVersionsAndRefresh]);
 
   // Tab switch archive & stats triggers
@@ -638,7 +655,7 @@ export default function App() {
     if (!hasLiveMatches) return;
 
     const performSync = async () => {
-      if (document.visibilityState !== 'visible') return; // Pause polling when tab is hidden/locked
+      if (document.visibilityState !== 'visible') return;
       try {
         const syncRes = await fetch('/api/sync?skipOdds=true');
         const syncData = await syncRes.json();
@@ -656,12 +673,12 @@ export default function App() {
     return () => clearInterval(intervalId);
   }, [hasLiveMatches, checkVersionsAndRefresh]);
 
-  // Smart version polling check (replaces SSE, only active when tab is visible)
+  // Smart version polling (only active when tab is visible)
   useEffect(() => {
     const intervalId = setInterval(() => {
-      if (document.visibilityState !== 'visible') return; // Pause polling when tab is hidden/locked
+      if (document.visibilityState !== 'visible') return;
       checkVersionsAndRefresh();
-    }, 10000); // Poll every 10 seconds
+    }, 30000);
 
     return () => clearInterval(intervalId);
   }, [checkVersionsAndRefresh]);
