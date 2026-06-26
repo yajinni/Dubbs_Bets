@@ -522,8 +522,8 @@ export default function PlayerPicksList({
                         textAlign: 'center',
                         whiteSpace: 'nowrap',
                         flexShrink: 0,
-                        background: displayPred.predicted_winner ? ((m.finished === 1 || liveStats) ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : (pickedUnderdog ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)')) : 'transparent',
-                        border: displayPred.predicted_winner ? ((m.finished === 1 || liveStats) ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : (pickedUnderdog ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px dashed rgba(255, 255, 255, 0.05)'
+                        background: displayPred.predicted_winner ? ((m.finished === 1 || liveStats) ? (underdogBonusEarned ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : (liveStats && pickedUnderdog ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)')) : 'transparent',
+                        border: displayPred.predicted_winner ? ((m.finished === 1 || liveStats) ? (underdogBonusEarned ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : (liveStats && pickedUnderdog ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)')) : '1px dashed rgba(255, 255, 255, 0.05)'
                       }}>
                         {displayPred.predicted_winner ? (pickedUnderdog ? 'B' : 'F') : '-'}
                       </span>
