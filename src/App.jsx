@@ -244,13 +244,13 @@ export default function App() {
       return currentLive;
     }
 
-    // 3. Otherwise leave the previous live/finished game showing
+    // 3. Otherwise show recently finished matches (including overlapping ones)
     const finishedMatches = matches.filter(m => m.finished === 1 || m.status === 'finished');
     if (finishedMatches.length > 0) {
       const sortedFinished = [...finishedMatches].sort((a, b) => {
         return new Date((b.local_date || '').replace(' ', 'T')) - new Date((a.local_date || '').replace(' ', 'T'));
       });
-      return [sortedFinished[0]];
+      return sortedFinished;
     }
 
     return [];
@@ -258,10 +258,7 @@ export default function App() {
 
   const liveTabCode = useMemo(() => {
     if (liveTabMatches.length === 0) return 'Live';
-    const m = liveTabMatches[0];
-    const home = m.home_code || (m.home_team_name || '').substring(0, 3).toUpperCase();
-    const away = m.away_code || (m.away_team_name || '').substring(0, 3).toUpperCase();
-    return `${home}|${away}`;
+    return `Live (${liveTabMatches.length})`;
   }, [liveTabMatches]);
 
   const fetchPredictions = async (pId) => {
