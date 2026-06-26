@@ -8,29 +8,38 @@ const headers = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// Pick the best O/U totals line from bookmakers: prefer .5 lines (1.5, 2.5, 3.5) over whole numbers
+// Pick the best O/U totals line: prefer BetMGM, then .5 lines, then first available
 function pickBestTotals(bookmakers) {
-  for (const b of bookmakers) {
+  const getTotals = (b) => {
     const totals = (b.markets || []).find(mk => mk.key === 'totals');
-    if (totals) {
-      const over = totals.outcomes.find(o => o.name === 'Over');
-      const under = totals.outcomes.find(o => o.name === 'Under');
-      if (over && under && over.point % 1 !== 0) {
-        return { line: over.point, overOdds: over.price, underOdds: under.price };
-      }
-    }
+    if (!totals) return null;
+    const over = totals.outcomes.find(o => o.name === 'Over');
+    const under = totals.outcomes.find(o => o.name === 'Under');
+    if (!over || !under) return null;
+    return { line: over.point, overOdds: over.price, underOdds: under.price };
+  };
+
+  const betmgm = bookmakers.find(b => b.key === 'betmgm');
+  if (betmgm) {
+    const t = getTotals(betmgm);
+    if (t && t.line % 1 !== 0) return t;
   }
-  // Fallback: first bookmaker with totals (even if whole number)
+
   for (const b of bookmakers) {
-    const totals = (b.markets || []).find(mk => mk.key === 'totals');
-    if (totals) {
-      const over = totals.outcomes.find(o => o.name === 'Over');
-      const under = totals.outcomes.find(o => o.name === 'Under');
-      if (over && under) {
-        return { line: over.point, overOdds: over.price, underOdds: under.price };
-      }
-    }
+    const t = getTotals(b);
+    if (t && t.line % 1 !== 0) return t;
   }
+
+  if (betmgm) {
+    const t = getTotals(betmgm);
+    if (t) return t;
+  }
+
+  for (const b of bookmakers) {
+    const t = getTotals(b);
+    if (t) return t;
+  }
+
   return null;
 }
 
