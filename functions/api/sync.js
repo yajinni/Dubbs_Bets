@@ -8,6 +8,32 @@ const headers = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+// Pick the best O/U totals line from bookmakers: prefer .5 lines (1.5, 2.5, 3.5) over whole numbers
+function pickBestTotals(bookmakers) {
+  for (const b of bookmakers) {
+    const totals = (b.markets || []).find(mk => mk.key === 'totals');
+    if (totals) {
+      const over = totals.outcomes.find(o => o.name === 'Over');
+      const under = totals.outcomes.find(o => o.name === 'Under');
+      if (over && under && over.point % 1 !== 0) {
+        return { line: over.point, overOdds: over.price, underOdds: under.price };
+      }
+    }
+  }
+  // Fallback: first bookmaker with totals (even if whole number)
+  for (const b of bookmakers) {
+    const totals = (b.markets || []).find(mk => mk.key === 'totals');
+    if (totals) {
+      const over = totals.outcomes.find(o => o.name === 'Over');
+      const under = totals.outcomes.find(o => o.name === 'Under');
+      if (over && under) {
+        return { line: over.point, overOdds: over.price, underOdds: under.price };
+      }
+    }
+  }
+  return null;
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers });
 }
@@ -518,17 +544,11 @@ async function syncFromTheOddsAPI(db, apiKey) {
             }
           }
           
-          const totals = bookmaker.markets.find(mk => mk.key === 'totals');
-          if (totals) {
-            const overOutcome = totals.outcomes.find(o => o.name === 'Over');
-            const underOutcome = totals.outcomes.find(o => o.name === 'Under');
-            if (overOutcome) {
-              ouLine = overOutcome.point;
-              overOdds = overOutcome.price;
-            }
-            if (underOutcome) {
-              underOdds = underOutcome.price;
-            }
+          const totalsResult = pickBestTotals(match.bookmakers);
+          if (totalsResult) {
+            ouLine = totalsResult.line;
+            overOdds = totalsResult.overOdds;
+            underOdds = totalsResult.underOdds;
           }
         }
       }
@@ -654,17 +674,11 @@ async function handleLockMatchTask(db, matchId, apiKey) {
               }
             }
             
-            const totals = bookmaker.markets.find(mk => mk.key === 'totals');
-            if (totals) {
-              const overOutcome = totals.outcomes.find(o => o.name === 'Over');
-              const underOutcome = totals.outcomes.find(o => o.name === 'Under');
-              if (overOutcome) {
-                ouLine = overOutcome.point;
-                overOdds = overOutcome.price;
-              }
-              if (underOutcome) {
-                underOdds = underOutcome.price;
-              }
+            const totalsResult = pickBestTotals(apiMatch.bookmakers);
+            if (totalsResult) {
+              ouLine = totalsResult.line;
+              overOdds = totalsResult.overOdds;
+              underOdds = totalsResult.underOdds;
             }
           }
         }
@@ -951,17 +965,11 @@ async function handleMidnightLock(db, apiKey) {
           }
         }
 
-        const totals = bookmaker.markets.find(mk => mk.key === 'totals');
-        if (totals) {
-          const overOutcome = totals.outcomes.find(o => o.name === 'Over');
-          const underOutcome = totals.outcomes.find(o => o.name === 'Under');
-          if (overOutcome) {
-            ouLine = overOutcome.point;
-            overOdds = overOutcome.price;
-          }
-          if (underOutcome) {
-            underOdds = underOutcome.price;
-          }
+        const totalsResult = pickBestTotals(match.bookmakers);
+        if (totalsResult) {
+          ouLine = totalsResult.line;
+          overOdds = totalsResult.overOdds;
+          underOdds = totalsResult.underOdds;
         }
       }
     }
