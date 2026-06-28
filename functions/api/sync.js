@@ -222,7 +222,7 @@ function normalizeTeamName(name) {
 async function syncFromESPN(db) {
   console.log('Syncing from ESPN Scoreboard API...');
   
-  const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, home_team_label, away_team_label, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at FROM matches').all();
+  const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, home_team_label, away_team_label, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at, type, round_name FROM matches').all();
   const matchUpdates = [];
   
   const datesToFetch = new Set();
@@ -279,30 +279,22 @@ async function syncFromESPN(db) {
   let finishedDuringSync = 0;
   const matchedDbIds = new Set();
 
-  // Reset team names for all knockout matches at the start of each sync.
-  // This ensures the first pass matches by label (placeholder name) and
-  // the second pass re-matches by date proximity fresh every time, preventing
-  // a prior incorrect match from perpetuating itself.
-  const hasKnockoutNames = dbMatches.some(m => (m.home_team_name || m.away_team_name) && ['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(m.type || m.round_name));
+  // Reset knockout matches to placeholder state at the start of each sync.
+  // This breaks the cycle from prior incorrect matches (e.g. match 74 was
+  // incorrectly assigned "Brazil vs Japan"). We clear team names AND event
+  // IDs, so the second pass can re-match fresh by date proximity.
+  const hasKnockoutNames = dbMatches.some(m => (m.home_team_name || m.away_team_name || m.espn_event_id) && ['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(m.type || m.round_name));
   if (hasKnockoutNames) {
-    await db.prepare(`UPDATE matches SET home_team_name = '', away_team_name = '' WHERE type IN ('r32', 'r16', 'qf', 'sf', 'third', 'final') AND (home_team_name != '' OR away_team_name != '')`).run();
-    // Re-fetch dbMatches to reflect the reset
-    dbMatches = await db.prepare(`
-      SELECT m.*, g.group_name 
-      FROM matches m 
-      LEFT JOIN match_groups g ON m.group_id = g.id
-      ORDER BY m.local_date ASC
-    `).all();
+    await db.prepare(`UPDATE matches SET home_team_name = '', away_team_name = '', espn_event_id = NULL WHERE type IN ('r32', 'r16', 'qf', 'sf', 'third', 'final') AND (home_team_name != '' OR away_team_name != '' OR espn_event_id IS NOT NULL)`).run();
+    // Update in-memory dbMatches to match the DB state (no re-assigning const)
+    for (const m of dbMatches) {
+      if (['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(m.type || m.round_name)) {
+        m.home_team_name = '';
+        m.away_team_name = '';
+        m.espn_event_id = null;
+      }
+    }
     clearMatchesCache();
-  }
-
-  // Log all events for debugging
-  for (const ev of events) {
-    const comp = ev.competitions?.[0];
-    if (!comp) continue;
-    const home = comp.competitors?.find(c => c.homeAway === 'home')?.team?.name;
-    const away = comp.competitors?.find(c => c.homeAway === 'away')?.team?.name;
-    console.log(`[Sync-Event] ${ev.id}: ${home} vs ${away} (${ev.date})`);
   }
 
   // Log match 76 state
@@ -515,6 +507,11 @@ async function syncFromESPN(db) {
     return !inKeys;
   });
   console.log(`[Sync-2ndPass] Total events: ${events.length}, unmatched: ${unmatchedEvents.length}`);
+
+  // Sort unmatched events by date DESCENDING. Later kickoffs have definitive
+  // timestamps and should claim their closest DB match first. This prevents
+  // earlier kickoffs from "stealing" the wrong match when DB dates are stale.
+  unmatchedEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   for (const event of unmatchedEvents) {
     const comp = event.competitions[0];
