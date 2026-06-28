@@ -279,6 +279,21 @@ async function syncFromESPN(db) {
   let finishedDuringSync = 0;
   const matchedDbIds = new Set();
 
+  // Log all events for debugging
+  for (const ev of events) {
+    const comp = ev.competitions?.[0];
+    if (!comp) continue;
+    const home = comp.competitors?.find(c => c.homeAway === 'home')?.team?.name;
+    const away = comp.competitors?.find(c => c.homeAway === 'away')?.team?.name;
+    console.log(`[Sync-Event] ${ev.id}: ${home} vs ${away} (${ev.date})`);
+  }
+
+  // Log match 76 state
+  const m76 = dbMatches.find(m => m.id === 76);
+  if (m76) {
+    console.log(`[Sync-Debug] Match 76 DB state: name="${m76.home_team_name}" vs "${m76.away_team_name}" label="${m76.home_team_label}" vs "${m76.away_team_label}" date="${m76.local_date}"`);
+  }
+
   // Pre-build lookup map for O(1) match matching
   const matchesByKey = new Map();
   for (const m of dbMatches) {
@@ -302,6 +317,7 @@ async function syncFromESPN(db) {
     // Find matching match in the database using O(1) map lookup
     const espnKey = normalizeTeamName(homeName) + '|' + normalizeTeamName(awayName);
     const dbMatch = matchesByKey.get(espnKey);
+    console.log(`[Sync-1stPass] ESPN: "${homeName}" vs "${awayName}" key="${espnKey}" -> ${dbMatch ? 'match '+dbMatch.id : 'no match'}`);
     
     if (dbMatch) {
       matchedDbIds.add(dbMatch.id);
