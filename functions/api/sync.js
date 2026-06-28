@@ -277,7 +277,8 @@ async function syncFromESPN(db) {
   
   let matchesUpdated = 0;
   let finishedDuringSync = 0;
-  
+  const matchedDbIds = new Set();
+
   // Pre-build lookup map for O(1) match matching
   const matchesByKey = new Map();
   for (const m of dbMatches) {
@@ -303,6 +304,7 @@ async function syncFromESPN(db) {
     const dbMatch = matchesByKey.get(espnKey);
     
     if (dbMatch) {
+      matchedDbIds.add(dbMatch.id);
       const homeScore = parseInt(homeCompetitor.score) || 0;
       const awayScore = parseInt(awayCompetitor.score) || 0;
       
@@ -465,14 +467,6 @@ async function syncFromESPN(db) {
     return !matchedKeys.has(normalizeTeamName(home) + '|' + normalizeTeamName(away));
   });
 
-  // Build set of already-updated match IDs
-  const updatedIds = new Set();
-  for (const m of dbMatches) {
-    const key = m.home_team_name ? normalizeTeamName(m.home_team_name) : normalizeTeamName(m.home_team_label || '');
-    const awayKey = m.away_team_name ? normalizeTeamName(m.away_team_name) : normalizeTeamName(m.away_team_label || '');
-    if (matchedKeys.has(key + '|' + awayKey)) updatedIds.add(m.id);
-  }
-
   for (const event of unmatchedEvents) {
     const comp = event.competitions[0];
     const homeCompetitor = comp.competitors.find(c => c.homeAway === 'home');
@@ -482,13 +476,13 @@ async function syncFromESPN(db) {
     const espnKickoff = new Date(event.date).getTime();
 
     // Try matching by espn_event_id first
-    let dbMatch = dbMatches.find(m => m.espn_event_id === event.id && !updatedIds.has(m.id));
+    let dbMatch = dbMatches.find(m => m.espn_event_id === event.id && !matchedDbIds.has(m.id));
     
     // Fallback: match by closest kickoff time within 2 hours
     if (!dbMatch) {
       let bestDiff = Infinity;
       for (const m of dbMatches) {
-        if (updatedIds.has(m.id) || m.finished === 1) continue;
+        if (matchedDbIds.has(m.id) || m.finished === 1) continue;
         const dbKickoff = new Date(m.local_date).getTime();
         const diff = Math.abs(dbKickoff - espnKickoff);
         if (diff < bestDiff && diff <= 2 * 60 * 60 * 1000) {
@@ -499,7 +493,7 @@ async function syncFromESPN(db) {
     }
 
     if (!dbMatch) continue;
-    updatedIds.add(dbMatch.id);
+    matchedDbIds.add(dbMatch.id);
 
     const homeScore = parseInt(homeCompetitor.score) || 0;
     const awayScore = parseInt(awayCompetitor.score) || 0;
