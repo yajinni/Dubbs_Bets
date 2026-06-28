@@ -224,6 +224,13 @@ async function syncFromESPN(db) {
   
   const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, home_team_label, away_team_label, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at, type, round_name FROM matches').all();
   const matchUpdates = [];
+
+  // Build team name -> id lookup for flag/code JOIN
+  const { results: teamRows } = await db.prepare('SELECT id, name_en FROM teams').all();
+  const teamNameToId = new Map();
+  for (const t of teamRows) {
+    teamNameToId.set(t.name_en.toLowerCase().trim(), t.id);
+  }
   
   const datesToFetch = new Set();
   const getYYYYMMDD = (d) => {
@@ -288,7 +295,7 @@ async function syncFromESPN(db) {
   const needsReset = m => (m.home_team_name || m.away_team_name || m.espn_event_id || (m.finished === 1 && !m.home_team_name && !m.away_team_name)) && ['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(m.type || m.round_name);
   const hasKnockoutNames = dbMatches.some(needsReset);
   if (hasKnockoutNames) {
-    await db.prepare(`UPDATE matches SET home_team_name = '', away_team_name = '', espn_event_id = NULL, finished = 0, status = 'scheduled', home_score = 0, away_score = 0, home_ht_score = NULL, away_ht_score = NULL, actual_cards = NULL, actual_first_scorer = NULL, display_clock = NULL WHERE type IN ('r32', 'r16', 'qf', 'sf', 'third', 'final') AND (home_team_name != '' OR away_team_name != '' OR espn_event_id IS NOT NULL OR (finished = 1 AND home_team_name = '' AND away_team_name = ''))`).run();
+    await db.prepare(`UPDATE matches SET home_team_name = '', away_team_name = '', espn_event_id = NULL, finished = 0, status = 'scheduled', home_score = 0, away_score = 0, home_ht_score = NULL, away_ht_score = NULL, actual_cards = NULL, actual_first_scorer = NULL, display_clock = NULL, home_team_id = NULL, away_team_id = NULL WHERE type IN ('r32', 'r16', 'qf', 'sf', 'third', 'final') AND (home_team_name != '' OR away_team_name != '' OR espn_event_id IS NOT NULL OR (finished = 1 AND home_team_name = '' AND away_team_name = ''))`).run();
     // Update in-memory dbMatches to match the DB state (no re-assigning const)
     for (const m of dbMatches) {
       if (needsReset(m)) {
@@ -304,6 +311,8 @@ async function syncFromESPN(db) {
         m.actual_cards = null;
         m.actual_first_scorer = null;
         m.display_clock = null;
+        m.home_team_id = null;
+        m.away_team_id = null;
       }
     }
     clearMatchesCache();
@@ -439,6 +448,8 @@ async function syncFromESPN(db) {
         dbMatch.away_team_name !== awayName;
 
       if (hasChanged) {
+        const homeTeamId = teamNameToId.get(homeName.toLowerCase().trim()) || null;
+        const awayTeamId = teamNameToId.get(awayName.toLowerCase().trim()) || null;
         matchUpdates.push(
           db.prepare(`
             UPDATE matches
@@ -455,7 +466,9 @@ async function syncFromESPN(db) {
               local_date = ?,
               display_clock = ?,
               home_team_name = ?,
-              away_team_name = ?
+              away_team_name = ?,
+              home_team_id = ?,
+              away_team_id = ?
             WHERE id = ?
           `).bind(
             homeScore,
@@ -471,6 +484,8 @@ async function syncFromESPN(db) {
             displayClock,
             homeName,
             awayName,
+            homeTeamId,
+            awayTeamId,
             dbMatch.id
           )
         );
@@ -587,13 +602,18 @@ async function syncFromESPN(db) {
           local_date = ?,
           display_clock = ?,
           home_team_name = ?,
-          away_team_name = ?
+          away_team_name = ?,
+          home_team_id = ?,
+          away_team_id = ?
         WHERE id = ?
       `).bind(
         homeScore, awayScore, homeHtScore, awayHtScore,
         status, finished, actualCards, actualFirstScorer,
         event.id, newLocalDate, displayClock,
-        homeName, awayName, dbMatch.id
+        homeName, awayName,
+        teamNameToId.get(homeName.toLowerCase().trim()) || null,
+        teamNameToId.get(awayName.toLowerCase().trim()) || null,
+        dbMatch.id
       )
     );
     if (finished === 1 && dbMatch.finished !== 1) {
@@ -908,6 +928,12 @@ async function handleLockMatchTask(db, matchId, apiKey) {
 
 async function handleScoreMatchTask(db, matchId) {
   console.log(`[Score Task] Syncing score and completing predictions for match ${matchId}...`);
+  // Build team name -> id lookup for flag/code JOIN
+  const { results: scoreTeamRows } = await db.prepare('SELECT id, name_en FROM teams').all();
+  const scoreTeamNameToId = new Map();
+  for (const t of scoreTeamRows) {
+    scoreTeamNameToId.set(t.name_en.toLowerCase().trim(), t.id);
+  }
   const match = await db.prepare(`
     SELECT m.*, t1.fifa_code AS home_code, t2.fifa_code AS away_code
     FROM matches m
@@ -1017,7 +1043,9 @@ async function handleScoreMatchTask(db, matchId) {
           actual_first_scorer = ?,
           espn_event_id = ?,
           home_team_name = ?,
-          away_team_name = ?
+          away_team_name = ?,
+          home_team_id = ?,
+          away_team_id = ?
         WHERE id = ?
       `).bind(
         homeScore,
@@ -1031,6 +1059,8 @@ async function handleScoreMatchTask(db, matchId) {
         event.id,
         homeName,
         awayName,
+        scoreTeamNameToId.get(homeName.toLowerCase().trim()) || null,
+        scoreTeamNameToId.get(awayName.toLowerCase().trim()) || null,
         matchId
       ).run();
       
