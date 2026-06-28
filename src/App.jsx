@@ -244,8 +244,9 @@ export default function App() {
       return currentLive;
     }
 
-    // 3. Otherwise show recently finished matches (including overlapping ones)
-    const finishedMatches = matches.filter(m => m.finished === 1 || m.status === 'finished');
+    // 3. Otherwise show today's finished matches (including overlapping ones)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const finishedMatches = matches.filter(m => (m.finished === 1 || m.status === 'finished') && (m.local_date || '').startsWith(todayStr));
     if (finishedMatches.length > 0) {
       const sortedFinished = [...finishedMatches].sort((a, b) => {
         return new Date((b.local_date || '').replace(' ', 'T')) - new Date((a.local_date || '').replace(' ', 'T'));
@@ -686,6 +687,7 @@ export default function App() {
       const res = await fetch('/api/sync?force=true');
       const data = await res.json();
       if (res.ok && data.success) {
+        console.log('[Sync] Result:', data.results);
         setLastSync(data.sync_time);
         await refreshAllData();
         if (data.results && data.results.oddsError) {
@@ -966,6 +968,7 @@ export default function App() {
                       selectedMatchId={null}
                       showLiveResults={m.status === 'live'}
                       onRefresh={refreshAllData}
+                      defaultExpanded={m.finished === 1}
                     />
                   </div>
                 ))
