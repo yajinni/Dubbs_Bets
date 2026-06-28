@@ -68,8 +68,8 @@ export default function PlayerPicksList({
 }) {
   const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
   const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
-  const homeCode = m.home_code || 'H';
-  const awayCode = m.away_code || 'A';
+  const homeCode = m.home_code || (m.home_team_name || m.home_team_label || '').substring(0, 3).toUpperCase() || 'H';
+  const awayCode = m.away_code || (m.away_team_name || m.away_team_label || '').substring(0, 3).toUpperCase() || 'A';
 
   const [liveStats, setLiveStats] = useState(null);
   const [cardMismatch, setCardMismatch] = useState(null);
