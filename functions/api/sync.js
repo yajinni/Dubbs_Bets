@@ -297,12 +297,6 @@ async function syncFromESPN(db) {
     clearMatchesCache();
   }
 
-  // Log match 76 state
-  const m76 = dbMatches.find(m => m.id === 76);
-  if (m76) {
-    console.log(`[Sync-Debug] Match 76 DB state: name="${m76.home_team_name}" vs "${m76.away_team_name}" label="${m76.home_team_label}" vs "${m76.away_team_label}" date="${m76.local_date}"`);
-  }
-
   // Pre-build lookup map for O(1) match matching
   // For knockout matches, ALWAYS use the label (placeholder name) as the key,
   // not any previously-synced real team name. This prevents a prior incorrect
@@ -336,7 +330,6 @@ async function syncFromESPN(db) {
     // Find matching match in the database using O(1) map lookup
     const espnKey = normalizeTeamName(homeName) + '|' + normalizeTeamName(awayName);
     const dbMatch = matchesByKey.get(espnKey);
-    console.log(`[Sync-1stPass] ESPN: "${homeName}" vs "${awayName}" key="${espnKey}" -> ${dbMatch ? 'match '+dbMatch.id : 'no match'}`);
     
     if (dbMatch) {
       matchedDbIds.add(dbMatch.id);
@@ -493,6 +486,18 @@ async function syncFromESPN(db) {
 
   // Second pass: match remaining ESPN events to DB matches by espn_event_id or date proximity
   const matchedKeys = new Set(matchesByKey.keys());
+  console.log(`[Sync-Debug] ESPN events: ${events.length}, matchedKeys: ${matchedKeys.size}`);
+  for (const ev of events) {
+    const c = ev.competitions?.[0];
+    if (!c) continue;
+    const h = c.competitors?.find(c2 => c2.homeAway === 'home')?.team?.name;
+    const a = c.competitors?.find(c2 => c2.homeAway === 'away')?.team?.name;
+    console.log(`[Sync-Debug] Event ${ev.id}: ${h} vs ${a} date=${ev.date}`);
+  }
+  const m73 = dbMatches.find(m => m.id === 73);
+  if (m73) {
+    console.log(`[Sync-Debug] Match 73: name="${m73.home_team_name}" vs "${m73.away_team_name}" label="${m73.home_team_label}" vs "${m73.away_team_label}" date="${m73.local_date}" espn_id=${m73.espn_event_id} finished=${m73.finished}`);
+  }
   const unmatchedEvents = events.filter(e => {
     const comp = e.competitions?.[0];
     if (!comp) return false;
@@ -501,12 +506,9 @@ async function syncFromESPN(db) {
     if (!home || !away) return false;
     const espnKey = normalizeTeamName(home) + '|' + normalizeTeamName(away);
     const inKeys = matchedKeys.has(espnKey);
-    if (!inKeys) {
-      console.log(`[Sync-2ndPass] Unmatched ESPN event: ${home} vs ${away} (${e.date}) key=${espnKey}`);
-    }
     return !inKeys;
   });
-  console.log(`[Sync-2ndPass] Total events: ${events.length}, unmatched: ${unmatchedEvents.length}`);
+  console.log(`[Sync-Debug] Unmatched events: ${unmatchedEvents.length}`);
 
   // Sort unmatched events by date DESCENDING. Later kickoffs have definitive
   // timestamps and should claim their closest DB match first. This prevents
@@ -520,13 +522,9 @@ async function syncFromESPN(db) {
     const homeName = homeCompetitor.team.name;
     const awayName = awayCompetitor.team.name;
     const espnKickoff = new Date(event.date).getTime();
-    console.log(`[Sync-2ndPass] Processing: ${homeName} vs ${awayName} at ${event.date} (${espnKickoff})`);
 
     // Try matching by espn_event_id first
     let dbMatch = dbMatches.find(m => m.espn_event_id === event.id && !matchedDbIds.has(m.id));
-    if (dbMatch) {
-      console.log(`[Sync-2ndPass] Matched by espn_event_id: DB match ${dbMatch.id}`);
-    }
     
     // Fallback: match by closest kickoff time within 2 hours
     if (!dbMatch) {
@@ -536,22 +534,17 @@ async function syncFromESPN(db) {
         if (matchedDbIds.has(m.id) || m.finished === 1) continue;
         const dbKickoff = new Date(m.local_date).getTime();
         const diff = Math.abs(dbKickoff - espnKickoff);
-        console.log(`[Sync-2ndPass]   Checking DB match ${m.id}: date=${m.local_date} (${dbKickoff}) label="${m.home_team_label || m.home_team_name}" vs "${m.away_team_label || m.away_team_name}" diff=${diff}ms`);
         if (diff < bestDiff && diff <= 24 * 60 * 60 * 1000) {
           bestDiff = diff;
           bestMatch = m;
         }
       }
       dbMatch = bestMatch;
-      if (dbMatch) {
-        console.log(`[Sync-2ndPass] Matched by date: DB match ${dbMatch.id} (${dbMatch.home_team_label || dbMatch.home_team_name} vs ${dbMatch.away_team_label || dbMatch.away_team_name}) diff=${bestDiff}ms`);
-      } else {
-        console.log(`[Sync-2ndPass] No match found by date proximity`);
-      }
     }
 
     if (!dbMatch) continue;
     matchedDbIds.add(dbMatch.id);
+    console.log(`[Sync-Debug] Second pass matched event ${event.id} (${homeName} vs ${awayName}) to DB match ${dbMatch.id} (${dbMatch.home_team_label || dbMatch.home_team_name} vs ${dbMatch.away_team_label || dbMatch.away_team_name})`);
 
     const homeScore = parseInt(homeCompetitor.score) || 0;
     const awayScore = parseInt(awayCompetitor.score) || 0;
