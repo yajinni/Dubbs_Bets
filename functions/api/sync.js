@@ -464,8 +464,14 @@ async function syncFromESPN(db) {
     const home = comp.competitors?.find(c => c.homeAway === 'home')?.team?.name;
     const away = comp.competitors?.find(c => c.homeAway === 'away')?.team?.name;
     if (!home || !away) return false;
-    return !matchedKeys.has(normalizeTeamName(home) + '|' + normalizeTeamName(away));
+    const espnKey = normalizeTeamName(home) + '|' + normalizeTeamName(away);
+    const inKeys = matchedKeys.has(espnKey);
+    if (!inKeys) {
+      console.log(`[Sync-2ndPass] Unmatched ESPN event: ${home} vs ${away} (${e.date}) key=${espnKey}`);
+    }
+    return !inKeys;
   });
+  console.log(`[Sync-2ndPass] Total events: ${events.length}, unmatched: ${unmatchedEvents.length}`);
 
   for (const event of unmatchedEvents) {
     const comp = event.competitions[0];
@@ -474,22 +480,33 @@ async function syncFromESPN(db) {
     const homeName = homeCompetitor.team.name;
     const awayName = awayCompetitor.team.name;
     const espnKickoff = new Date(event.date).getTime();
+    console.log(`[Sync-2ndPass] Processing: ${homeName} vs ${awayName} at ${event.date} (${espnKickoff})`);
 
     // Try matching by espn_event_id first
     let dbMatch = dbMatches.find(m => m.espn_event_id === event.id && !matchedDbIds.has(m.id));
+    if (dbMatch) {
+      console.log(`[Sync-2ndPass] Matched by espn_event_id: DB match ${dbMatch.id}`);
+    }
     
     // Fallback: match by closest kickoff time within 2 hours
     if (!dbMatch) {
       let bestDiff = Infinity;
+      let bestMatch = null;
       for (const m of dbMatches) {
         if (matchedDbIds.has(m.id) || m.finished === 1) continue;
         const dbKickoff = new Date(m.local_date).getTime();
         const diff = Math.abs(dbKickoff - espnKickoff);
-        // Match within same day (24 hours), pick closest
+        console.log(`[Sync-2ndPass]   Checking DB match ${m.id}: date=${m.local_date} (${dbKickoff}) label="${m.home_team_label || m.home_team_name}" vs "${m.away_team_label || m.away_team_name}" diff=${diff}ms`);
         if (diff < bestDiff && diff <= 24 * 60 * 60 * 1000) {
           bestDiff = diff;
-          dbMatch = m;
+          bestMatch = m;
         }
+      }
+      dbMatch = bestMatch;
+      if (dbMatch) {
+        console.log(`[Sync-2ndPass] Matched by date: DB match ${dbMatch.id} (${dbMatch.home_team_label || dbMatch.home_team_name} vs ${dbMatch.away_team_label || dbMatch.away_team_name}) diff=${bestDiff}ms`);
+      } else {
+        console.log(`[Sync-2ndPass] No match found by date proximity`);
       }
     }
 
