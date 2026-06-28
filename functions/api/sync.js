@@ -485,7 +485,8 @@ async function syncFromESPN(db) {
         if (matchedDbIds.has(m.id) || m.finished === 1) continue;
         const dbKickoff = new Date(m.local_date).getTime();
         const diff = Math.abs(dbKickoff - espnKickoff);
-        if (diff < bestDiff && diff <= 2 * 60 * 60 * 1000) {
+        // Match within same day (24 hours), pick closest
+        if (diff < bestDiff && diff <= 24 * 60 * 60 * 1000) {
           bestDiff = diff;
           dbMatch = m;
         }
