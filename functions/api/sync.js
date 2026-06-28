@@ -222,7 +222,7 @@ function normalizeTeamName(name) {
 async function syncFromESPN(db) {
   console.log('Syncing from ESPN Scoreboard API...');
   
-  const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at FROM matches').all();
+  const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, home_team_label, away_team_label, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at FROM matches').all();
   const matchUpdates = [];
   
   const datesToFetch = new Set();
@@ -281,7 +281,9 @@ async function syncFromESPN(db) {
   // Pre-build lookup map for O(1) match matching
   const matchesByKey = new Map();
   for (const m of dbMatches) {
-    const key = normalizeTeamName(m.home_team_name) + '|' + normalizeTeamName(m.away_team_name);
+    const homeKey = m.home_team_name ? normalizeTeamName(m.home_team_name) : normalizeTeamName(m.home_team_label || '');
+    const awayKey = m.away_team_name ? normalizeTeamName(m.away_team_name) : normalizeTeamName(m.away_team_label || '');
+    const key = homeKey + '|' + awayKey;
     matchesByKey.set(key, m);
   }
 
@@ -390,7 +392,9 @@ async function syncFromESPN(db) {
         dbMatch.actual_first_scorer !== actualFirstScorer ||
         dbMatch.espn_event_id !== event.id ||
         dbMatch.local_date !== newLocalDate ||
-        dbMatch.display_clock !== displayClock;
+        dbMatch.display_clock !== displayClock ||
+        dbMatch.home_team_name !== homeName ||
+        dbMatch.away_team_name !== awayName;
 
       if (hasChanged) {
         matchUpdates.push(
@@ -407,7 +411,9 @@ async function syncFromESPN(db) {
               actual_first_scorer = ?,
               espn_event_id = ?,
               local_date = ?,
-              display_clock = ?
+              display_clock = ?,
+              home_team_name = ?,
+              away_team_name = ?
             WHERE id = ?
           `).bind(
             homeScore,
@@ -421,6 +427,8 @@ async function syncFromESPN(db) {
             event.id,
             newLocalDate,
             displayClock,
+            homeName,
+            awayName,
             dbMatch.id
           )
         );
@@ -444,6 +452,121 @@ async function syncFromESPN(db) {
         matchesUpdated++;
       }
     }
+  }
+
+  // Second pass: match remaining ESPN events to DB matches by espn_event_id or date proximity
+  const matchedKeys = new Set(matchesByKey.keys());
+  const unmatchedEvents = events.filter(e => {
+    const comp = e.competitions?.[0];
+    if (!comp) return false;
+    const home = comp.competitors?.find(c => c.homeAway === 'home')?.team?.name;
+    const away = comp.competitors?.find(c => c.homeAway === 'away')?.team?.name;
+    if (!home || !away) return false;
+    return !matchedKeys.has(normalizeTeamName(home) + '|' + normalizeTeamName(away));
+  });
+
+  // Build set of already-updated match IDs
+  const updatedIds = new Set();
+  for (const m of dbMatches) {
+    const key = m.home_team_name ? normalizeTeamName(m.home_team_name) : normalizeTeamName(m.home_team_label || '');
+    const awayKey = m.away_team_name ? normalizeTeamName(m.away_team_name) : normalizeTeamName(m.away_team_label || '');
+    if (matchedKeys.has(key + '|' + awayKey)) updatedIds.add(m.id);
+  }
+
+  for (const event of unmatchedEvents) {
+    const comp = event.competitions[0];
+    const homeCompetitor = comp.competitors.find(c => c.homeAway === 'home');
+    const awayCompetitor = comp.competitors.find(c => c.homeAway === 'away');
+    const homeName = homeCompetitor.team.name;
+    const awayName = awayCompetitor.team.name;
+    const espnKickoff = new Date(event.date).getTime();
+
+    // Try matching by espn_event_id first
+    let dbMatch = dbMatches.find(m => m.espn_event_id === event.id && !updatedIds.has(m.id));
+    
+    // Fallback: match by closest kickoff time within 2 hours
+    if (!dbMatch) {
+      let bestDiff = Infinity;
+      for (const m of dbMatches) {
+        if (updatedIds.has(m.id) || m.finished === 1) continue;
+        const dbKickoff = new Date(m.local_date).getTime();
+        const diff = Math.abs(dbKickoff - espnKickoff);
+        if (diff < bestDiff && diff <= 2 * 60 * 60 * 1000) {
+          bestDiff = diff;
+          dbMatch = m;
+        }
+      }
+    }
+
+    if (!dbMatch) continue;
+    updatedIds.add(dbMatch.id);
+
+    const homeScore = parseInt(homeCompetitor.score) || 0;
+    const awayScore = parseInt(awayCompetitor.score) || 0;
+    const state = comp.status?.type?.state;
+    const completed = comp.status?.type?.completed;
+    let status = 'scheduled';
+    if (state === 'in') status = 'live';
+    else if (state === 'post') status = 'finished';
+    const finished = completed ? 1 : 0;
+    let homeHtScore = 0, awayHtScore = 0, actualFirstScorer = 'none', firstGoalTime = Infinity, actualCards = 0;
+    const details = comp.details || [];
+    for (const detail of details) {
+      if ((detail.yellowCard || detail.redCard) && detail.athletesInvolved?.length > 0) actualCards++;
+      const isGoal = detail.scoringPlay || (detail.type?.text?.toLowerCase().includes('goal'));
+      if (isGoal) {
+        const isHome = detail.team?.id === homeCompetitor.team?.id;
+        const clockVal = detail.clock?.value || 0;
+        if (clockVal <= 2700) { if (isHome) homeHtScore++; else awayHtScore++; }
+        if (clockVal < firstGoalTime) { firstGoalTime = clockVal; actualFirstScorer = isHome ? 'home' : 'away'; }
+      }
+    }
+    if (!finished && actualFirstScorer === 'none') actualFirstScorer = null;
+    if (status === 'scheduled') { homeHtScore = null; awayHtScore = null; actualFirstScorer = null; actualCards = null; }
+
+    const displayClock = comp.status?.displayClock || null;
+    const dbKickoff = new Date(dbMatch.local_date).getTime();
+    let newLocalDate = dbMatch.local_date;
+    if (dbKickoff !== espnKickoff) newLocalDate = new Date(event.date).toISOString();
+
+    matchUpdates.push(
+      db.prepare(`
+        UPDATE matches
+        SET
+          home_score = ?,
+          away_score = ?,
+          home_ht_score = ?,
+          away_ht_score = ?,
+          status = ?,
+          finished = ?,
+          actual_cards = ?,
+          actual_first_scorer = ?,
+          espn_event_id = ?,
+          local_date = ?,
+          display_clock = ?,
+          home_team_name = ?,
+          away_team_name = ?
+        WHERE id = ?
+      `).bind(
+        homeScore, awayScore, homeHtScore, awayHtScore,
+        status, finished, actualCards, actualFirstScorer,
+        event.id, newLocalDate, displayClock,
+        homeName, awayName, dbMatch.id
+      )
+    );
+    if (finished === 1 && dbMatch.finished !== 1) {
+      finishedDuringSync++;
+      await scoreAllPredictionsForMatch(db, dbMatch.id, {
+        home_score: homeScore, away_score: awayScore,
+        over_under_line: dbMatch.over_under_line,
+        home_win_pct: dbMatch.home_win_pct,
+        away_win_pct: dbMatch.away_win_pct,
+        draw_pct: dbMatch.draw_pct,
+        actual_cards: actualCards, actual_first_scorer: actualFirstScorer,
+        home_ht_score: homeHtScore, away_ht_score: awayHtScore,
+      });
+    }
+    matchesUpdated++;
   }
 
   if (matchUpdates.length > 0) {
@@ -480,7 +603,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
   
   
   const { results: dbMatches } = await db.prepare(`
-    SELECT m.id, m.home_team_name, m.away_team_name, m.local_date, m.finished, m.home_win_pct, m.away_win_pct, m.draw_pct, m.over_under_line, m.over_odds, m.under_odds, m.cards_line, m.cards_over_odds, m.cards_under_odds, m.odds_locked, m.odds_updated_at, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+    SELECT m.id, m.home_team_name, m.away_team_name, m.home_team_label, m.away_team_label, m.local_date, m.finished, m.home_win_pct, m.away_win_pct, m.draw_pct, m.over_under_line, m.over_odds, m.under_odds, m.cards_line, m.cards_over_odds, m.cards_under_odds, m.odds_locked, m.odds_updated_at, t1.fifa_code AS home_code, t2.fifa_code AS away_code
     FROM matches m
     LEFT JOIN teams t1 ON m.home_team_id = t1.id
     LEFT JOIN teams t2 ON m.away_team_id = t2.id
@@ -493,7 +616,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
   // Pre-build lookup map for O(1) match matching
   const matchesByKey2 = new Map();
   for (const m of dbMatches) {
-    const key = normalizeTeamName(m.home_team_name) + '|' + normalizeTeamName(m.away_team_name);
+    const key = (m.home_team_name ? normalizeTeamName(m.home_team_name) : normalizeTeamName(m.home_team_label || '')) + '|' + (m.away_team_name ? normalizeTeamName(m.away_team_name) : normalizeTeamName(m.away_team_label || ''));
     matchesByKey2.set(key, m);
   }
 
@@ -778,12 +901,15 @@ async function handleScoreMatchTask(db, matchId) {
     const homeName = homeCompetitor.team.name;
     const awayName = awayCompetitor.team.name;
     
-    const dbHome = normalizeTeamName(match.home_team_name);
-    const dbAway = normalizeTeamName(match.away_team_name);
+    const dbHome = normalizeTeamName(match.home_team_name || match.home_team_label || '');
+    const dbAway = normalizeTeamName(match.away_team_name || match.away_team_label || '');
     const espnHome = normalizeTeamName(homeName);
     const espnAway = normalizeTeamName(awayName);
     
-    if (dbHome === espnHome && dbAway === espnAway) {
+    const namesMatch = dbHome === espnHome && dbAway === espnAway;
+    const idMatch = match.espn_event_id === event.id;
+
+    if (namesMatch || idMatch) {
       matchFound = true;
       const homeScore = parseInt(homeCompetitor.score) || 0;
       const awayScore = parseInt(awayCompetitor.score) || 0;
@@ -847,7 +973,9 @@ async function handleScoreMatchTask(db, matchId) {
           finished = ?,
           actual_cards = ?,
           actual_first_scorer = ?,
-          espn_event_id = ?
+          espn_event_id = ?,
+          home_team_name = ?,
+          away_team_name = ?
         WHERE id = ?
       `).bind(
         homeScore,
@@ -859,6 +987,8 @@ async function handleScoreMatchTask(db, matchId) {
         actualCards,
         actualFirstScorer,
         event.id,
+        homeName,
+        awayName,
         matchId
       ).run();
       
