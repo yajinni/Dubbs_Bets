@@ -279,6 +279,23 @@ async function syncFromESPN(db) {
   let finishedDuringSync = 0;
   const matchedDbIds = new Set();
 
+  // Reset team names for all knockout matches at the start of each sync.
+  // This ensures the first pass matches by label (placeholder name) and
+  // the second pass re-matches by date proximity fresh every time, preventing
+  // a prior incorrect match from perpetuating itself.
+  const hasKnockoutNames = dbMatches.some(m => (m.home_team_name || m.away_team_name) && ['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(m.type || m.round_name));
+  if (hasKnockoutNames) {
+    await db.prepare(`UPDATE matches SET home_team_name = '', away_team_name = '' WHERE type IN ('r32', 'r16', 'qf', 'sf', 'third', 'final') AND (home_team_name != '' OR away_team_name != '')`).run();
+    // Re-fetch dbMatches to reflect the reset
+    dbMatches = await db.prepare(`
+      SELECT m.*, g.group_name 
+      FROM matches m 
+      LEFT JOIN match_groups g ON m.group_id = g.id
+      ORDER BY m.local_date ASC
+    `).all();
+    clearMatchesCache();
+  }
+
   // Log all events for debugging
   for (const ev of events) {
     const comp = ev.competitions?.[0];
@@ -295,10 +312,20 @@ async function syncFromESPN(db) {
   }
 
   // Pre-build lookup map for O(1) match matching
+  // For knockout matches, ALWAYS use the label (placeholder name) as the key,
+  // not any previously-synced real team name. This prevents a prior incorrect
+  // match from perpetuating itself and ensures the second pass (date proximity)
+  // gets the real match.
+  const KNOCKOUT_TYPES = new Set(['r32', 'r16', 'qf', 'sf', 'third', 'final']);
   const matchesByKey = new Map();
   for (const m of dbMatches) {
-    const homeKey = m.home_team_name ? normalizeTeamName(m.home_team_name) : normalizeTeamName(m.home_team_label || '');
-    const awayKey = m.away_team_name ? normalizeTeamName(m.away_team_name) : normalizeTeamName(m.away_team_label || '');
+    const isKnockout = KNOCKOUT_TYPES.has(m.type || m.round_name);
+    const homeKey = isKnockout
+      ? normalizeTeamName(m.home_team_label || m.home_team_name || '')
+      : normalizeTeamName(m.home_team_name || m.home_team_label || '');
+    const awayKey = isKnockout
+      ? normalizeTeamName(m.away_team_label || m.away_team_name || '')
+      : normalizeTeamName(m.away_team_name || m.away_team_label || '');
     const key = homeKey + '|' + awayKey;
     matchesByKey.set(key, m);
   }
