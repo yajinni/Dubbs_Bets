@@ -281,17 +281,29 @@ async function syncFromESPN(db) {
 
   // Reset knockout matches to placeholder state at the start of each sync.
   // This breaks the cycle from prior incorrect matches (e.g. match 74 was
-  // incorrectly assigned "Brazil vs Japan"). We clear team names AND event
-  // IDs, so the second pass can re-match fresh by date proximity.
-  const hasKnockoutNames = dbMatches.some(m => (m.home_team_name || m.away_team_name || m.espn_event_id) && ['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(m.type || m.round_name));
+  // incorrectly assigned "Brazil vs Japan", or match 73 was incorrectly
+  // marked finished with no team names). We clear team names, event IDs,
+  // finished/status, and scores, so the second pass can re-match fresh by
+  // date proximity.
+  const needsReset = m => (m.home_team_name || m.away_team_name || m.espn_event_id || (m.finished === 1 && !m.home_team_name && !m.away_team_name)) && ['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(m.type || m.round_name);
+  const hasKnockoutNames = dbMatches.some(needsReset);
   if (hasKnockoutNames) {
-    await db.prepare(`UPDATE matches SET home_team_name = '', away_team_name = '', espn_event_id = NULL WHERE type IN ('r32', 'r16', 'qf', 'sf', 'third', 'final') AND (home_team_name != '' OR away_team_name != '' OR espn_event_id IS NOT NULL)`).run();
+    await db.prepare(`UPDATE matches SET home_team_name = '', away_team_name = '', espn_event_id = NULL, finished = 0, status = 'scheduled', home_score = 0, away_score = 0, home_ht_score = NULL, away_ht_score = NULL, actual_cards = NULL, actual_first_scorer = NULL, display_clock = NULL WHERE type IN ('r32', 'r16', 'qf', 'sf', 'third', 'final') AND (home_team_name != '' OR away_team_name != '' OR espn_event_id IS NOT NULL OR (finished = 1 AND home_team_name = '' AND away_team_name = ''))`).run();
     // Update in-memory dbMatches to match the DB state (no re-assigning const)
     for (const m of dbMatches) {
-      if (['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(m.type || m.round_name)) {
+      if (needsReset(m)) {
         m.home_team_name = '';
         m.away_team_name = '';
         m.espn_event_id = null;
+        m.finished = 0;
+        m.status = 'scheduled';
+        m.home_score = 0;
+        m.away_score = 0;
+        m.home_ht_score = null;
+        m.away_ht_score = null;
+        m.actual_cards = null;
+        m.actual_first_scorer = null;
+        m.display_clock = null;
       }
     }
     clearMatchesCache();
@@ -486,18 +498,6 @@ async function syncFromESPN(db) {
 
   // Second pass: match remaining ESPN events to DB matches by espn_event_id or date proximity
   const matchedKeys = new Set(matchesByKey.keys());
-  console.log(`[Sync-Debug] ESPN events: ${events.length}, matchedKeys: ${matchedKeys.size}`);
-  for (const ev of events) {
-    const c = ev.competitions?.[0];
-    if (!c) continue;
-    const h = c.competitors?.find(c2 => c2.homeAway === 'home')?.team?.name;
-    const a = c.competitors?.find(c2 => c2.homeAway === 'away')?.team?.name;
-    console.log(`[Sync-Debug] Event ${ev.id}: ${h} vs ${a} date=${ev.date}`);
-  }
-  const m73 = dbMatches.find(m => m.id === 73);
-  if (m73) {
-    console.log(`[Sync-Debug] Match 73: name="${m73.home_team_name}" vs "${m73.away_team_name}" label="${m73.home_team_label}" vs "${m73.away_team_label}" date="${m73.local_date}" espn_id=${m73.espn_event_id} finished=${m73.finished}`);
-  }
   const unmatchedEvents = events.filter(e => {
     const comp = e.competitions?.[0];
     if (!comp) return false;
@@ -508,7 +508,6 @@ async function syncFromESPN(db) {
     const inKeys = matchedKeys.has(espnKey);
     return !inKeys;
   });
-  console.log(`[Sync-Debug] Unmatched events: ${unmatchedEvents.length}`);
 
   // Sort unmatched events by date DESCENDING. Later kickoffs have definitive
   // timestamps and should claim their closest DB match first. This prevents
@@ -544,8 +543,6 @@ async function syncFromESPN(db) {
 
     if (!dbMatch) continue;
     matchedDbIds.add(dbMatch.id);
-    console.log(`[Sync-Debug] Second pass matched event ${event.id} (${homeName} vs ${awayName}) to DB match ${dbMatch.id} (${dbMatch.home_team_label || dbMatch.home_team_name} vs ${dbMatch.away_team_label || dbMatch.away_team_name})`);
-
     const homeScore = parseInt(homeCompetitor.score) || 0;
     const awayScore = parseInt(awayCompetitor.score) || 0;
     const state = comp.status?.type?.state;
