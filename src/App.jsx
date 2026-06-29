@@ -375,6 +375,7 @@ export default function App() {
 
         if (predictionsChanged) {
           updatedVersions.predictions = serverVersions.predictions;
+          const participantSwitched = activeParticipantId !== loadedVersionsRef.current.participantId;
           updatedVersions.participantId = activeParticipantId;
 
           if (activeParticipantId) {
@@ -383,7 +384,7 @@ export default function App() {
                 .then(r => r.json())
                 .then(data => {
                   setPredictions(data);
-                  setMatchPredictionsCache({});
+                  if (participantSwitched) setMatchPredictionsCache({});
                 })
             );
           } else {
