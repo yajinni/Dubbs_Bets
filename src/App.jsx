@@ -374,7 +374,6 @@ export default function App() {
         const predictionsChanged = shouldForce || serverPredsVersionChanged || participantChanged;
 
         if (predictionsChanged) {
-          setMatchPredictionsCache({}); // clear detailed match predictions cache
           updatedVersions.predictions = serverVersions.predictions;
           updatedVersions.participantId = activeParticipantId;
 
@@ -384,10 +383,12 @@ export default function App() {
                 .then(r => r.json())
                 .then(data => {
                   setPredictions(data);
+                  setMatchPredictionsCache({});
                 })
             );
           } else {
             setPredictions([]);
+            setMatchPredictionsCache({});
           }
         }
 
