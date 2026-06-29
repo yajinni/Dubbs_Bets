@@ -59,7 +59,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
 
   // Lazy-load predictions for this match when card is expanded
   useEffect(() => {
-    if (!isCollapsed && !matchPredictions && getMatchPredictions) {
+    if (isCollapsed !== 'collapsed' && !matchPredictions && getMatchPredictions) {
       getMatchPredictions(m.id);
     }
   }, [isCollapsed, matchPredictions, m.id, getMatchPredictions]);
