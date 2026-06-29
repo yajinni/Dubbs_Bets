@@ -4,7 +4,7 @@ import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 import LiveFeed from './LiveFeed';
 
-export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictions, getMatchPredictions, leaderboard = [], selectedMatchId, showLiveResults: propShowLiveResults = false, onRefresh }) {
+export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictions, getMatchPredictions, leaderboard = [], selectedMatchId, showLiveResults: propShowLiveResults = false, onRefresh, defaultExpanded = false }) {
   const isLocked = new Date(m.local_date).getTime() <= Date.now() || m.status !== 'scheduled' || m.finished === 1;
   const homeName = shortenTeamName(m.home_team_name || m.home_team_label || 'TBD');
   const awayName = shortenTeamName(m.away_team_name || m.away_team_label || 'TBD');
@@ -38,7 +38,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
   const showLiveResults = propShowLiveResults || isLive;
   // Auto-open feed for live matches
   const [feedTab, setFeedTab] = useState(isLive ? 'stats' : null);
-  const [isCollapsed, setIsCollapsed] = useState(m.finished === 1);
+  const [isCollapsed, setIsCollapsed] = useState(defaultExpanded ? 'semi' : (m.finished === 1 ? 'collapsed' : 'expanded'));
   const [liveScores, setLiveScores] = useState(null);
   const displayHome = liveScores ? liveScores.home : m.home_score;
   const displayAway = liveScores ? liveScores.away : m.away_score;
@@ -53,7 +53,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
   // Auto-expand if this match is selected from another view (e.g. Dashboard)
   useEffect(() => {
     if (selectedMatchId === m.id) {
-      setIsCollapsed(false);
+      setIsCollapsed('expanded');
     }
   }, [selectedMatchId, m.id]);
 
@@ -334,7 +334,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
         )}
       </div>
 
-      {!isCollapsed && (
+      {isCollapsed === 'expanded' && (
         <>
           {/* Analytics Box */}
           <div className="match-analytics-box">
@@ -693,7 +693,13 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
           </div>
         )}
 
-        {/* Shared Players' Picks component */}
+      </div>
+      </>
+      )}
+
+      {/* Player Results (visible in expanded and semi-expanded states) */}
+      {(isCollapsed === 'expanded' || isCollapsed === 'semi') && (
+        <div className="match-stats-drawer" style={{ gridTemplateColumns: '1fr', borderTop: '1px solid var(--glass-border)', paddingTop: '4px', display: 'flex', flexDirection: 'column', alignItems: 'stretch', alignSelf: 'stretch' }}>
         <PlayerPicksList
           m={m}
           matchPredictions={matchPredictions}
@@ -712,15 +718,13 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
           showLiveResults={showLiveResults}
           onRefresh={onRefresh}
         />
-
-      </div>
-      </>
+        </div>
       )}
 
       {/* Action Buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '10px' }}>
         {/* Feed Tab Buttons (above the feed panel) */}
-        {!isCollapsed && (m.status !== 'scheduled' || m.espn_event_id) && (
+        {isCollapsed !== 'collapsed' && (m.status !== 'scheduled' || m.espn_event_id) && (
           <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
             <button 
               type="button"
@@ -768,7 +772,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
       </div>
 
       {/* Live Feed Panel (below the buttons) */}
-      {!isCollapsed && feedTab && (
+      {isCollapsed !== 'collapsed' && feedTab && (
         <LiveFeed
           espnEventId={m.espn_event_id}
           matchStatus={isLive ? 'live' : m.status}
@@ -785,7 +789,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
         {m.finished === 1 && (
           <button 
             type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={() => setIsCollapsed(isCollapsed === 'collapsed' ? 'semi' : isCollapsed === 'semi' ? 'expanded' : 'collapsed')}
             className="btn-secondary"
             style={{ 
               alignSelf: 'center', 
@@ -800,14 +804,14 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
               borderRadius: '8px'
             }}
           >
-            {isCollapsed ? (
-              <>
-                Show Details & Picks <ChevronDown size={14} />
-              </>
-            ) : (
-              <>
-                Hide Details & Picks <ChevronUp size={14} />
-              </>
+            {isCollapsed === 'collapsed' && (
+              <>Show Results <ChevronDown size={14} /></>
+            )}
+            {isCollapsed === 'semi' && (
+              <>Show Full Details <ChevronDown size={14} /></>
+            )}
+            {isCollapsed === 'expanded' && (
+              <>Hide Details & Picks <ChevronUp size={14} /></>
             )}
           </button>
         )}
