@@ -83,6 +83,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
   const [firstScorer, setFirstScorer] = useState('');
   const [highestScoringHalf, setHighestScoringHalf] = useState('');
   const [cleanSheet, setCleanSheet] = useState('');
+  const [penalties, setPenalties] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -101,6 +102,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
       setFirstScorer(pred.predicted_first_scorer || '');
       setHighestScoringHalf(pred.predicted_highest_scoring_half || '');
       setCleanSheet(pred.predicted_clean_sheet || '');
+      setPenalties(pred.predicted_penalties || '');
     } else {
       setWinner('');
       setOverUnder('');
@@ -110,6 +112,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
       setFirstScorer('');
       setHighestScoringHalf('');
       setCleanSheet('');
+      setPenalties('');
     }
     setError('');
     setSuccessMsg('');
@@ -125,9 +128,10 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
     const currentFirstScorer = firstScorer || '';
     const currentHalf = highestScoringHalf || '';
     const currentClean = cleanSheet || '';
+    const currentPenalties = penalties || '';
 
     if (!pred) {
-      return currentWinner !== '' || currentOU !== '' || currentHome !== '' || currentAway !== '' || currentTotalCards !== '' || currentFirstScorer !== '' || currentHalf !== '' || currentClean !== '';
+      return currentWinner !== '' || currentOU !== '' || currentHome !== '' || currentAway !== '' || currentTotalCards !== '' || currentFirstScorer !== '' || currentHalf !== '' || currentClean !== '' || currentPenalties !== '';
     }
 
     const matchWinner = currentWinner === (pred.predicted_winner || '');
@@ -138,8 +142,9 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
     const matchFirstScorer = currentFirstScorer === (pred.predicted_first_scorer || '');
     const matchHalf = currentHalf === (pred.predicted_highest_scoring_half || '');
     const matchClean = currentClean === (pred.predicted_clean_sheet || '');
+    const matchPenalties = currentPenalties === (pred.predicted_penalties || '');
 
-    return !(matchWinner && matchOU && matchHome && matchAway && matchTotalCards && matchFirstScorer && matchHalf && matchClean);
+    return !(matchWinner && matchOU && matchHome && matchAway && matchTotalCards && matchFirstScorer && matchHalf && matchClean && matchPenalties);
   })();
 
   const handleSave = async (e) => {
@@ -165,6 +170,10 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
     }
     if (!cleanSheet) {
       setError('Select Clean Sheet.');
+      return;
+    }
+    if (!penalties) {
+      setError('Select Penalties.');
       return;
     }
     if (homeScore === '' || awayScore === '') {
@@ -206,7 +215,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
           predictedTotalCards: tCards,
           predictedFirstScorer: firstScorer,
           predictedHighestScoringHalf: highestScoringHalf,
-          predictedCleanSheet: cleanSheet
+          predictedCleanSheet: cleanSheet,
+          predictedPenalties: penalties
         }),
       });
 
@@ -657,6 +667,29 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
                       type="button"
                       className={`choice-btn ${cleanSheet === 'no' ? 'active' : ''}`}
                       onClick={() => setCleanSheet('no')}
+                      disabled={saving}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+
+                {/* Penalties Select */}
+                <div className="prediction-col">
+                  <label>Penalties (2 pts)</label>
+                  <div className="inline-choice-group">
+                    <button
+                      type="button"
+                      className={`choice-btn ${penalties === 'yes' ? 'active' : ''}`}
+                      onClick={() => setPenalties('yes')}
+                      disabled={saving}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      className={`choice-btn ${penalties === 'no' ? 'active' : ''}`}
+                      onClick={() => setPenalties('no')}
                       disabled={saving}
                     >
                       No

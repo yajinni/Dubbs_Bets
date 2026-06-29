@@ -52,7 +52,7 @@ export async function checkAndInitDb(db) {
     if (_dbInitialized) return;
 
     // Fast path 2: Check settings if fully initialized and migrated
-    const CURRENT_SCHEMA_VERSION = '2'; // Increment this if new migrations are added
+    const CURRENT_SCHEMA_VERSION = '3'; // Increment this if new migrations are added
     try {
       const initSetting = await db.prepare("SELECT value FROM settings WHERE key = 'db_initialized'").first();
       if (initSetting && initSetting.value === '1') {
@@ -88,6 +88,7 @@ export async function checkAndInitDb(db) {
       ['odds_locked', 'INTEGER DEFAULT 0'],
       ['odds_updated_at', 'TEXT DEFAULT NULL'],
       ['display_clock', 'TEXT DEFAULT NULL'],
+      ['actual_penalties', 'TEXT DEFAULT NULL'],
     ];
     const predMigrations = [
       ['predicted_cards_over_under', 'TEXT DEFAULT NULL'],
@@ -100,6 +101,8 @@ export async function checkAndInitDb(db) {
       ['predicted_clean_sheet', 'TEXT DEFAULT NULL'],
       ['points_highest_scoring_half', 'INTEGER DEFAULT 0'],
       ['points_clean_sheet', 'INTEGER DEFAULT 0'],
+      ['predicted_penalties', 'TEXT DEFAULT NULL'],
+      ['points_penalties', 'INTEGER DEFAULT 0'],
     ];
 
     if (existingMatchCols.size > 0) {
@@ -128,6 +131,7 @@ export async function checkAndInitDb(db) {
       ['points_highest_scoring_half', 'REAL DEFAULT 0'],
       ['points_clean_sheet', 'REAL DEFAULT 0'],
       ['points_underdog', 'REAL DEFAULT 0'],
+      ['points_penalties', 'REAL DEFAULT 0'],
     ];
     if (existingLbCols.size > 0) {
       for (const [col, type] of lbMigrations) {
@@ -141,6 +145,19 @@ export async function checkAndInitDb(db) {
         await recomputeLeaderboardCache(db);
       }
     }
+
+    // Migration: add correct_penalties to stats_cache
+    try {
+      await db.prepare("ALTER TABLE stats_cache ADD COLUMN correct_penalties INTEGER DEFAULT 0").run();
+    } catch(e) { /* column may already exist */ }
+
+    // Migration: record penalties_start_at on first v3 run (used to skip backfill of old matches)
+    try {
+      const existingPenaltyStart = await db.prepare("SELECT value FROM settings WHERE key = 'penalties_start_at'").first();
+      if (!existingPenaltyStart) {
+        await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('penalties_start_at', ?)").bind(new Date().toISOString()).run();
+      }
+    } catch(e) {}
 
     // Migration: correct score points changed from 1 to 4 (per the scoring rules)
     if (existingPredCols.size > 0) {
@@ -216,6 +233,7 @@ export async function checkAndInitDb(db) {
           correct_exact_cards INTEGER DEFAULT 0,
           correct_half INTEGER DEFAULT 0,
           correct_clean INTEGER DEFAULT 0,
+          correct_penalties INTEGER DEFAULT 0,
           winner_pct REAL DEFAULT 0,
           ou_pct REAL DEFAULT 0,
           underdog_pct REAL DEFAULT 0,
@@ -259,6 +277,7 @@ export async function checkAndInitDb(db) {
           correct_total_cards INTEGER DEFAULT 0,
           correct_highest_scoring_half INTEGER DEFAULT 0,
           correct_clean_sheet INTEGER DEFAULT 0,
+          correct_penalties INTEGER DEFAULT 0,
           correct_underdog INTEGER DEFAULT 0,
           points_winner REAL DEFAULT 0,
           points_ou REAL DEFAULT 0,
@@ -267,6 +286,7 @@ export async function checkAndInitDb(db) {
           points_total_cards REAL DEFAULT 0,
           points_highest_scoring_half REAL DEFAULT 0,
           points_clean_sheet REAL DEFAULT 0,
+          points_penalties REAL DEFAULT 0,
           points_underdog REAL DEFAULT 0,
           correct_bets_count INTEGER DEFAULT 0,
           total_bets_count INTEGER DEFAULT 0
@@ -510,10 +530,12 @@ export async function recomputeLeaderboardCache(db) {
         (id, name, total_points,
          correct_winners, correct_ou, correct_scores,
          correct_first_scorer, correct_total_cards, correct_highest_scoring_half, correct_clean_sheet,
+         correct_penalties,
          correct_bets_count, total_bets_count,
          correct_underdog,
          points_winner, points_ou, points_score,
          points_first_scorer, points_total_cards, points_highest_scoring_half, points_clean_sheet,
+         points_penalties,
          points_underdog)
       SELECT
         p.id,
@@ -526,6 +548,7 @@ export async function recomputeLeaderboardCache(db) {
         COALESCE(SUM(CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END), 0),
         COALESCE(SUM(CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END), 0),
         COALESCE(SUM(CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN pred.points_penalties > 0 THEN 1 ELSE 0 END), 0),
         SUM(CASE WHEN m.finished = 1 THEN
           (CASE WHEN pred.points_winner > 0 THEN 1 ELSE 0 END) +
           (CASE WHEN pred.points_ou > 0 THEN 1 ELSE 0 END) +
@@ -534,7 +557,8 @@ export async function recomputeLeaderboardCache(db) {
           (CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END) +
           (CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END) +
           (CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END)
+          (CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.points_penalties > 0 THEN 1 ELSE 0 END)
         ELSE 0 END),
         SUM(CASE WHEN m.finished = 1 THEN
           (CASE WHEN pred.predicted_winner IS NOT NULL AND pred.predicted_winner != '' THEN 1 ELSE 0 END) +
@@ -543,7 +567,8 @@ export async function recomputeLeaderboardCache(db) {
           (CASE WHEN pred.predicted_first_scorer IS NOT NULL AND pred.predicted_first_scorer != '' THEN 1 ELSE 0 END) +
           (CASE WHEN pred.predicted_total_cards IS NOT NULL THEN 1 ELSE 0 END) +
           (CASE WHEN pred.predicted_highest_scoring_half IS NOT NULL AND pred.predicted_highest_scoring_half != '' THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END)
+          (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END) +
+          (CASE WHEN pred.predicted_penalties IS NOT NULL AND pred.predicted_penalties != '' THEN 1 ELSE 0 END)
         ELSE 0 END),
         COALESCE(SUM(CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END), 0),
         COALESCE(SUM(pred.points_winner), 0),
@@ -553,6 +578,7 @@ export async function recomputeLeaderboardCache(db) {
         COALESCE(SUM(pred.points_total_cards), 0),
         COALESCE(SUM(pred.points_highest_scoring_half), 0),
         COALESCE(SUM(pred.points_clean_sheet), 0),
+        COALESCE(SUM(pred.points_penalties), 0),
         COALESCE(SUM(pred.points_cards_ou), 0)
       FROM participants p
       LEFT JOIN predictions pred ON p.id = pred.participant_id
@@ -646,11 +672,11 @@ export async function recomputeStatsCache(db) {
         participant_id, name,
         total_finished_preds,
         correct_winners, correct_ou, underdog_correct, underdog_attempts,
-        correct_scores, correct_first_scorers, correct_exact_cards, correct_half, correct_clean,
+        correct_scores, correct_first_scorers, correct_exact_cards, correct_half, correct_clean, correct_penalties,
         winner_pct, ou_pct, underdog_pct, first_scorer_pct, exact_cards_pct, half_pct, clean_pct, score_pct,
         total_points,
         median_per_match, max_per_match, median_per_day, max_per_day
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     // Pre-build matches lookup map for O(1) access
@@ -679,6 +705,7 @@ export async function recomputeStatsCache(db) {
       const correctExactCards = pPreds.filter(pred => pred.points_total_cards > 0).length;
       const correctHalf = pPreds.filter(pred => pred.points_highest_scoring_half > 0).length;
       const correctClean = pPreds.filter(pred => pred.points_clean_sheet > 0).length;
+      const correctPenalties = pPreds.filter(pred => pred.points_penalties > 0).length;
 
       const totalPoints = pPreds.reduce((sum, pred) => sum + (pred.total_points || 0), 0);
       const winnerPct = totalFinishedPreds > 0 ? Math.round((correctWinners / totalFinishedPreds) * 100) : 0;
@@ -708,7 +735,7 @@ export async function recomputeStatsCache(db) {
         p.id, p.name,
         totalFinishedPreds,
         correctWinners, correctOu, underdogCorrect, underdogAttempts,
-        correctScores, correctFirstScorers, correctExactCards, correctHalf, correctClean,
+        correctScores, correctFirstScorers, correctExactCards, correctHalf, correctClean, correctPenalties,
         winnerPct, ouPct, underdogPct, firstScorerPct, exactCardsPct, halfPct, cleanPct, scorePct,
         totalPoints,
         medianPerMatch, maxPerMatch, medianPerDay, maxPerDay
@@ -730,6 +757,7 @@ export async function recomputeStatsCache(db) {
       correctExactCards: r.correct_exact_cards,
       correctHalf: r.correct_half,
       correctClean: r.correct_clean,
+      correctPenalties: r.correct_penalties,
       winnerPct: r.winner_pct,
       ouPct: r.ou_pct,
       underdogPct: r.underdog_pct,
@@ -757,7 +785,7 @@ export async function recomputeStatsCache(db) {
 
     if (statsRows && statsRows.length > 0) {
       let totalPreds = 0, totalWinners = 0, totalOu = 0, totalUnderdogCor = 0, totalUnderdogAtt = 0;
-      let totalScores = 0, totalFS = 0, totalEC = 0, totalHalf = 0, totalClean = 0;
+      let totalScores = 0, totalFS = 0, totalEC = 0, totalHalf = 0, totalClean = 0, totalPenalties = 0;
       const allPerMatch = [];
       const allDayMap = {};
 
@@ -770,6 +798,7 @@ export async function recomputeStatsCache(db) {
         totalEC += p.points_total_cards > 0 ? 1 : 0;
         totalHalf += p.points_highest_scoring_half > 0 ? 1 : 0;
         totalClean += p.points_clean_sheet > 0 ? 1 : 0;
+        totalPenalties += p.points_penalties > 0 ? 1 : 0;
         if (p.points_cards_ou > 0) totalUnderdogCor++;
         if (p.predicted_winner && p.home_win_pct != null && p.away_win_pct != null && p.draw_pct != null) {
           const maxPct = Math.max(p.home_win_pct, p.away_win_pct, p.draw_pct);
@@ -1042,12 +1071,17 @@ export function calculatePointsFromPrediction(pred, match) {
     points_clean_sheet = pred.predicted_clean_sheet === cleanSheetHappened ? 1 : 0;
   }
 
+  let points_penalties = 0;
+  if (pred.predicted_penalties != null && match.actual_penalties != null) {
+    points_penalties = pred.predicted_penalties === match.actual_penalties ? 2 : 0;
+  }
+
   const total_points = points_winner + points_ou + points_score + points_cards_ou +
-    points_total_cards + points_first_scorer + points_highest_scoring_half + points_clean_sheet;
+    points_total_cards + points_first_scorer + points_highest_scoring_half + points_clean_sheet + points_penalties;
 
   return { points_winner, points_ou, points_score, points_cards_ou,
     points_total_cards, points_first_scorer, points_highest_scoring_half,
-    points_clean_sheet, total_points };
+    points_clean_sheet, points_penalties, total_points };
 }
 
 export async function scoreAllPredictionsForMatch(db, matchId, match) {
@@ -1058,7 +1092,7 @@ export async function scoreAllPredictionsForMatch(db, matchId, match) {
     UPDATE predictions SET
       points_winner = ?, points_ou = ?, points_score = ?, points_cards_ou = ?,
       points_total_cards = ?, points_first_scorer = ?, points_highest_scoring_half = ?,
-      points_clean_sheet = ?, total_points = ?
+      points_clean_sheet = ?, points_penalties = ?, total_points = ?
     WHERE participant_id = ? AND match_id = ?
   `);
 
@@ -1069,7 +1103,7 @@ export async function scoreAllPredictionsForMatch(db, matchId, match) {
       stmt.bind(
         pts.points_winner, pts.points_ou, pts.points_score, pts.points_cards_ou,
         pts.points_total_cards, pts.points_first_scorer, pts.points_highest_scoring_half,
-        pts.points_clean_sheet, pts.total_points,
+        pts.points_clean_sheet, pts.points_penalties, pts.total_points,
         pred.participant_id, matchId
       )
     );

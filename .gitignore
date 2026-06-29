@@ -31,3 +31,6 @@ dist-ssr
 # Binary files
 *.exe
 *.pdf
+
+# OpenCode config (contains API keys)
+opencode.json

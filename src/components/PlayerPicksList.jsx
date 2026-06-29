@@ -128,6 +128,7 @@ export default function PlayerPicksList({
               const aScore = parseInt(awayTeam.score) || 0;
 
               const cleanSheet = (hScore === 0 || aScore === 0) ? 'yes' : 'no';
+              const penalties = (homeTeam.penalty != null || awayTeam.penalty != null) ? 'yes' : null;
 
               const homeTeamId = homeTeam.id || homeTeam.team?.id;
               const awayTeamId = awayTeam.id || awayTeam.team?.id;
@@ -217,6 +218,7 @@ export default function PlayerPicksList({
                 firstScorer,
                 highestScoringHalf,
                 cleanSheet,
+                penalties,
               });
             }
           }
@@ -249,6 +251,7 @@ export default function PlayerPicksList({
   let actualCleanSheet = null;
   let actualCards = null;
   let actualFirstScorer = null;
+  let actualPenalties = null;
 
   const activeHomeScore = liveStats ? liveStats.homeScore : m.home_score;
   const activeAwayScore = liveStats ? liveStats.awayScore : m.away_score;
@@ -266,6 +269,7 @@ export default function PlayerPicksList({
       actualCleanSheet = liveStats.cleanSheet;
       actualCards = liveStats.totalCards;
       actualFirstScorer = liveStats.firstScorer;
+      actualPenalties = liveStats.penalties;
     } else {
       if (m.home_ht_score !== null && m.home_ht_score !== undefined && m.away_ht_score !== null && m.away_ht_score !== undefined) {
         const firstHalfGoals = m.home_ht_score + m.away_ht_score;
@@ -277,6 +281,7 @@ export default function PlayerPicksList({
       actualCleanSheet = (m.home_score === 0 || m.away_score === 0) ? 'yes' : 'no';
       actualCards = m.actual_cards;
       actualFirstScorer = m.actual_first_scorer;
+      actualPenalties = m.actual_penalties;
     }
   }
 
@@ -377,6 +382,9 @@ export default function PlayerPicksList({
 
             const hasCleanPred = displayPred && displayPred.predicted_clean_sheet;
             const isCleanCorrect = (m.finished === 1 || liveStats) && hasCleanPred && displayPred.predicted_clean_sheet === actualCleanSheet;
+
+            const hasPenaltiesPred = displayPred && displayPred.predicted_penalties;
+            const isPenaltiesCorrect = (m.finished === 1 || liveStats) && hasPenaltiesPred && actualPenalties != null && displayPred.predicted_penalties === actualPenalties;
 
             const hasScorePred = displayPred && displayPred.predicted_home_score !== null && displayPred.predicted_away_score !== null;
             const isScoreCorrect = (m.finished === 1 || liveStats) && hasScorePred && displayPred.predicted_home_score === activeHomeScore && displayPred.predicted_away_score === activeAwayScore;
@@ -574,6 +582,22 @@ export default function PlayerPicksList({
                         border: hasCleanPred ? ((m.finished === 1 || liveStats) ? (isCleanCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
                       }}>
                         {hasCleanPred ? `CS:${displayPred.predicted_clean_sheet === 'yes' ? 'Y' : 'N'}` : '-'}
+                      </span>
+
+                      {/* Penalties */}
+                      <span style={{ 
+                        padding: '2px 4px', 
+                        borderRadius: '4px', 
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        color: '#ffffff',
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        background: hasPenaltiesPred ? ((m.finished === 1 || liveStats) ? (isPenaltiesCorrect ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)') : 'rgba(255, 255, 255, 0.05)') : 'transparent',
+                        border: hasPenaltiesPred ? ((m.finished === 1 || liveStats) ? (isPenaltiesCorrect ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)') : '1px solid rgba(255, 255, 255, 0.1)') : '1px dashed rgba(255, 255, 255, 0.05)'
+                      }}>
+                        {hasPenaltiesPred ? `P:${displayPred.predicted_penalties === 'yes' ? 'Y' : 'N'}` : '-'}
                       </span>
                     </div>
                   ) : (

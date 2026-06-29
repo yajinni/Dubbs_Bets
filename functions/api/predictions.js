@@ -44,6 +44,7 @@ export async function onRequest(context) {
             pr.predicted_first_scorer,
             pr.predicted_highest_scoring_half,
             pr.predicted_clean_sheet,
+            pr.predicted_penalties,
             COALESCE(pr.total_points, 0) AS total_points,
             COALESCE(pr.points_winner, 0) AS points_winner,
             COALESCE(pr.points_ou, 0) AS points_ou,
@@ -52,6 +53,7 @@ export async function onRequest(context) {
             COALESCE(pr.points_total_cards, 0) AS points_total_cards,
             COALESCE(pr.points_highest_scoring_half, 0) AS points_highest_scoring_half,
             COALESCE(pr.points_clean_sheet, 0) AS points_clean_sheet,
+            COALESCE(pr.points_penalties, 0) AS points_penalties,
             COALESCE(pr.points_cards_ou, 0) AS points_cards_ou
           FROM participants p
           LEFT JOIN predictions pr ON pr.participant_id = p.id AND pr.match_id = ?
@@ -113,6 +115,7 @@ export async function onRequest(context) {
         predictedFirstScorer,     // 'home', 'away', or 'none'
         predictedHighestScoringHalf, // 'first', 'second', or 'equal'
         predictedCleanSheet,      // 'yes' or 'no'
+        predictedPenalties,      // 'yes' or 'no'
         force                     // bypass lock check
       } = body;
 
@@ -122,7 +125,7 @@ export async function onRequest(context) {
 
       // 1. Fetch match with team info (merged query)
       const match = await env.db.prepare(`
-        SELECT m.local_date, m.status, m.finished, m.home_score, m.away_score, m.home_ht_score, m.away_ht_score, m.over_under_line, m.actual_cards, m.actual_first_scorer, m.home_win_pct, m.away_win_pct, m.home_team_name, m.away_team_name, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+        SELECT m.local_date, m.status, m.finished, m.home_score, m.away_score, m.home_ht_score, m.away_ht_score, m.over_under_line, m.actual_cards, m.actual_first_scorer, m.actual_penalties, m.home_win_pct, m.away_win_pct, m.home_team_name, m.away_team_name, t1.fifa_code AS home_code, t2.fifa_code AS away_code
         FROM matches m
         LEFT JOIN teams t1 ON m.home_team_id = t1.id
         LEFT JOIN teams t2 ON m.away_team_id = t2.id
@@ -150,6 +153,7 @@ export async function onRequest(context) {
       const pFirstScorer = predictedFirstScorer || null;
       const pHalfPick = predictedHighestScoringHalf || null;
       const pCleanPick = predictedCleanSheet || null;
+      const pPenalties = predictedPenalties || null;
 
       // Get participant name
       const participant = await env.db.prepare('SELECT name FROM participants WHERE id = ?').bind(participantId).first();
@@ -210,6 +214,12 @@ export async function onRequest(context) {
         changes.push(`Clean Sheet: ${oldClean || 'None'} -> ${newClean || 'None'}`);
       }
 
+      const oldPenalties = existing ? existing.predicted_penalties : null;
+      const newPenalties = pPenalties;
+      if (oldPenalties !== newPenalties) {
+        changes.push(`Penalties: ${oldPenalties || 'None'} -> ${newPenalties || 'None'}`);
+      }
+
       if (changes.length > 0) {
         const actionType = existing ? 'updated' : 'submitted';
         const description = `${participantName} ${actionType} prediction for ${matchLabel}`;
@@ -230,11 +240,12 @@ export async function onRequest(context) {
               predicted_total_cards = ?,
               predicted_first_scorer = ?,
               predicted_highest_scoring_half = ?,
-              predicted_clean_sheet = ?
+              predicted_clean_sheet = ?,
+              predicted_penalties = ?
             WHERE participant_id = ? AND match_id = ?
           `;
           await env.db.prepare(updateQuery)
-            .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, participantId, matchId)
+            .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, pPenalties, participantId, matchId)
             .run();
           await bumpVersion(env.db, 'predictions');
         }
@@ -250,11 +261,12 @@ export async function onRequest(context) {
             predicted_total_cards,
             predicted_first_scorer,
             predicted_highest_scoring_half,
-            predicted_clean_sheet
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            predicted_clean_sheet,
+            predicted_penalties
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         await env.db.prepare(insertQuery)
-          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick)
+          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, pPenalties)
           .run();
         await bumpVersion(env.db, 'predictions');
       }
@@ -270,6 +282,7 @@ export async function onRequest(context) {
           predicted_first_scorer: pFirstScorer,
           predicted_highest_scoring_half: pHalfPick,
           predicted_clean_sheet: pCleanPick,
+          predicted_penalties: pPenalties,
         }, match);
 
         await env.db.prepare(`
@@ -277,12 +290,12 @@ export async function onRequest(context) {
           SET
             points_winner = ?, points_ou = ?, points_score = ?, points_cards_ou = ?,
             points_total_cards = ?, points_first_scorer = ?, points_highest_scoring_half = ?,
-            points_clean_sheet = ?, total_points = ?
+            points_clean_sheet = ?, points_penalties = ?, total_points = ?
           WHERE participant_id = ? AND match_id = ?
         `).bind(
           pts.points_winner, pts.points_ou, pts.points_score, pts.points_cards_ou,
           pts.points_total_cards, pts.points_first_scorer, pts.points_highest_scoring_half,
-          pts.points_clean_sheet, pts.total_points,
+          pts.points_clean_sheet, pts.points_penalties, pts.total_points,
           participantId, matchId
         ).run();
 
@@ -290,59 +303,6 @@ export async function onRequest(context) {
       }
 
       await emitEvent(env.db, 'predictions_updated');
-      // ── Signal Group Notification (fire-and-forget, reuse already-fetched data) ──
-      if (env.SIGNAL_API_URL && env.SIGNAL_SENDER && env.SIGNAL_GROUP_ID) {
-        try {
-          if (participant && match) {
-            const pName = participant.name;
-            const home = match.home_team_name || 'Home';
-            const away = match.away_team_name || 'Away';
-
-            // Format the winner display
-            const winnerDisplay = predictedWinner === 'home' ? home
-              : predictedWinner === 'away' ? away
-              : 'Draw';
-
-            // Format first scorer display
-            const firstDisplay = pFirstScorer === 'home' ? home
-              : pFirstScorer === 'away' ? away
-              : 'No Goal';
-
-            // Format half display
-            const halfDisplay = pHalfPick === 'first' ? '1st Half'
-              : pHalfPick === 'second' ? '2nd Half'
-              : 'Equal';
-
-            // Format O/U display
-            const ouDisplay = `${(predictedOverUnder || '').charAt(0).toUpperCase()}${(predictedOverUnder || '').slice(1)} ${match.over_under_line || '2.5'}`;
-
-            const msg = [
-              `🎯 ${pName} placed a pick!`,
-              `🏟️ ${home} vs ${away}`,
-              `━━━━━━━━━━━━━━━━━━`,
-              `Winner: ${winnerDisplay}`,
-              `Score: ${pHomeScore ?? '?'}-${pAwayScore ?? '?'} | O/U: ${ouDisplay}`,
-              `Cards: ${pTotalCards ?? '?'} | First: ${firstDisplay}`,
-              `Half: ${halfDisplay} | Clean Sheet: ${(pCleanPick || '?').toUpperCase()}`,
-            ].join('\n');
-
-            // Fire-and-forget — don't await in the critical path
-            fetch(`${env.SIGNAL_API_URL}/v2/send`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                message: msg,
-                number: env.SIGNAL_SENDER,
-                recipients: [env.SIGNAL_GROUP_ID]
-              })
-            }).catch(err => {
-              console.error('Signal notification failed (non-blocking):', err.message);
-            });
-          }
-        } catch (signalErr) {
-          console.error('Signal notification error (non-blocking):', signalErr.message);
-        }
-      }
 
       await flushLogs(env.db);
       return new Response(JSON.stringify({
@@ -358,6 +318,7 @@ export async function onRequest(context) {
           predicted_first_scorer: pFirstScorer,
           predicted_highest_scoring_half: pHalfPick,
           predicted_clean_sheet: pCleanPick,
+          predicted_penalties: pPenalties,
           points_winner: 0,
           points_ou: 0,
           points_score: 0,

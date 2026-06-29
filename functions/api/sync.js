@@ -225,6 +225,10 @@ async function syncFromESPN(db) {
   const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, home_team_label, away_team_label, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at, type, round_name FROM matches').all();
   const matchUpdates = [];
 
+  // Load penalties_start_at to skip backfill of matches scheduled before penalties tracking began
+  const penaltyStartSetting = await db.prepare("SELECT value FROM settings WHERE key = 'penalties_start_at'").first();
+  const penaltiesStartAt = penaltyStartSetting ? penaltyStartSetting.value : null;
+
   // Build team name -> id lookup for flag/code JOIN
   const { results: teamRows } = await db.prepare('SELECT id, name_en FROM teams').all();
   const teamNameToId = new Map();
@@ -366,6 +370,9 @@ async function syncFromESPN(db) {
       
       const finished = completed ? 1 : 0;
       
+      // Detect penalties from ESPN competitor data (only for matches scheduled on/after penalties_start_at)
+      let actualPenalties = (penaltiesStartAt && dbMatch.local_date && dbMatch.local_date >= penaltiesStartAt && (homeCompetitor.penalty != null || awayCompetitor.penalty != null)) ? 'yes' : null;
+
       // Parse details/timeline for Halftime scores, Cards, and First Scorer
       let homeHtScore = 0;
       let awayHtScore = 0;
@@ -411,6 +418,7 @@ async function syncFromESPN(db) {
         awayHtScore = null;
         actualFirstScorer = null;
         actualCards = null;
+        actualPenalties = null;
       }
       
       // Update kickoff time from ESPN sync if it changed
@@ -441,6 +449,7 @@ async function syncFromESPN(db) {
         dbMatch.finished !== finished ||
         dbMatch.actual_cards !== actualCards ||
         dbMatch.actual_first_scorer !== actualFirstScorer ||
+        dbMatch.actual_penalties !== actualPenalties ||
         dbMatch.espn_event_id !== event.id ||
         dbMatch.local_date !== newLocalDate ||
         dbMatch.display_clock !== displayClock ||
@@ -462,6 +471,7 @@ async function syncFromESPN(db) {
               finished = ?,
               actual_cards = ?,
               actual_first_scorer = ?,
+              actual_penalties = ?,
               espn_event_id = ?,
               local_date = ?,
               display_clock = ?,
@@ -479,6 +489,7 @@ async function syncFromESPN(db) {
             finished,
             actualCards,
             actualFirstScorer,
+            actualPenalties,
             event.id,
             newLocalDate,
             displayClock,
@@ -501,6 +512,7 @@ async function syncFromESPN(db) {
             draw_pct: dbMatch.draw_pct,
             actual_cards: actualCards,
             actual_first_scorer: actualFirstScorer,
+            actual_penalties: actualPenalties,
             home_ht_score: homeHtScore,
             away_ht_score: awayHtScore,
           });
@@ -566,6 +578,8 @@ async function syncFromESPN(db) {
     if (state === 'in') status = 'live';
     else if (state === 'post') status = 'finished';
     const finished = completed ? 1 : 0;
+    // Detect penalties only for matches scheduled on/after penalties_start_at
+    let actualPenalties = (penaltiesStartAt && dbMatch.local_date && dbMatch.local_date >= penaltiesStartAt && (homeCompetitor.penalty != null || awayCompetitor.penalty != null)) ? 'yes' : null;
     let homeHtScore = 0, awayHtScore = 0, actualFirstScorer = 'none', firstGoalTime = Infinity, actualCards = 0;
     const details = comp.details || [];
     for (const detail of details) {
@@ -579,7 +593,7 @@ async function syncFromESPN(db) {
       }
     }
     if (!finished && actualFirstScorer === 'none') actualFirstScorer = null;
-    if (status === 'scheduled') { homeHtScore = null; awayHtScore = null; actualFirstScorer = null; actualCards = null; }
+    if (status === 'scheduled') { homeHtScore = null; awayHtScore = null; actualFirstScorer = null; actualCards = null; actualPenalties = null; }
 
     const displayClock = comp.status?.displayClock || null;
     const dbKickoff = new Date(dbMatch.local_date).getTime();
@@ -598,6 +612,7 @@ async function syncFromESPN(db) {
           finished = ?,
           actual_cards = ?,
           actual_first_scorer = ?,
+          actual_penalties = ?,
           espn_event_id = ?,
           local_date = ?,
           display_clock = ?,
@@ -608,7 +623,7 @@ async function syncFromESPN(db) {
         WHERE id = ?
       `).bind(
         homeScore, awayScore, homeHtScore, awayHtScore,
-        status, finished, actualCards, actualFirstScorer,
+        status, finished, actualCards, actualFirstScorer, actualPenalties,
         event.id, newLocalDate, displayClock,
         homeName, awayName,
         teamNameToId.get(homeName.toLowerCase().trim()) || null,
@@ -625,6 +640,7 @@ async function syncFromESPN(db) {
         away_win_pct: dbMatch.away_win_pct,
         draw_pct: dbMatch.draw_pct,
         actual_cards: actualCards, actual_first_scorer: actualFirstScorer,
+        actual_penalties: actualPenalties,
         home_ht_score: homeHtScore, away_ht_score: awayHtScore,
       });
     }
@@ -934,6 +950,9 @@ async function handleScoreMatchTask(db, matchId) {
   for (const t of scoreTeamRows) {
     scoreTeamNameToId.set(t.name_en.toLowerCase().trim(), t.id);
   }
+  // Load penalties_start_at to skip backfill
+  const scorePenaltyStartSetting = await db.prepare("SELECT value FROM settings WHERE key = 'penalties_start_at'").first();
+  const scorePenaltiesStartAt = scorePenaltyStartSetting ? scorePenaltyStartSetting.value : null;
   const match = await db.prepare(`
     SELECT m.*, t1.fifa_code AS home_code, t2.fifa_code AS away_code
     FROM matches m
@@ -990,6 +1009,8 @@ async function handleScoreMatchTask(db, matchId) {
       else if (state === 'post') status = 'finished';
       
       const finished = completed ? 1 : 0;
+      // Detect penalties only for matches scheduled on/after penalties_start_at
+      let actualPenalties = (scorePenaltiesStartAt && match.local_date && match.local_date >= scorePenaltiesStartAt && (homeCompetitor.penalty != null || awayCompetitor.penalty != null)) ? 'yes' : null;
       
       let homeHtScore = 0;
       let awayHtScore = 0;
@@ -1027,6 +1048,7 @@ async function handleScoreMatchTask(db, matchId) {
         awayHtScore = null;
         actualFirstScorer = null;
         actualCards = null;
+        actualPenalties = null;
       }
       
       // Update DB
@@ -1041,6 +1063,7 @@ async function handleScoreMatchTask(db, matchId) {
           finished = ?,
           actual_cards = ?,
           actual_first_scorer = ?,
+          actual_penalties = ?,
           espn_event_id = ?,
           home_team_name = ?,
           away_team_name = ?,
@@ -1056,6 +1079,7 @@ async function handleScoreMatchTask(db, matchId) {
         finished,
         actualCards,
         actualFirstScorer,
+        actualPenalties,
         event.id,
         homeName,
         awayName,
@@ -1076,6 +1100,7 @@ async function handleScoreMatchTask(db, matchId) {
           draw_pct: match.draw_pct,
           actual_cards: actualCards,
           actual_first_scorer: actualFirstScorer,
+          actual_penalties: actualPenalties,
           home_ht_score: homeHtScore,
           away_ht_score: awayHtScore,
         });
