@@ -501,8 +501,8 @@ async function syncFromESPN(db) {
           )
         );
         
-        if (finished === 1 && dbMatch.finished !== 1) {
-          finishedDuringSync++;
+        if (finished === 1 && (dbMatch.finished !== 1 || dbMatch.actual_penalties !== actualPenalties)) {
+          if (dbMatch.finished !== 1) finishedDuringSync++;
           await scoreAllPredictionsForMatch(db, dbMatch.id, {
             home_score: homeScore,
             away_score: awayScore,
@@ -631,8 +631,8 @@ async function syncFromESPN(db) {
         dbMatch.id
       )
     );
-    if (finished === 1 && dbMatch.finished !== 1) {
-      finishedDuringSync++;
+    if (finished === 1 && (dbMatch.finished !== 1 || dbMatch.actual_penalties !== actualPenalties)) {
+      if (dbMatch.finished !== 1) finishedDuringSync++;
       await scoreAllPredictionsForMatch(db, dbMatch.id, {
         home_score: homeScore, away_score: awayScore,
         over_under_line: dbMatch.over_under_line,
