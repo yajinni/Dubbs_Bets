@@ -218,6 +218,10 @@ export default function App() {
     const nowMs = Date.now();
       const thirtyMinsMs = 30 * 60 * 1000;
 
+    // Hide matches that haven't been synced yet (placeholder team names from R32/R16/QF/SF/Final).
+    // Without this, the live tab shows "Runner-up Group A vs Runner-up Group B" which is useless to the user.
+    const hasRealTeamNames = (m) => !!(m.home_team_name && m.away_team_name);
+
     const isMatchLive = (m) => {
       if (m.status === 'live') return true;
       if (m.finished === 1 || m.status === 'finished') return false;
@@ -233,20 +237,20 @@ export default function App() {
     };
 
     // 1. Swap to next live match 30 min before it starts
-    const upcomingClose = matches.filter(isMatchStartingSoon);
+    const upcomingClose = matches.filter(m => isMatchStartingSoon(m) && hasRealTeamNames(m));
     if (upcomingClose.length > 0) {
       return upcomingClose.sort((a, b) => new Date((a.local_date || '').replace(' ', 'T')) - new Date((b.local_date || '').replace(' ', 'T')));
     }
 
     // 2. Otherwise show currently live matches (including started but not finished)
-    const currentLive = matches.filter(isMatchLive);
+    const currentLive = matches.filter(m => isMatchLive(m) && hasRealTeamNames(m));
     if (currentLive.length > 0) {
       return currentLive;
     }
 
     // 3. Otherwise show today's finished matches (including overlapping ones)
     const todayStr = new Date().toISOString().split('T')[0];
-    const finishedMatches = matches.filter(m => (m.finished === 1 || m.status === 'finished') && (m.local_date || '').startsWith(todayStr));
+    const finishedMatches = matches.filter(m => (m.finished === 1 || m.status === 'finished') && (m.local_date || '').startsWith(todayStr) && hasRealTeamNames(m));
     if (finishedMatches.length > 0) {
       const sortedFinished = [...finishedMatches].sort((a, b) => {
         return new Date((b.local_date || '').replace(' ', 'T')) - new Date((a.local_date || '').replace(' ', 'T'));
