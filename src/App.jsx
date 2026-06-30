@@ -9,7 +9,7 @@ import LogsView from './components/LogsView';
 import InfoView from './components/InfoView';
 import NavCustomizerModal from './components/NavCustomizerModal';
 import ChatBox from './components/ChatBox';
-import { Calendar, Award, Trophy, MessageSquare, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp, Menu, X, Info, BarChart2, List, RefreshCw, Clock } from 'lucide-react';
+import { Calendar, Award, Trophy, MessageSquare, ChevronLeft, ChevronRight, CheckCircle, XCircle, ArrowUp, Menu, X, Info, BarChart2, List, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
 import { shortenTeamName } from './utils/teamNames';
 
 // ─── Nav Layout Helpers ───────────────────────────────────────────────────────
@@ -92,6 +92,7 @@ export default function App() {
   const [statsData, setStatsData] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [dataHealth, setDataHealth] = useState({ ok: true, issues: [] });
   
   const [loading, setLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -321,6 +322,17 @@ export default function App() {
   const isFetchingRef = useRef(false);
   const pendingForceRefreshRef = useRef(false);
 
+  const fetchDataHealth = useCallback(async () => {
+    try {
+      const res = await fetch('/api/data_health');
+      if (!res.ok) return;
+      const data = await res.json();
+      setDataHealth(data);
+    } catch (err) {
+      console.error('Failed to fetch data health:', err);
+    }
+  }, []);
+
   const checkVersionsAndRefresh = useCallback(async (force = false) => {
     if (isFetchingRef.current) {
       if (force) pendingForceRefreshRef.current = true;
@@ -357,6 +369,7 @@ export default function App() {
                 updatedVersions.matches = serverVersions.matches;
               })
           );
+          promises.push(fetchDataHealth());
         }
 
         // Check leaderboard
@@ -525,7 +538,8 @@ export default function App() {
           fetch('/api/matches?activeOnly=true').then(r => r.json()),
           fetch('/api/leaderboard').then(r => r.json()),
           fetch('/api/sync?checkOnly=true').then(r => r.json()).catch(() => ({})),
-          fetch('/api/versions').then(r => r.json()).catch(() => ({}))
+          fetch('/api/versions').then(r => r.json()).catch(() => ({})),
+          fetch('/api/data_health').then(r => r.json()).catch(() => ({ ok: true, issues: [] }))
         ];
         
         if (activeParticipantId) {
@@ -537,10 +551,12 @@ export default function App() {
         const leaderboardData = results[1];
         const syncData = results[2];
         const vData = results[3];
-        const predictionsData = activeParticipantId ? results[4] : [];
+        const healthData = results[4];
+        const predictionsData = activeParticipantId ? results[5] : [];
         
         setMatches(matchesData);
         setLeaderboard(leaderboardData);
+        setDataHealth(healthData);
         if (syncData?.success && syncData?.sync_time) {
           setLastSync(syncData.sync_time);
         } else if (syncData?.last_sync) {
@@ -821,6 +837,42 @@ export default function App() {
         </div>
       ) : (
         <main style={{ flex: 1 }}>
+          {dataHealth?.issues?.length > 0 && (
+            <div
+              className="glass-panel"
+              style={{
+                maxWidth: '900px',
+                margin: '0 auto 18px',
+                border: '1px solid rgba(251, 191, 36, 0.45)',
+                background: 'linear-gradient(135deg, rgba(251,191,36,0.16), rgba(239,68,68,0.08))',
+                boxShadow: '0 0 24px rgba(251,191,36,0.12)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <AlertTriangle size={20} color="#fbbf24" />
+                  <strong style={{ color: '#fde68a', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Admin attention: data sync issue{dataHealth.issues.length === 1 ? '' : 's'} detected
+                  </strong>
+                </div>
+                <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleTabChange('admin')}>
+                  Open Admin
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                {dataHealth.issues.slice(0, 3).map((issue, index) => (
+                  <span key={`${issue.type}-${issue.matchId}-${index}`}>• {issue.message}</span>
+                ))}
+                {dataHealth.issues.length > 3 && (
+                  <span>• Plus {dataHealth.issues.length - 3} more issue{dataHealth.issues.length - 3 === 1 ? '' : 's'}.</span>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'dashboard' && (
             <div className="dashboard-grid">
               

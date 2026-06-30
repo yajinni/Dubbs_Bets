@@ -1,5 +1,6 @@
 // Cloudflare Pages Functions: API route to retrieve and update matches (GET, POST)
 import { checkAndInitDb, logChange, formatOuPct, emitEvent, bumpVersion, recomputeAllCaches, getMatchesCache, setMatchesCache, clearMatchesCache, scoreAllPredictionsForMatch, flushLogs } from './db_helper.js';
+import { getAdminPasswordAuthError } from './auth.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -101,12 +102,9 @@ export async function onRequest(context) {
         actualFirstScorer
       } = body;
 
-      // Validate Admin Password
-      const adminPassSetting = await env.db.prepare("SELECT value FROM settings WHERE key = 'admin_password'").first();
-      const expectedPassword = adminPassSetting ? adminPassSetting.value : 'admin123';
-
-      if (password !== expectedPassword) {
-        return new Response(JSON.stringify({ error: 'Unauthorized: Invalid Admin Password' }), { status: 401, headers });
+      const authError = await getAdminPasswordAuthError(env.db, password);
+      if (authError) {
+        return new Response(JSON.stringify({ error: authError.message }), { status: authError.status, headers });
       }
 
       if (!matchId) {

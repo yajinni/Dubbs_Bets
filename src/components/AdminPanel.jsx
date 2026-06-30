@@ -100,7 +100,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
       const response = await fetch('/api/participants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newPlayerName.trim() })
+        body: JSON.stringify({ name: newPlayerName.trim(), password })
       });
       const data = await response.json();
 
@@ -126,7 +126,8 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
 
     try {
       const response = await fetch(`/api/participants?id=${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': password }
       });
       const data = await response.json();
 

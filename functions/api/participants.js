@@ -1,12 +1,13 @@
 // Cloudflare Pages Functions: API route to manage participants (GET, POST, DELETE)
 import { checkAndInitDb, emitEvent, recomputeAllCaches } from './db_helper.js';
+import { getAdminPasswordAuthError } from './auth.js';
 
 // CORS headers
 const headers = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Password',
 };
 
 export async function onRequestOptions() {
@@ -31,7 +32,11 @@ export async function onRequest(context) {
 
     if (method === 'POST') {
       const body = await request.json();
-      const { name } = body;
+      const { name, password } = body;
+      const authError = await getAdminPasswordAuthError(env.db, password || request.headers.get('X-Admin-Password'));
+      if (authError) {
+        return new Response(JSON.stringify({ error: authError.message }), { status: authError.status, headers });
+      }
 
       if (!name || name.trim() === '') {
         return new Response(JSON.stringify({ error: 'Name is required' }), { status: 400, headers });
@@ -56,6 +61,11 @@ export async function onRequest(context) {
     if (method === 'DELETE') {
       const url = new URL(request.url);
       const id = url.searchParams.get('id');
+      const password = request.headers.get('X-Admin-Password') || url.searchParams.get('password');
+      const authError = await getAdminPasswordAuthError(env.db, password);
+      if (authError) {
+        return new Response(JSON.stringify({ error: authError.message }), { status: authError.status, headers });
+      }
 
       if (!id) {
         return new Response(JSON.stringify({ error: 'ID is required' }), { status: 400, headers });

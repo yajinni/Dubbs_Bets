@@ -68,7 +68,6 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- Initialize settings
 INSERT OR IGNORE INTO settings (key, value) VALUES ('last_sync', '2026-06-10T00:00:00Z');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_password', 'admin123');
 
 -- 6. Logs Table
 CREATE TABLE IF NOT EXISTS logs (

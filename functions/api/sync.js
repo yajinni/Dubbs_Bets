@@ -1,5 +1,6 @@
 // Cloudflare Pages Functions: API route to sync matches, scores, and odds from API-Football
 import { checkAndInitDb, logChange, formatOuPct, emitEvent, bumpVersion, recomputeAllCaches, clearMatchesCache, scoreAllPredictionsForMatch, flushLogs } from './db_helper.js';
+import { getSyncSecretAuthError } from './auth.js';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -69,14 +70,13 @@ export async function onRequest(context) {
       }), { status: 200, headers });
     }
 
-    // Verify secret key if configured in environment (allow same-origin browser requests to bypass)
+    // Verify secret key if configured in environment (allow same-origin browser requests to bypass normal sync)
     const clientSecret = url.searchParams.get('secret');
     const secFetchSite = request.headers.get('sec-fetch-site');
     const isSameOrigin = secFetchSite === 'same-origin' || secFetchSite === 'same-site';
     const isDiagnostic = url.searchParams.get('checkBets') === 'true' || url.searchParams.get('checkOddsFixture') !== null;
-    const isInternal = url.searchParams.get('midnightLock') === 'true' || url.searchParams.get('lockMatchId') || url.searchParams.get('scoreMatchId');
 
-    if (!isDiagnostic && !isInternal && env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
+    if (!isDiagnostic && env.SYNC_SECRET && env.SYNC_SECRET !== '' && !isSameOrigin && clientSecret !== env.SYNC_SECRET) {
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid sync secret' }), { status: 401, headers });
     }
 
@@ -85,6 +85,11 @@ export async function onRequest(context) {
     // Handle automated task webhooks
     const lockMatchId = url.searchParams.get('lockMatchId');
     if (lockMatchId) {
+      const authError = getSyncSecretAuthError(request, env);
+      if (authError) {
+        return new Response(JSON.stringify({ error: authError.message }), { status: authError.status, headers });
+      }
+
       const apiKeyOdds = env.THE_ODDS_API_KEY;
       if (!apiKeyOdds) {
         return new Response(JSON.stringify({ error: 'THE_ODDS_API_KEY is missing' }), { status: 400, headers });
@@ -97,6 +102,11 @@ export async function onRequest(context) {
 
     const scoreMatchId = url.searchParams.get('scoreMatchId');
     if (scoreMatchId) {
+      const authError = getSyncSecretAuthError(request, env);
+      if (authError) {
+        return new Response(JSON.stringify({ error: authError.message }), { status: authError.status, headers });
+      }
+
       await logChange(env.db, 'system', parseInt(scoreMatchId), null, 'Score Match & Recalculate Predictions', null, `Match ID: ${scoreMatchId}`);
       await handleScoreMatchTask(env.db, parseInt(scoreMatchId));
       await flushLogs(env.db);
@@ -105,6 +115,11 @@ export async function onRequest(context) {
 
     const midnightLock = url.searchParams.get('midnightLock') === 'true';
     if (midnightLock) {
+      const authError = getSyncSecretAuthError(request, env);
+      if (authError) {
+        return new Response(JSON.stringify({ error: authError.message }), { status: authError.status, headers });
+      }
+
       const apiKeyOdds = env.THE_ODDS_API_KEY;
       if (!apiKeyOdds) {
         return new Response(JSON.stringify({ error: 'THE_ODDS_API_KEY is missing' }), { status: 400, headers });
@@ -216,6 +231,12 @@ function normalizeTeamName(name) {
   return n;
 }
 
+function getActualPenalties(penaltiesStartAt, localDate, finished, homeCompetitor, awayCompetitor) {
+  if (!penaltiesStartAt || !localDate || localDate < penaltiesStartAt) return null;
+  if (homeCompetitor.penalty != null || awayCompetitor.penalty != null) return 'yes';
+  return finished === 1 ? 'no' : null;
+}
+
 // --------------------------------------------------------
 // ESPN Scoreboard Sync Implementation (Free, Keyless)
 // --------------------------------------------------------
@@ -291,40 +312,9 @@ async function syncFromESPN(db) {
   
   let matchesUpdated = 0;
   let finishedDuringSync = 0;
+  let scoringChangedDuringSync = false;
   const matchedDbIds = new Set();
   const matchedEventKeys = new Set();
-
-  // Reset knockout matches to placeholder state at the start of each sync.
-  // This breaks the cycle from prior incorrect matches (e.g. match 74 was
-  // incorrectly assigned "Brazil vs Japan", or match 73 was incorrectly
-  // marked finished with no team names). We clear team names, event IDs,
-  // finished/status, and scores, so the second pass can re-match fresh by
-  // date proximity.
-  const needsReset = m => (m.home_team_name || m.away_team_name || m.espn_event_id || (m.finished === 1 && !m.home_team_name && !m.away_team_name)) && ['r32', 'r16', 'qf', 'sf', 'third', 'final'].includes(m.type || m.round_name);
-  const hasKnockoutNames = dbMatches.some(needsReset);
-  if (hasKnockoutNames) {
-    await db.prepare(`UPDATE matches SET home_team_name = '', away_team_name = '', espn_event_id = NULL, finished = 0, status = 'scheduled', home_score = 0, away_score = 0, home_ht_score = NULL, away_ht_score = NULL, actual_cards = NULL, actual_first_scorer = NULL, display_clock = NULL, home_team_id = NULL, away_team_id = NULL WHERE type IN ('r32', 'r16', 'qf', 'sf', 'third', 'final') AND (home_team_name != '' OR away_team_name != '' OR espn_event_id IS NOT NULL OR (finished = 1 AND home_team_name = '' AND away_team_name = ''))`).run();
-    // Update in-memory dbMatches to match the DB state (no re-assigning const)
-    for (const m of dbMatches) {
-      if (needsReset(m)) {
-        m.home_team_name = '';
-        m.away_team_name = '';
-        m.espn_event_id = null;
-        m.finished = 0;
-        m.status = 'scheduled';
-        m.home_score = 0;
-        m.away_score = 0;
-        m.home_ht_score = null;
-        m.away_ht_score = null;
-        m.actual_cards = null;
-        m.actual_first_scorer = null;
-        m.display_clock = null;
-        m.home_team_id = null;
-        m.away_team_id = null;
-      }
-    }
-    clearMatchesCache();
-  }
 
   // Pre-build lookup map for O(1) match matching
   // For knockout matches, ALWAYS use the label (placeholder name) as the key,
@@ -376,7 +366,7 @@ async function syncFromESPN(db) {
       const finished = completed ? 1 : 0;
       
       // Detect penalties from ESPN competitor data (only for matches scheduled on/after penalties_start_at)
-      let actualPenalties = (penaltiesStartAt && dbMatch.local_date && dbMatch.local_date >= penaltiesStartAt && (homeCompetitor.penalty != null || awayCompetitor.penalty != null)) ? 'yes' : null;
+      let actualPenalties = getActualPenalties(penaltiesStartAt, dbMatch.local_date, finished, homeCompetitor, awayCompetitor);
 
       // Parse details/timeline for Halftime scores, Cards, and First Scorer
       let homeHtScore = 0;
@@ -449,6 +439,15 @@ async function syncFromESPN(db) {
       const isKnockout = KNOCKOUT_TYPES.has(dbMatch.type || dbMatch.round_name);
       const newHomeLabel = isKnockout && homeTeamId ? homeName : dbMatch.home_team_label;
       const newAwayLabel = isKnockout && awayTeamId ? awayName : dbMatch.away_team_label;
+      const scoringChanged =
+        dbMatch.finished !== finished ||
+        dbMatch.home_score !== homeScore ||
+        dbMatch.away_score !== awayScore ||
+        dbMatch.home_ht_score !== homeHtScore ||
+        dbMatch.away_ht_score !== awayHtScore ||
+        dbMatch.actual_cards !== actualCards ||
+        dbMatch.actual_first_scorer !== actualFirstScorer ||
+        dbMatch.actual_penalties !== actualPenalties;
 
       const hasChanged = 
         dbMatch.home_score !== homeScore ||
@@ -515,8 +514,9 @@ async function syncFromESPN(db) {
           )
         );
         
-        if (finished === 1 && (dbMatch.finished !== 1 || dbMatch.actual_penalties !== actualPenalties)) {
+        if (finished === 1 && scoringChanged) {
           if (dbMatch.finished !== 1) finishedDuringSync++;
+          scoringChangedDuringSync = true;
           await scoreAllPredictionsForMatch(db, dbMatch.id, {
             home_score: homeScore,
             away_score: awayScore,
@@ -591,7 +591,7 @@ async function syncFromESPN(db) {
     else if (state === 'post') status = 'finished';
     const finished = completed ? 1 : 0;
     // Detect penalties only for matches scheduled on/after penalties_start_at
-    let actualPenalties = (penaltiesStartAt && dbMatch.local_date && dbMatch.local_date >= penaltiesStartAt && (homeCompetitor.penalty != null || awayCompetitor.penalty != null)) ? 'yes' : null;
+    let actualPenalties = getActualPenalties(penaltiesStartAt, dbMatch.local_date, finished, homeCompetitor, awayCompetitor);
     let homeHtScore = 0, awayHtScore = 0, actualFirstScorer = 'none', firstGoalTime = Infinity, actualCards = 0;
     const details = comp.details || [];
     for (const detail of details) {
@@ -616,6 +616,15 @@ async function syncFromESPN(db) {
     const isKnockout = KNOCKOUT_TYPES.has(dbMatch.type || dbMatch.round_name);
     const newHomeLabel = isKnockout && homeTeamId ? homeName : dbMatch.home_team_label;
     const newAwayLabel = isKnockout && awayTeamId ? awayName : dbMatch.away_team_label;
+    const scoringChanged =
+      dbMatch.finished !== finished ||
+      dbMatch.home_score !== homeScore ||
+      dbMatch.away_score !== awayScore ||
+      dbMatch.home_ht_score !== homeHtScore ||
+      dbMatch.away_ht_score !== awayHtScore ||
+      dbMatch.actual_cards !== actualCards ||
+      dbMatch.actual_first_scorer !== actualFirstScorer ||
+      dbMatch.actual_penalties !== actualPenalties;
 
     matchUpdates.push(
       db.prepare(`
@@ -650,8 +659,9 @@ async function syncFromESPN(db) {
         dbMatch.id
       )
     );
-    if (finished === 1 && (dbMatch.finished !== 1 || dbMatch.actual_penalties !== actualPenalties)) {
+    if (finished === 1 && scoringChanged) {
       if (dbMatch.finished !== 1) finishedDuringSync++;
+      scoringChangedDuringSync = true;
       await scoreAllPredictionsForMatch(db, dbMatch.id, {
         home_score: homeScore, away_score: awayScore,
         over_under_line: dbMatch.over_under_line,
@@ -673,7 +683,7 @@ async function syncFromESPN(db) {
   if (matchesUpdated > 0) {
     clearMatchesCache();
     await bumpVersion(db, 'matches');
-    if (finishedDuringSync > 0) {
+    if (scoringChangedDuringSync) {
       await recomputeAllCaches(db);
     }
     await emitEvent(db, 'matches_updated');
@@ -1029,7 +1039,7 @@ async function handleScoreMatchTask(db, matchId) {
       
       const finished = completed ? 1 : 0;
       // Detect penalties only for matches scheduled on/after penalties_start_at
-      let actualPenalties = (scorePenaltiesStartAt && match.local_date && match.local_date >= scorePenaltiesStartAt && (homeCompetitor.penalty != null || awayCompetitor.penalty != null)) ? 'yes' : null;
+      let actualPenalties = getActualPenalties(scorePenaltiesStartAt, match.local_date, finished, homeCompetitor, awayCompetitor);
       
       let homeHtScore = 0;
       let awayHtScore = 0;
