@@ -89,6 +89,7 @@ export async function checkAndInitDb(db) {
       ['odds_updated_at', 'TEXT DEFAULT NULL'],
       ['display_clock', 'TEXT DEFAULT NULL'],
       ['actual_penalties', 'TEXT DEFAULT NULL'],
+      ['shootout_winner', 'TEXT DEFAULT NULL'],
     ];
     const predMigrations = [
       ['predicted_cards_over_under', 'TEXT DEFAULT NULL'],
@@ -1022,8 +1023,12 @@ export async function recomputeStatsCache(db) {
 
 export function calculatePointsFromPrediction(pred, match) {
   let winner = 'draw';
-  if (match.home_score > match.away_score) winner = 'home';
-  else if (match.away_score > match.home_score) winner = 'away';
+  if (match.actual_penalties === 'yes' && match.shootout_winner) {
+    winner = match.shootout_winner;
+  } else {
+    if (match.home_score > match.away_score) winner = 'home';
+    else if (match.away_score > match.home_score) winner = 'away';
+  }
 
   const totalGoals = match.home_score + match.away_score;
   const ouResult = totalGoals > match.over_under_line ? 'over' : 'under';

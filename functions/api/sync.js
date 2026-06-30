@@ -243,7 +243,7 @@ function getActualPenalties(penaltiesStartAt, localDate, finished, homeCompetito
 async function syncFromESPN(db) {
   console.log('Syncing from ESPN Scoreboard API...');
   
-  const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, home_team_label, away_team_label, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, actual_penalties, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at, type, round_name FROM matches').all();
+  const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, home_team_label, away_team_label, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, actual_penalties, shootout_winner, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at, type, round_name FROM matches').all();
   const matchUpdates = [];
 
   // Load penalties_start_at to skip backfill of matches scheduled before penalties tracking began
@@ -367,6 +367,9 @@ async function syncFromESPN(db) {
       
       // Detect penalties from ESPN competitor data (only for matches scheduled on/after penalties_start_at)
       let actualPenalties = getActualPenalties(penaltiesStartAt, dbMatch.local_date, finished, homeCompetitor, awayCompetitor);
+      let shootoutWinner = actualPenalties === 'yes'
+        ? (homeCompetitor.shootoutScore > awayCompetitor.shootoutScore ? 'home' : 'away')
+        : null;
 
       // Parse details/timeline for Halftime scores, Cards, and First Scorer
       let homeHtScore = 0;
@@ -414,6 +417,7 @@ async function syncFromESPN(db) {
         actualFirstScorer = null;
         actualCards = null;
         actualPenalties = null;
+        shootoutWinner = null;
       }
       
       // Update kickoff time from ESPN sync if it changed
@@ -447,7 +451,8 @@ async function syncFromESPN(db) {
         dbMatch.away_ht_score !== awayHtScore ||
         dbMatch.actual_cards !== actualCards ||
         dbMatch.actual_first_scorer !== actualFirstScorer ||
-        dbMatch.actual_penalties !== actualPenalties;
+        dbMatch.actual_penalties !== actualPenalties ||
+        dbMatch.shootout_winner !== shootoutWinner;
 
       const hasChanged = 
         dbMatch.home_score !== homeScore ||
@@ -459,6 +464,7 @@ async function syncFromESPN(db) {
         dbMatch.actual_cards !== actualCards ||
         dbMatch.actual_first_scorer !== actualFirstScorer ||
         dbMatch.actual_penalties !== actualPenalties ||
+        dbMatch.shootout_winner !== shootoutWinner ||
         dbMatch.espn_event_id !== event.id ||
         dbMatch.local_date !== newLocalDate ||
         dbMatch.display_clock !== displayClock ||
@@ -481,6 +487,7 @@ async function syncFromESPN(db) {
               actual_cards = ?,
               actual_first_scorer = ?,
               actual_penalties = ?,
+              shootout_winner = ?,
               espn_event_id = ?,
               local_date = ?,
               display_clock = ?,
@@ -501,6 +508,7 @@ async function syncFromESPN(db) {
             actualCards,
             actualFirstScorer,
             actualPenalties,
+            shootoutWinner,
             event.id,
             newLocalDate,
             displayClock,
@@ -527,6 +535,7 @@ async function syncFromESPN(db) {
             actual_cards: actualCards,
             actual_first_scorer: actualFirstScorer,
             actual_penalties: actualPenalties,
+            shootout_winner: shootoutWinner,
             home_ht_score: homeHtScore,
             away_ht_score: awayHtScore,
           });
@@ -592,6 +601,9 @@ async function syncFromESPN(db) {
     const finished = completed ? 1 : 0;
     // Detect penalties only for matches scheduled on/after penalties_start_at
     let actualPenalties = getActualPenalties(penaltiesStartAt, dbMatch.local_date, finished, homeCompetitor, awayCompetitor);
+    let shootoutWinner = actualPenalties === 'yes'
+      ? (homeCompetitor.shootoutScore > awayCompetitor.shootoutScore ? 'home' : 'away')
+      : null;
     let homeHtScore = 0, awayHtScore = 0, actualFirstScorer = 'none', firstGoalTime = Infinity, actualCards = 0;
     const details = comp.details || [];
     for (const detail of details) {
@@ -605,7 +617,7 @@ async function syncFromESPN(db) {
       }
     }
     if (!finished && actualFirstScorer === 'none') actualFirstScorer = null;
-    if (status === 'scheduled') { homeHtScore = null; awayHtScore = null; actualFirstScorer = null; actualCards = null; actualPenalties = null; }
+    if (status === 'scheduled') { homeHtScore = null; awayHtScore = null; actualFirstScorer = null; actualCards = null; actualPenalties = null; shootoutWinner = null; }
 
     const displayClock = comp.status?.displayClock || null;
     const dbKickoff = new Date(dbMatch.local_date).getTime();
@@ -624,7 +636,8 @@ async function syncFromESPN(db) {
       dbMatch.away_ht_score !== awayHtScore ||
       dbMatch.actual_cards !== actualCards ||
       dbMatch.actual_first_scorer !== actualFirstScorer ||
-      dbMatch.actual_penalties !== actualPenalties;
+      dbMatch.actual_penalties !== actualPenalties ||
+      dbMatch.shootout_winner !== shootoutWinner;
 
     matchUpdates.push(
       db.prepare(`
@@ -639,6 +652,7 @@ async function syncFromESPN(db) {
           actual_cards = ?,
           actual_first_scorer = ?,
           actual_penalties = ?,
+          shootout_winner = ?,
           espn_event_id = ?,
           local_date = ?,
           display_clock = ?,
@@ -651,7 +665,7 @@ async function syncFromESPN(db) {
         WHERE id = ?
       `).bind(
         homeScore, awayScore, homeHtScore, awayHtScore,
-        status, finished, actualCards, actualFirstScorer, actualPenalties,
+        status, finished, actualCards, actualFirstScorer, actualPenalties, shootoutWinner,
         event.id, newLocalDate, displayClock,
         homeName, awayName,
         newHomeLabel, newAwayLabel,
@@ -669,7 +683,7 @@ async function syncFromESPN(db) {
         away_win_pct: dbMatch.away_win_pct,
         draw_pct: dbMatch.draw_pct,
         actual_cards: actualCards, actual_first_scorer: actualFirstScorer,
-        actual_penalties: actualPenalties,
+        actual_penalties: actualPenalties, shootout_winner: shootoutWinner,
         home_ht_score: homeHtScore, away_ht_score: awayHtScore,
       });
     }
@@ -1040,6 +1054,9 @@ async function handleScoreMatchTask(db, matchId) {
       const finished = completed ? 1 : 0;
       // Detect penalties only for matches scheduled on/after penalties_start_at
       let actualPenalties = getActualPenalties(scorePenaltiesStartAt, match.local_date, finished, homeCompetitor, awayCompetitor);
+      let shootoutWinner = actualPenalties === 'yes'
+        ? (homeCompetitor.shootoutScore > awayCompetitor.shootoutScore ? 'home' : 'away')
+        : null;
       
       let homeHtScore = 0;
       let awayHtScore = 0;
@@ -1078,6 +1095,7 @@ async function handleScoreMatchTask(db, matchId) {
         actualFirstScorer = null;
         actualCards = null;
         actualPenalties = null;
+        shootoutWinner = null;
       }
       
       // Update DB
@@ -1093,6 +1111,7 @@ async function handleScoreMatchTask(db, matchId) {
           actual_cards = ?,
           actual_first_scorer = ?,
           actual_penalties = ?,
+          shootout_winner = ?,
           espn_event_id = ?,
           home_team_name = ?,
           away_team_name = ?,
@@ -1109,6 +1128,7 @@ async function handleScoreMatchTask(db, matchId) {
         actualCards,
         actualFirstScorer,
         actualPenalties,
+        shootoutWinner,
         event.id,
         homeName,
         awayName,
@@ -1129,7 +1149,7 @@ async function handleScoreMatchTask(db, matchId) {
           draw_pct: match.draw_pct,
           actual_cards: actualCards,
           actual_first_scorer: actualFirstScorer,
-          actual_penalties: actualPenalties,
+          actual_penalties: actualPenalties, shootout_winner: shootoutWinner,
           home_ht_score: homeHtScore,
           away_ht_score: awayHtScore,
         });

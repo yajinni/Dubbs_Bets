@@ -257,9 +257,13 @@ export default function PlayerPicksList({
   const activeAwayScore = liveStats ? liveStats.awayScore : m.away_score;
 
   if (m.finished === 1 || liveStats || showLiveResults) {
-    if (activeHomeScore > activeAwayScore) actualWinner = 'home';
-    else if (activeAwayScore > activeHomeScore) actualWinner = 'away';
-    else actualWinner = 'draw';
+    if (m.actual_penalties === 'yes' && m.shootout_winner) {
+      actualWinner = m.shootout_winner;
+    } else {
+      if (activeHomeScore > activeAwayScore) actualWinner = 'home';
+      else if (activeAwayScore > activeHomeScore) actualWinner = 'away';
+      else actualWinner = 'draw';
+    }
 
     const totalGoals = activeHomeScore + activeAwayScore;
     actualOU = totalGoals > m.over_under_line ? 'over' : 'under';
