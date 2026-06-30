@@ -222,7 +222,7 @@ function normalizeTeamName(name) {
 async function syncFromESPN(db) {
   console.log('Syncing from ESPN Scoreboard API...');
   
-  const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, home_team_label, away_team_label, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at, type, round_name FROM matches').all();
+  const { results: dbMatches } = await db.prepare('SELECT id, home_team_name, away_team_name, home_team_label, away_team_label, local_date, finished, home_score, away_score, home_ht_score, away_ht_score, status, actual_cards, actual_first_scorer, actual_penalties, over_under_line, home_win_pct, away_win_pct, draw_pct, espn_event_id, display_clock, odds_locked, odds_updated_at, type, round_name FROM matches').all();
   const matchUpdates = [];
 
   // Load penalties_start_at to skip backfill of matches scheduled before penalties tracking began
@@ -232,9 +232,12 @@ async function syncFromESPN(db) {
   // Build team name -> id lookup for flag/code JOIN
   const { results: teamRows } = await db.prepare('SELECT id, name_en FROM teams').all();
   const teamNameToId = new Map();
+  const normalizedTeamNameToId = new Map();
   for (const t of teamRows) {
     teamNameToId.set(t.name_en.toLowerCase().trim(), t.id);
+    normalizedTeamNameToId.set(normalizeTeamName(t.name_en), t.id);
   }
+  const getTeamIdByName = name => teamNameToId.get(name.toLowerCase().trim()) || normalizedTeamNameToId.get(normalizeTeamName(name)) || null;
   
   const datesToFetch = new Set();
   const getYYYYMMDD = (d) => {
@@ -289,6 +292,7 @@ async function syncFromESPN(db) {
   let matchesUpdated = 0;
   let finishedDuringSync = 0;
   const matchedDbIds = new Set();
+  const matchedEventKeys = new Set();
 
   // Reset knockout matches to placeholder state at the start of each sync.
   // This breaks the cycle from prior incorrect matches (e.g. match 74 was
@@ -358,6 +362,7 @@ async function syncFromESPN(db) {
     
     if (dbMatch) {
       matchedDbIds.add(dbMatch.id);
+      matchedEventKeys.add(espnKey);
       const homeScore = parseInt(homeCompetitor.score) || 0;
       const awayScore = parseInt(awayCompetitor.score) || 0;
       
@@ -439,6 +444,11 @@ async function syncFromESPN(db) {
 
       // Get display clock from ESPN
       const displayClock = comp.status?.displayClock || null;
+      const homeTeamId = getTeamIdByName(homeName);
+      const awayTeamId = getTeamIdByName(awayName);
+      const isKnockout = KNOCKOUT_TYPES.has(dbMatch.type || dbMatch.round_name);
+      const newHomeLabel = isKnockout && homeTeamId ? homeName : dbMatch.home_team_label;
+      const newAwayLabel = isKnockout && awayTeamId ? awayName : dbMatch.away_team_label;
 
       const hasChanged = 
         dbMatch.home_score !== homeScore ||
@@ -454,11 +464,11 @@ async function syncFromESPN(db) {
         dbMatch.local_date !== newLocalDate ||
         dbMatch.display_clock !== displayClock ||
         dbMatch.home_team_name !== homeName ||
-        dbMatch.away_team_name !== awayName;
+        dbMatch.away_team_name !== awayName ||
+        dbMatch.home_team_label !== newHomeLabel ||
+        dbMatch.away_team_label !== newAwayLabel;
 
       if (hasChanged) {
-        const homeTeamId = teamNameToId.get(homeName.toLowerCase().trim()) || null;
-        const awayTeamId = teamNameToId.get(awayName.toLowerCase().trim()) || null;
         matchUpdates.push(
           db.prepare(`
             UPDATE matches
@@ -477,6 +487,8 @@ async function syncFromESPN(db) {
               display_clock = ?,
               home_team_name = ?,
               away_team_name = ?,
+              home_team_label = ?,
+              away_team_label = ?,
               home_team_id = ?,
               away_team_id = ?
             WHERE id = ?
@@ -495,6 +507,8 @@ async function syncFromESPN(db) {
             displayClock,
             homeName,
             awayName,
+            newHomeLabel,
+            newAwayLabel,
             homeTeamId,
             awayTeamId,
             dbMatch.id
@@ -524,7 +538,6 @@ async function syncFromESPN(db) {
   }
 
   // Second pass: match remaining ESPN events to DB matches by espn_event_id or date proximity
-  const matchedKeys = new Set(matchesByKey.keys());
   const unmatchedEvents = events.filter(e => {
     const comp = e.competitions?.[0];
     if (!comp) return false;
@@ -532,8 +545,7 @@ async function syncFromESPN(db) {
     const away = comp.competitors?.find(c => c.homeAway === 'away')?.team?.name;
     if (!home || !away) return false;
     const espnKey = normalizeTeamName(home) + '|' + normalizeTeamName(away);
-    const inKeys = matchedKeys.has(espnKey);
-    return !inKeys;
+    return !matchedEventKeys.has(espnKey);
   });
 
   // Sort unmatched events by date DESCENDING. Later kickoffs have definitive
@@ -599,6 +611,11 @@ async function syncFromESPN(db) {
     const dbKickoff = new Date(dbMatch.local_date).getTime();
     let newLocalDate = dbMatch.local_date;
     if (dbKickoff !== espnKickoff) newLocalDate = new Date(event.date).toISOString();
+    const homeTeamId = getTeamIdByName(homeName);
+    const awayTeamId = getTeamIdByName(awayName);
+    const isKnockout = KNOCKOUT_TYPES.has(dbMatch.type || dbMatch.round_name);
+    const newHomeLabel = isKnockout && homeTeamId ? homeName : dbMatch.home_team_label;
+    const newAwayLabel = isKnockout && awayTeamId ? awayName : dbMatch.away_team_label;
 
     matchUpdates.push(
       db.prepare(`
@@ -618,6 +635,8 @@ async function syncFromESPN(db) {
           display_clock = ?,
           home_team_name = ?,
           away_team_name = ?,
+          home_team_label = ?,
+          away_team_label = ?,
           home_team_id = ?,
           away_team_id = ?
         WHERE id = ?
@@ -626,8 +645,8 @@ async function syncFromESPN(db) {
         status, finished, actualCards, actualFirstScorer, actualPenalties,
         event.id, newLocalDate, displayClock,
         homeName, awayName,
-        teamNameToId.get(homeName.toLowerCase().trim()) || null,
-        teamNameToId.get(awayName.toLowerCase().trim()) || null,
+        newHomeLabel, newAwayLabel,
+        homeTeamId, awayTeamId,
         dbMatch.id
       )
     );
