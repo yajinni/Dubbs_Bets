@@ -437,8 +437,8 @@ async function syncFromESPN(db) {
       const homeTeamId = getTeamIdByName(homeName);
       const awayTeamId = getTeamIdByName(awayName);
       const isKnockout = KNOCKOUT_TYPES.has(dbMatch.type || dbMatch.round_name);
-      const newHomeLabel = isKnockout && homeTeamId ? homeName : dbMatch.home_team_label;
-      const newAwayLabel = isKnockout && awayTeamId ? awayName : dbMatch.away_team_label;
+      const newHomeLabel = isKnockout ? homeName : dbMatch.home_team_label;
+      const newAwayLabel = isKnockout ? awayName : dbMatch.away_team_label;
       const scoringChanged =
         dbMatch.finished !== finished ||
         dbMatch.home_score !== homeScore ||
@@ -614,8 +614,8 @@ async function syncFromESPN(db) {
     const homeTeamId = getTeamIdByName(homeName);
     const awayTeamId = getTeamIdByName(awayName);
     const isKnockout = KNOCKOUT_TYPES.has(dbMatch.type || dbMatch.round_name);
-    const newHomeLabel = isKnockout && homeTeamId ? homeName : dbMatch.home_team_label;
-    const newAwayLabel = isKnockout && awayTeamId ? awayName : dbMatch.away_team_label;
+    const newHomeLabel = isKnockout ? homeName : dbMatch.home_team_label;
+    const newAwayLabel = isKnockout ? awayName : dbMatch.away_team_label;
     const scoringChanged =
       dbMatch.finished !== finished ||
       dbMatch.home_score !== homeScore ||
