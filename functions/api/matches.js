@@ -218,6 +218,7 @@ export async function onRequest(context) {
           draw_pct: dPct,
           actual_cards: actCards,
           actual_first_scorer: actFirstScorer,
+          actual_penalties: oldMatch.actual_penalties,
           home_ht_score: hHtScore,
           away_ht_score: aHtScore,
         });

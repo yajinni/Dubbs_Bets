@@ -233,7 +233,7 @@ function normalizeTeamName(name) {
 
 function getActualPenalties(penaltiesStartAt, localDate, finished, homeCompetitor, awayCompetitor) {
   if (!penaltiesStartAt || !localDate || localDate < penaltiesStartAt) return null;
-  if (homeCompetitor.penalty != null || awayCompetitor.penalty != null) return 'yes';
+  if (homeCompetitor.shootoutScore != null || awayCompetitor.shootoutScore != null) return 'yes';
   return finished === 1 ? 'no' : null;
 }
 

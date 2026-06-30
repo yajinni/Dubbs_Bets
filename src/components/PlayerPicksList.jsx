@@ -128,7 +128,7 @@ export default function PlayerPicksList({
               const aScore = parseInt(awayTeam.score) || 0;
 
               const cleanSheet = (hScore === 0 || aScore === 0) ? 'yes' : 'no';
-              const penalties = (homeTeam.penalty != null || awayTeam.penalty != null) ? 'yes' : null;
+              const penalties = (homeTeam.shootoutScore != null || awayTeam.shootoutScore != null) ? 'yes' : null;
 
               const homeTeamId = homeTeam.id || homeTeam.team?.id;
               const awayTeamId = awayTeam.id || awayTeam.team?.id;
