@@ -746,7 +746,8 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
             totalCards,
             firstScorer,
             highestScoringHalf,
-            cleanSheet
+            cleanSheet,
+            penalties
           }}
           showLiveResults={showLiveResults}
           onRefresh={onRefresh}

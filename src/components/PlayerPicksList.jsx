@@ -352,6 +352,7 @@ export default function PlayerPicksList({
                 predicted_first_scorer: winnerLocalState.firstScorer || null,
                 predicted_highest_scoring_half: winnerLocalState.highestScoringHalf || null,
                 predicted_clean_sheet: winnerLocalState.cleanSheet || null,
+                predicted_penalties: winnerLocalState.penalties || null,
                 total_points: opPred ? opPred.total_points : 0,
                 points_cards_ou: opPred ? opPred.points_cards_ou : 0
               };
