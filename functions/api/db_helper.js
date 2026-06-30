@@ -67,14 +67,16 @@ export async function checkAndInitDb(db) {
     }
 
     // Always run schema migrations (ALTER TABLE) if schema version doesn't match
-    const [matchCols, predCols, lbCols] = await Promise.all([
+    const [matchCols, predCols, lbCols, partCols] = await Promise.all([
       db.prepare("PRAGMA table_info(matches)").all(),
       db.prepare("PRAGMA table_info(predictions)").all(),
       db.prepare("PRAGMA table_info(leaderboard_cache)").all(),
+      db.prepare("PRAGMA table_info(participants)").all(),
     ]);
     const existingMatchCols = new Set((matchCols.results || []).map(c => c.name));
     const existingPredCols = new Set((predCols.results || []).map(c => c.name));
     const existingLbCols = new Set((lbCols.results || []).map(c => c.name));
+    const existingPartCols = new Set((partCols.results || []).map(c => c.name));
 
     const matchMigrations = [
       ['cards_line', 'REAL DEFAULT 3.5'],
@@ -159,6 +161,13 @@ export async function checkAndInitDb(db) {
         await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('penalties_start_at', ?)").bind(new Date().toISOString()).run();
       }
     } catch(e) {}
+
+    // Participants migrations
+    if (existingPartCols.size > 0 && !existingPartCols.has('nav_layout')) {
+      try {
+        await db.prepare("ALTER TABLE participants ADD COLUMN nav_layout TEXT DEFAULT NULL").run();
+      } catch (_) {}
+    }
 
     // Migration: correct score points changed from 1 to 4 (per the scoring rules)
     if (existingPredCols.size > 0) {
@@ -1121,9 +1130,27 @@ export async function scoreAllPredictionsForMatch(db, matchId, match) {
   return predictions.length;
 }
 
+export async function updateMatchCountsCache(db) {
+  try {
+    const row = await db.prepare(`
+      SELECT
+        (SELECT COUNT(*) FROM matches WHERE status = 'live') AS live,
+        (SELECT COUNT(*) FROM matches WHERE finished = 1) AS finished,
+        (SELECT COUNT(*) FROM matches WHERE status = 'scheduled' AND finished = 0) AS scheduled
+    `).first();
+    const payload = JSON.stringify({ live: row?.live || 0, finished: row?.finished || 0, scheduled: row?.scheduled || 0 });
+    await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('cached_match_counts', ?)").bind(payload).run();
+  } catch (err) {
+    console.error('[MatchCounts] Failed to update cache:', err.message);
+  }
+}
+
 export async function bumpVersion(db, key) {
   const timestamp = new Date().toISOString();
   clearVersionsCache();
+  if (key === 'matches') {
+    try { await updateMatchCountsCache(db); } catch (_) {}
+  }
   try {
     await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").bind(`version_${key}`, timestamp).run();
   } catch (err) {

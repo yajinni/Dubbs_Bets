@@ -34,9 +34,7 @@ export async function onRequest(context) {
         (SELECT value FROM settings WHERE key = 'version_predictions') AS predictions,
         (SELECT value FROM settings WHERE key = 'version_leaderboard') AS leaderboard,
         (SELECT value FROM settings WHERE key = 'version_stats') AS stats,
-        (SELECT COUNT(*) FROM matches WHERE status = 'live') AS live,
-        (SELECT COUNT(*) FROM matches WHERE finished = 1) AS finished,
-        (SELECT COUNT(*) FROM matches WHERE status = 'scheduled' AND finished = 0) AS scheduled
+        (SELECT value FROM settings WHERE key = 'cached_match_counts') AS match_counts
     `).first();
 
     const versions = {};
@@ -60,11 +58,11 @@ export async function onRequest(context) {
       await env.db.batch(batch);
     }
 
-    versions.matchCounts = {
-      live: row?.live || 0,
-      finished: row?.finished || 0,
-      scheduled: row?.scheduled || 0,
-    };
+    let matchCounts = { live: 0, finished: 0, scheduled: 0 };
+    if (row?.match_counts) {
+      try { matchCounts = JSON.parse(row.match_counts); } catch (_) {}
+    }
+    versions.matchCounts = matchCounts;
 
     setVersionsCache(versions);
 

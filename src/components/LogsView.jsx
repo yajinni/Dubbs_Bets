@@ -1,22 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Search, Database, Clock, ChevronRight } from 'lucide-react';
+import { RefreshCw, Search, Database, Clock, ChevronRight, AlertCircle } from 'lucide-react';
 
 export default function LogsView() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState('prediction');
   const [searchTerm, setSearchTerm] = useState('');
+  const [fetchError, setFetchError] = useState(null);
 
   const fetchLogs = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const res = await fetch('/api/logs');
       const data = await res.json();
       if (Array.isArray(data)) {
         setLogs(data);
+        setFetchError(null);
+      } else {
+        setFetchError(data?.error || 'Unexpected response format');
+        setLogs([]);
       }
     } catch (err) {
       console.error('Failed to load logs:', err);
+      setFetchError(err.message || 'Failed to load logs');
     } finally {
       setLoading(false);
     }
@@ -150,7 +157,17 @@ export default function LogsView() {
 
       {/* Logs Table / List */}
       <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
-        {loading && logs.length === 0 ? (
+        {fetchError ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', gap: '12px', textAlign: 'center' }}>
+            <AlertCircle size={36} style={{ color: '#ef4444' }} />
+            <span style={{ fontWeight: '600', color: '#ef4444' }}>Failed to load logs</span>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{fetchError}</span>
+            <button onClick={fetchLogs} className="choice-btn" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: 'auto', padding: '8px 16px', marginTop: '8px' }}>
+              <RefreshCw size={16} />
+              Retry
+            </button>
+          </div>
+        ) : loading && logs.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: '12px' }}>
             <RefreshCw size={36} className="animate-spin text-secondary" />
             <span style={{ color: 'var(--text-secondary)' }}>Fetching activity logs...</span>

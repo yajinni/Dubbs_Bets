@@ -116,27 +116,28 @@ export default function InfoView() {
       {/* Max points summary */}
       <div className="glass-panel" style={{ background: 'rgba(139,92,246,0.07)', borderLeft: '4px solid var(--primary)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🔢 Maximum Points Per Match</h4>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-          {[
-            { label: 'Winner', pts: 3, color: '#a855f7' },
-            { label: 'Goals O/U', pts: 1, color: '#22c55e' },
-            { label: 'Underdog Bonus', pts: 1, color: '#fbbf24' },
-            { label: 'Scored First', pts: 2, color: '#ec4899' },
-            { label: 'Exact Score', pts: 4, color: '#eab308' },
-            { label: 'Exact Cards', pts: 3, color: '#06b6d4' },
-            { label: 'Highest scoring Half', pts: 2, color: '#c084fc' },
-            { label: 'Clean Sheet', pts: 1, color: '#38bdf8' },
-          ].map(item => (
-            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{item.label}</span>
-              <span style={{ fontSize: '14px', fontWeight: '800', color: item.color }}>+{item.pts}</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            {[
+              { label: 'Winner', pts: 3, color: '#a855f7' },
+              { label: 'Goals O/U', pts: 1, color: '#22c55e' },
+              { label: 'Underdog Bonus', pts: 1, color: '#fbbf24' },
+              { label: 'Scored First', pts: 2, color: '#ec4899' },
+              { label: 'Exact Score', pts: 4, color: '#eab308' },
+              { label: 'Exact Cards', pts: 3, color: '#06b6d4' },
+              { label: 'Highest scoring Half', pts: 2, color: '#c084fc' },
+              { label: 'Clean Sheet', pts: 1, color: '#38bdf8' },
+              { label: 'Penalties', pts: 2, color: '#f472b6' },
+            ].map(item => (
+              <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{item.label}</span>
+                <span style={{ fontSize: '14px', fontWeight: '800', color: item.color }}>+{item.pts}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(139,92,246,0.15)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Total Max</span>
+              <span style={{ fontSize: '16px', fontWeight: '900', color: '#c084fc' }}>{[3,1,1,2,4,3,2,1,2].reduce((a,b)=>a+b, 0)} pts</span>
             </div>
-          ))}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(139,92,246,0.15)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.3)' }}>
-            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Total Max</span>
-            <span style={{ fontSize: '16px', fontWeight: '900', color: '#c084fc' }}>18 pts</span>
           </div>
-        </div>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
           Picks are locked the moment a match kicks off. Make sure you submit before then!
         </p>

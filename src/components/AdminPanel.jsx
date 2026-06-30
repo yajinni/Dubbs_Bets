@@ -34,6 +34,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
   const [matchError, setMatchError] = useState('');
   const [matchSuccess, setMatchSuccess] = useState('');
   const [updatingMatch, setUpdatingMatch] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   // Handle local authentication check
   const handleLogin = (e) => {
@@ -120,9 +121,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
 
   // Remove a participant
   const handleDeletePlayer = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to remove ${name}? This will delete all their predictions and points!`)) {
-      return;
-    }
+    setConfirmDelete(null);
 
     try {
       const response = await fetch(`/api/participants?id=${id}`, {
@@ -137,7 +136,7 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
 
       onRefreshData(); // refresh leaderboard
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      setPlayerError(err.message);
     }
   };
 
@@ -284,15 +283,23 @@ export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
                 leaderboard.map(p => (
                   <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
                     <span style={{ fontWeight: '600' }}>{p.name}</span>
-                    <button 
-                      id={`delete-player-btn-${p.id}`}
-                      className="btn-danger" 
-                      style={{ padding: '4px 8px', fontSize: '12px' }}
-                      onClick={() => handleDeletePlayer(p.id, p.name)}
-                    >
-                      <Trash2 size={12} />
-                      Remove
-                    </button>
+                    {confirmDelete === p.id ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        Remove {p.name}?
+                        <button onClick={() => handleDeletePlayer(p.id, p.name)} className="btn-danger" style={{ padding: '4px 8px', fontSize: '12px' }}>Yes</button>
+                        <button onClick={() => setConfirmDelete(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px' }}>No</button>
+                      </span>
+                    ) : (
+                      <button 
+                        id={`delete-player-btn-${p.id}`}
+                        className="btn-danger" 
+                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                        onClick={() => setConfirmDelete(p.id)}
+                      >
+                        <Trash2 size={12} />
+                        Remove
+                      </button>
+                    )}
                   </div>
                 ))
               )}

@@ -25,11 +25,6 @@ export async function onRequest(context) {
 
     await checkAndInitDb(env.db);
 
-    // Ensure nav_layout column exists (safe migration — ignored if already there)
-    try {
-      await env.db.prepare('ALTER TABLE participants ADD COLUMN nav_layout TEXT DEFAULT NULL').run();
-    } catch (_) { /* already exists */ }
-
     if (method === 'GET') {
       const url = new URL(request.url);
       const participantId = url.searchParams.get('participantId');

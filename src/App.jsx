@@ -487,12 +487,9 @@ export default function App() {
       const data = await res.json();
       if (data.streamUrl) {
         window.open(data.streamUrl, '_blank', 'noopener,noreferrer');
-      } else {
-        window.open('https://istreameast.app/v52', '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
       console.error('Failed to resolve stream link:', err);
-      window.open('https://istreameast.app/v52', '_blank', 'noopener,noreferrer');
     }
   };
 

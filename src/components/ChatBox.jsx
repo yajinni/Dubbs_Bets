@@ -58,6 +58,7 @@ export default function ChatBox({ onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [config, setConfig] = useState(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [configLoading, setConfigLoading] = useState(true);
 
   const messagesEndRef = useRef(null);
@@ -134,10 +135,9 @@ export default function ChatBox({ onClose }) {
   };
 
   const clearChat = () => {
-    if (window.confirm("Are you sure you want to clear the chat history?")) {
-      setMessages([]);
-      setError(null);
-    }
+    setMessages([]);
+    setError(null);
+    setConfirmClear(false);
   };
 
   return (
@@ -160,9 +160,9 @@ export default function ChatBox({ onClose }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {!configLoading && config?.enabled && messages.length > 0 && (
+          {!configLoading && config?.enabled && messages.length > 0 && !confirmClear && (
             <button 
-              onClick={clearChat}
+              onClick={() => setConfirmClear(true)}
               style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}
               title="Clear Chat History"
               className="chat-clear-btn"
@@ -170,6 +170,13 @@ export default function ChatBox({ onClose }) {
               <Trash2 size={13} />
               <span className="hide-mobile">Clear</span>
             </button>
+          )}
+          {!configLoading && config?.enabled && confirmClear && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+              Clear all?
+              <button onClick={clearChat} style={{ background: 'rgba(239, 68, 68, 0.15)', border: 'none', color: '#ef4444', borderRadius: '6px', padding: '4px 8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Yes</button>
+              <button onClick={() => setConfirmClear(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', borderRadius: '6px', padding: '4px 8px', fontSize: '12px', cursor: 'pointer' }}>No</button>
+            </span>
           )}
 
           {onClose && (
