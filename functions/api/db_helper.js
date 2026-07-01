@@ -534,70 +534,66 @@ export async function consolidateExistingLogs(db) {
 }
 
 export async function recomputeLeaderboardCache(db) {
-  try {
-    await db.prepare(`
-      INSERT OR REPLACE INTO leaderboard_cache
-        (id, name, total_points,
-         correct_winners, correct_ou, correct_scores,
-         correct_first_scorer, correct_total_cards, correct_highest_scoring_half, correct_clean_sheet,
-         correct_penalties,
-         correct_bets_count, total_bets_count,
-         correct_underdog,
-         points_winner, points_ou, points_score,
-         points_first_scorer, points_total_cards, points_highest_scoring_half, points_clean_sheet,
-         points_penalties,
-         points_underdog)
-      SELECT
-        p.id,
-        p.name,
-        COALESCE(SUM(pred.total_points), 0),
-        COALESCE(SUM(CASE WHEN pred.points_winner > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN pred.points_ou > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN pred.points_score > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN pred.points_first_scorer > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN pred.points_penalties > 0 THEN 1 ELSE 0 END), 0),
-        SUM(CASE WHEN m.finished = 1 THEN
-          (CASE WHEN pred.points_winner > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_ou > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_score > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_first_scorer > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.points_penalties > 0 THEN 1 ELSE 0 END)
-        ELSE 0 END),
-        SUM(CASE WHEN m.finished = 1 THEN
-          (CASE WHEN pred.predicted_winner IS NOT NULL AND pred.predicted_winner != '' THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_over_under IS NOT NULL AND pred.predicted_over_under != '' THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_home_score IS NOT NULL THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_first_scorer IS NOT NULL AND pred.predicted_first_scorer != '' THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_total_cards IS NOT NULL THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_highest_scoring_half IS NOT NULL AND pred.predicted_highest_scoring_half != '' THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END) +
-          (CASE WHEN pred.predicted_penalties IS NOT NULL AND pred.predicted_penalties != '' THEN 1 ELSE 0 END)
-        ELSE 0 END),
-        COALESCE(SUM(CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END), 0),
-        COALESCE(SUM(pred.points_winner), 0),
-        COALESCE(SUM(pred.points_ou), 0),
-        COALESCE(SUM(pred.points_score), 0),
-        COALESCE(SUM(pred.points_first_scorer), 0),
-        COALESCE(SUM(pred.points_total_cards), 0),
-        COALESCE(SUM(pred.points_highest_scoring_half), 0),
-        COALESCE(SUM(pred.points_clean_sheet), 0),
-        COALESCE(SUM(pred.points_penalties), 0),
-        COALESCE(SUM(pred.points_cards_ou), 0)
-      FROM participants p
-      LEFT JOIN predictions pred ON p.id = pred.participant_id
-      LEFT JOIN matches m ON pred.match_id = m.id
-      GROUP BY p.id, p.name
-    `).run();
-  } catch (err) {
-    console.error('[LeaderboardCache] Failed to recompute:', err.message);
-  }
+  await db.prepare(`
+    INSERT OR REPLACE INTO leaderboard_cache
+      (id, name, total_points,
+       correct_winners, correct_ou, correct_scores,
+       correct_first_scorer, correct_total_cards, correct_highest_scoring_half, correct_clean_sheet,
+       correct_penalties,
+       correct_bets_count, total_bets_count,
+       correct_underdog,
+       points_winner, points_ou, points_score,
+       points_first_scorer, points_total_cards, points_highest_scoring_half, points_clean_sheet,
+       points_penalties,
+       points_underdog)
+    SELECT
+      p.id,
+      p.name,
+      COALESCE(SUM(pred.total_points), 0),
+      COALESCE(SUM(CASE WHEN pred.points_winner > 0 THEN 1 ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN pred.points_ou > 0 THEN 1 ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN pred.points_score > 0 THEN 1 ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN pred.points_first_scorer > 0 THEN 1 ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN pred.points_penalties > 0 THEN 1 ELSE 0 END), 0),
+      SUM(CASE WHEN m.finished = 1 THEN
+        (CASE WHEN pred.points_winner > 0 THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.points_ou > 0 THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.points_score > 0 THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.points_first_scorer > 0 THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.points_total_cards > 0 THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.points_highest_scoring_half > 0 THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.points_clean_sheet > 0 THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.points_penalties > 0 THEN 1 ELSE 0 END)
+      ELSE 0 END),
+      SUM(CASE WHEN m.finished = 1 THEN
+        (CASE WHEN pred.predicted_winner IS NOT NULL AND pred.predicted_winner != '' THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.predicted_over_under IS NOT NULL AND pred.predicted_over_under != '' THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.predicted_home_score IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.predicted_first_scorer IS NOT NULL AND pred.predicted_first_scorer != '' THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.predicted_total_cards IS NOT NULL THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.predicted_highest_scoring_half IS NOT NULL AND pred.predicted_highest_scoring_half != '' THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.predicted_clean_sheet IS NOT NULL AND pred.predicted_clean_sheet != '' THEN 1 ELSE 0 END) +
+        (CASE WHEN pred.predicted_penalties IS NOT NULL AND pred.predicted_penalties != '' THEN 1 ELSE 0 END)
+      ELSE 0 END),
+      COALESCE(SUM(CASE WHEN pred.points_cards_ou > 0 THEN 1 ELSE 0 END), 0),
+      COALESCE(SUM(pred.points_winner), 0),
+      COALESCE(SUM(pred.points_ou), 0),
+      COALESCE(SUM(pred.points_score), 0),
+      COALESCE(SUM(pred.points_first_scorer), 0),
+      COALESCE(SUM(pred.points_total_cards), 0),
+      COALESCE(SUM(pred.points_highest_scoring_half), 0),
+      COALESCE(SUM(pred.points_clean_sheet), 0),
+      COALESCE(SUM(pred.points_penalties), 0),
+      COALESCE(SUM(pred.points_cards_ou), 0)
+    FROM participants p
+    LEFT JOIN predictions pred ON p.id = pred.participant_id
+    LEFT JOIN matches m ON pred.match_id = m.id
+    GROUP BY p.id, p.name
+  `).run();
 }
 
 export async function recomputeStatsCache(db) {
@@ -1159,7 +1155,15 @@ export async function bumpVersion(db, key) {
 }
 
 export async function recomputeAllCaches(db) {
-  await recomputeLeaderboardCache(db);
+  // Recompute leaderboard cache first; if it fails, abort to keep both caches consistent.
+  // Without this guard, stats cache could be updated while leaderboard stays stale,
+  // causing Running > Total for players.
+  try {
+    await recomputeLeaderboardCache(db);
+  } catch (err) {
+    console.error('[AllCaches] Leaderboard cache failed, aborting to prevent inconsistency:', err.message);
+    return;
+  }
   await recomputeStatsCache(db);
   await bumpVersion(db, 'predictions');
   await bumpVersion(db, 'leaderboard');
