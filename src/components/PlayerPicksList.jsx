@@ -3,7 +3,7 @@ import { Users, RefreshCw } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 
 // Helper to compute live points
-function calcLivePoints(pred, match, liveHomeScore, liveAwayScore, liveTotalCards, liveFirstScorer, liveHighestHalf, liveCleanSheet) {
+function calcLivePoints(pred, match, liveHomeScore, liveAwayScore, liveTotalCards, liveFirstScorer, liveHighestHalf, liveCleanSheet, livePenalties) {
   if (!pred) return 0;
 
   const homeScore = liveHomeScore;
@@ -53,7 +53,10 @@ function calcLivePoints(pred, match, liveHomeScore, liveAwayScore, liveTotalCard
   // Highest Scoring Half: 2 pts
   const pHalf = (pred.predicted_highest_scoring_half && liveHighestHalf && pred.predicted_highest_scoring_half === liveHighestHalf) ? 2 : 0;
 
-  return pWinner + pOu + pScore + pUnderdog + pCleanSheet + pTotalCards + pFirstScorer + pHalf;
+  // Penalties: 2 pts
+  const pPenalties = (pred.predicted_penalties != null && livePenalties != null && pred.predicted_penalties === livePenalties) ? 2 : 0;
+
+  return pWinner + pOu + pScore + pUnderdog + pCleanSheet + pTotalCards + pFirstScorer + pHalf + pPenalties;
 }
 
 export default function PlayerPicksList({ 
@@ -299,6 +302,17 @@ export default function PlayerPicksList({
     ? matchPredictions.reduce((sum, pred) => sum + (pred.total_points || 0), 0)
     : 0;
 
+  const headerTotal = showsLiveTitle && leaderboard.length > 0
+    ? leaderboard.reduce((sum, op) => {
+        const opPred = matchPredictions?.find(ap => ap.participant_id === op.id);
+        const displayPred = opPred && opPred.id ? opPred : null;
+        if (displayPred) {
+          return sum + calcLivePoints(displayPred, m, activeHomeScore, activeAwayScore, actualCards, actualFirstScorer, actualHighestHalf, actualCleanSheet, actualPenalties);
+        }
+        return sum;
+      }, 0)
+    : playersTotalPoints;
+
   return (
     <div style={{ marginTop: '0', borderTop: '1px dashed var(--glass-border)', paddingTop: '6px' }}>
       <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
@@ -309,8 +323,8 @@ export default function PlayerPicksList({
           </div>
           {matchPredictions && matchPredictions.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'none', color: 'var(--primary-hover)' }}>
-              <span>Players Total:</span>
-              <span style={{ color: '#ffffff', fontWeight: '800' }}>{playersTotalPoints}</span>
+              <span>{showsLiveTitle ? 'Live Total:' : 'Match Total:'}</span>
+              <span style={{ color: '#ffffff', fontWeight: '800' }}>{headerTotal}</span>
             </div>
           )}
         </div>
@@ -408,7 +422,8 @@ export default function PlayerPicksList({
                 actualCards,
                 actualFirstScorer,
                 actualHighestHalf,
-                actualCleanSheet
+                actualCleanSheet,
+                actualPenalties
               );
             }
 
