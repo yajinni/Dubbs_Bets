@@ -126,6 +126,7 @@ export async function checkAndInitDb(db) {
     // Leaderboard cache migrations
     const lbMigrations = [
       ['correct_underdog', 'INTEGER DEFAULT 0'],
+      ['correct_penalties', 'INTEGER DEFAULT 0'],
       ['points_winner', 'REAL DEFAULT 0'],
       ['points_ou', 'REAL DEFAULT 0'],
       ['points_score', 'REAL DEFAULT 0'],
