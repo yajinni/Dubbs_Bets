@@ -78,14 +78,22 @@ export default function App() {
   });
   const [lastSync, setLastSync] = useState(null);
   const [selectedMatchId, setSelectedMatchId] = useState(null);
+  const getWeekFromDiffDays = (diffDays) => {
+    if (diffDays < 7) return 1;
+    if (diffDays < 14) return 2;
+    if (diffDays < 17) return 3;
+    if (diffDays < 23) return 4;
+    if (diffDays < 28) return 5;
+    return 6;
+  };
+
   const [selectedWeek, setSelectedWeek] = useState(() => {
     const startDate = new Date('2026-06-11T00:00:00Z');
     const today = new Date();
     const diffTime = today - startDate;
     if (diffTime < 0) return 1;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const week = Math.floor(diffDays / 7) + 1;
-    return Math.min(6, Math.max(1, week));
+    return getWeekFromDiffDays(diffDays);
   });
   const [matchPredictionsCache, setMatchPredictionsCache] = useState({});
   const [matchCounts, setMatchCounts] = useState({ live: 0, finished: 0, scheduled: 0 });
@@ -746,14 +754,13 @@ export default function App() {
     return `${dateStr} ET`;
   };
 
-  const getWeekNumber = (dateString) => {
-    if (!dateString) return 1;
-    const startDate = new Date('2026-06-11T00:00:00Z');
-    const d = new Date(dateString);
-    const diffTime = d - startDate;
-    if (diffTime < 0) return 1;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    return Math.floor(diffDays / 7) + 1;
+  const getWeekNumber = (match) => {
+    if (!match || !match.matchday) return 1;
+    const md = match.matchday;
+    if (md <= 3) return md;
+    if (md === 4) return 4;
+    if (md === 5) return 5;
+    return 6;
   };
 
   const formatLastSync = (isoString) => {
@@ -773,7 +780,7 @@ export default function App() {
   };
 
   const getMatchesForWeek = (weekNum) => {
-    return matches.filter(m => getWeekNumber(m.local_date) === weekNum && m.finished !== 1);
+    return matches.filter(m => getWeekNumber(m) === weekNum && m.finished !== 1);
   };
 
   const handleTabChange = (tab) => {
