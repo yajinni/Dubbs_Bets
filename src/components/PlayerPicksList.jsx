@@ -62,7 +62,7 @@ function calcLivePoints(pred, match, liveHomeScore, liveAwayScore, liveTotalCard
 export default function PlayerPicksList({ 
   m, 
   matchPredictions, 
-  leaderboard, 
+  leaderboard = [], 
   activeParticipantId, 
   runningPointsMap = {}, 
   winnerLocalState = {},
@@ -226,7 +226,7 @@ export default function PlayerPicksList({
             }
           }
         }
-      } catch (_) {}
+      } catch (err) { console.warn('ESPN live stats fetch error:', err); }
     };
 
     fetchLiveStats();

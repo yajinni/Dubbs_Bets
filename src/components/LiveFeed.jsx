@@ -344,8 +344,8 @@ export default function LiveFeed({ espnEventId, matchStatus, homeCode, awayCode,
             });
           }
         }
-      } catch (_) {
-        // ignore score parse errors
+      } catch (err) {
+        console.warn('ESPN live stats parse error:', err);
       }
 
       // Pull all stats from boxscore

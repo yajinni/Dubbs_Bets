@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, UserPlus, Trash2, Edit, Save, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 
-export default function AdminPanel({ matches, leaderboard, onRefreshData }) {
+export default function AdminPanel({ matches = [], leaderboard = [], onRefreshData }) {
   const [password, setPassword] = useState(() => localStorage.getItem('admin_pass') || '');
   const [isAuth, setIsAuth] = useState(false);
   const [authError, setAuthError] = useState('');
