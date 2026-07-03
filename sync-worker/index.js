@@ -1,22 +1,24 @@
-// Cloudflare Worker Cron Trigger: locks odds for today's matches at midnight ET
+// Cloudflare Worker Cron Trigger: locks odds for today's matches at 9 AM ET (Daily Odds Lock)
+// The `midnightLock=true` query param is preserved for Pages route compatibility
+// but the lock time is 9 AM ET, not midnight.
 export default {
   async scheduled(event, env, ctx) {
     const pagesUrl = env.PAGES_URL || "https://dubbs-bets.pages.dev";
     const secret = env.SYNC_SECRET;
-    
+
     const url = `${pagesUrl}/api/sync?midnightLock=true${secret ? `&secret=${secret}` : ''}`;
-    
-    console.log(`[Midnight Lock] Calling: ${pagesUrl}/api/sync?midnightLock=true...`);
-    
+
+    console.log(`[Daily Odds Lock] Calling: ${pagesUrl}/api/sync?midnightLock=true...`);
+
     ctx.waitUntil(
       fetch(url)
         .then(async (response) => {
           const text = await response.text();
-          console.log(`[Midnight Lock] Response status: ${response.status}`);
-          console.log(`[Midnight Lock] Response body: ${text}`);
+          console.log(`[Daily Odds Lock] Response status: ${response.status}`);
+          console.log(`[Daily Odds Lock] Response body: ${text}`);
         })
         .catch((error) => {
-          console.error(`[Midnight Lock] Error: ${error.message}`);
+          console.error(`[Daily Odds Lock] Error: ${error.message}`);
         })
     );
   }
