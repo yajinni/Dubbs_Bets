@@ -10,6 +10,45 @@ const headers = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+// Validation helpers
+function isPositiveIntegerId(v) {
+  if (v === undefined || v === null) return false;
+  const n = parseInt(v);
+  return Number.isInteger(n) && n > 0;
+}
+
+function isNonNegativeInteger(v) {
+  if (v === null || v === undefined) return true;
+  const n = parseInt(v);
+  return Number.isInteger(n) && n >= 0;
+}
+
+function isFiniteNumber(v) {
+  if (v === null || v === undefined) return false;
+  return typeof v === 'number' && Number.isFinite(v);
+}
+
+function isPercentValue(v) {
+  if (v === undefined || v === null) return false;
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100;
+}
+
+function isEnumValue(v, allowed) {
+  return allowed.includes(v);
+}
+
+// Local helper: treat a match as started
+function matchHasStarted(match) {
+  if (!match) return true;
+  if (match.status !== 'scheduled') return true;
+  if (match.finished === 1) return true;
+  if (!match.local_date) return true;
+  const ms = new Date(match.local_date).getTime();
+  if (isNaN(ms)) return true;
+  if (ms <= Date.now()) return true;
+  return false;
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers });
 }
@@ -80,7 +119,6 @@ export async function onRequest(context) {
     }
 
     if (method === 'POST') {
-      // Admin update of match details (scores, odds, status)
       const body = await request.json();
       const { 
         password,
@@ -107,16 +145,65 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ error: authError.message }), { status: authError.status, headers });
       }
 
-      if (!matchId) {
-        return new Response(JSON.stringify({ error: 'Match ID is required' }), { status: 400, headers });
+      // Strict input validation
+      if (!isPositiveIntegerId(matchId)) {
+        return new Response(JSON.stringify({ error: 'Invalid matchId: must be a positive integer' }), { status: 400, headers });
+      }
+      if (!isNonNegativeInteger(homeScore)) {
+        return new Response(JSON.stringify({ error: 'Invalid homeScore: must be a non-negative integer' }), { status: 400, headers });
+      }
+      if (!isNonNegativeInteger(awayScore)) {
+        return new Response(JSON.stringify({ error: 'Invalid awayScore: must be a non-negative integer' }), { status: 400, headers });
+      }
+      if (homeHtScore !== null && homeHtScore !== undefined && !isNonNegativeInteger(homeHtScore)) {
+        return new Response(JSON.stringify({ error: 'Invalid homeHtScore: must be a non-negative integer' }), { status: 400, headers });
+      }
+      if (awayHtScore !== null && awayHtScore !== undefined && !isNonNegativeInteger(awayHtScore)) {
+        return new Response(JSON.stringify({ error: 'Invalid awayHtScore: must be a non-negative integer' }), { status: 400, headers });
+      }
+      if (status && !isEnumValue(status, ['scheduled', 'live', 'finished'])) {
+        return new Response(JSON.stringify({ error: 'Invalid status: must be scheduled, live, or finished' }), { status: 400, headers });
+      }
+      if (actualCards !== undefined && actualCards !== null && actualCards !== '' && !isNonNegativeInteger(actualCards)) {
+        return new Response(JSON.stringify({ error: 'Invalid actualCards: must be a non-negative integer' }), { status: 400, headers });
+      }
+      if (actualFirstScorer && !isEnumValue(actualFirstScorer, ['home', 'away', 'none'])) {
+        return new Response(JSON.stringify({ error: 'Invalid actualFirstScorer: must be home, away, or none' }), { status: 400, headers });
+      }
+      if (homeWinPct !== undefined && !isPercentValue(parseFloat(homeWinPct))) {
+        return new Response(JSON.stringify({ error: 'Invalid homeWinPct: must be a number between 0 and 100' }), { status: 400, headers });
+      }
+      if (awayWinPct !== undefined && !isPercentValue(parseFloat(awayWinPct))) {
+        return new Response(JSON.stringify({ error: 'Invalid awayWinPct: must be a number between 0 and 100' }), { status: 400, headers });
+      }
+      if (drawWinPct !== undefined && !isPercentValue(parseFloat(drawWinPct))) {
+        return new Response(JSON.stringify({ error: 'Invalid drawWinPct: must be a number between 0 and 100' }), { status: 400, headers });
+      }
+      if (overUnderLine !== undefined && !isFiniteNumber(parseFloat(overUnderLine))) {
+        return new Response(JSON.stringify({ error: 'Invalid overUnderLine: must be a finite number' }), { status: 400, headers });
+      }
+      if (overOdds !== undefined && !isFiniteNumber(parseFloat(overOdds))) {
+        return new Response(JSON.stringify({ error: 'Invalid overOdds: must be a finite number' }), { status: 400, headers });
+      }
+      if (underOdds !== undefined && !isFiniteNumber(parseFloat(underOdds))) {
+        return new Response(JSON.stringify({ error: 'Invalid underOdds: must be a finite number' }), { status: 400, headers });
+      }
+      if (cardsLine !== undefined && !isFiniteNumber(parseFloat(cardsLine))) {
+        return new Response(JSON.stringify({ error: 'Invalid cardsLine: must be a finite number' }), { status: 400, headers });
       }
 
-      // Convert variables to correct SQL types
+      // Normalize types
       const hScore = homeScore !== undefined ? parseInt(homeScore) : 0;
       const aScore = awayScore !== undefined ? parseInt(awayScore) : 0;
       const hHtScore = (homeHtScore !== undefined && homeHtScore !== null && homeHtScore !== '') ? parseInt(homeHtScore) : null;
       const aHtScore = (awayHtScore !== undefined && awayHtScore !== null && awayHtScore !== '') ? parseInt(awayHtScore) : null;
-      const finishedVal = finished ? 1 : 0;
+      let finishedVal = finished ? 1 : 0;
+      let normalizedStatus = status || 'scheduled';
+
+      // Enforce consistency
+      if (finishedVal === 1) normalizedStatus = 'finished';
+      if (normalizedStatus === 'finished') finishedVal = 1;
+
       const hPct = homeWinPct !== undefined ? parseFloat(homeWinPct) : 33.3;
       const aPct = awayWinPct !== undefined ? parseFloat(awayWinPct) : 33.3;
       const dPct = drawWinPct !== undefined ? parseFloat(drawWinPct) : 33.3;
@@ -127,55 +214,73 @@ export async function onRequest(context) {
       const actCards = (actualCards !== undefined && actualCards !== '') ? parseInt(actualCards) : null;
       let actFirstScorer = actualFirstScorer || null;
 
+      // Fetch existing match
       const oldMatch = await env.db.prepare(`
         SELECT m.*, t1.fifa_code AS home_code, t2.fifa_code AS away_code
         FROM matches m
         LEFT JOIN teams t1 ON m.home_team_id = t1.id
         LEFT JOIN teams t2 ON m.away_team_id = t2.id
         WHERE m.id = ?
-      `).bind(matchId).first();
+      `).bind(parseInt(matchId)).first();
 
+      if (!oldMatch) {
+        return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
+      }
+
+      // Protect odds after kickoff
+      if (matchHasStarted(oldMatch)) {
+        const oddsFieldsChanged =
+          (homeWinPct !== undefined && oldMatch.home_win_pct !== hPct) ||
+          (awayWinPct !== undefined && oldMatch.away_win_pct !== aPct) ||
+          (drawWinPct !== undefined && oldMatch.draw_pct !== dPct) ||
+          (overUnderLine !== undefined && oldMatch.over_under_line !== ouLine) ||
+          (overOdds !== undefined && oldMatch.over_odds !== oOdds) ||
+          (underOdds !== undefined && oldMatch.under_odds !== uOdds) ||
+          (cardsLine !== undefined && oldMatch.cards_line !== cLine);
+
+        if (oddsFieldsChanged) {
+          return new Response(JSON.stringify({ error: 'Cannot change odds after match has started' }), { status: 400, headers });
+        }
+      }
+
+      // Log odds changes only when odds actually changed
       if (oldMatch) {
         const homeCode = oldMatch.home_code || oldMatch.home_team_name.substring(0, 3).toUpperCase();
         const awayCode = oldMatch.away_code || oldMatch.away_team_name.substring(0, 3).toUpperCase();
         const matchLabel = `${homeCode} vs ${awayCode}`;
         
-        // Log Odds changes (grouped Winner probabilities)
-        if (oldMatch.home_win_pct !== hPct || oldMatch.away_win_pct !== aPct || oldMatch.draw_pct !== dPct) {
+        if (homeWinPct !== undefined && (oldMatch.home_win_pct !== hPct || oldMatch.away_win_pct !== aPct || oldMatch.draw_pct !== dPct)) {
           const oldVal = `H: ${oldMatch.home_win_pct}%, D: ${oldMatch.draw_pct}%, A: ${oldMatch.away_win_pct}%`;
           const newVal = `H: ${hPct}%, D: ${dPct}%, A: ${aPct}%`;
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} Winner`, oldVal, newVal);
+          await logChange(env.db, 'odds', parseInt(matchId), null, `${matchLabel} Winner`, oldVal, newVal);
         }
 
-        // Log O/U Goals (combined line and odds)
-        if (oldMatch.over_under_line !== ouLine || oldMatch.over_odds !== oOdds || oldMatch.under_odds !== uOdds) {
+        if (overUnderLine !== undefined && (oldMatch.over_under_line !== ouLine || oldMatch.over_odds !== oOdds || oldMatch.under_odds !== uOdds)) {
           const oldVal = `Line: ${oldMatch.over_under_line}, ${formatOuPct(oldMatch.over_odds, oldMatch.under_odds)}`;
           const newVal = `Line: ${ouLine}, ${formatOuPct(oOdds, uOdds)}`;
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} O/U Goals`, oldVal, newVal);
+          await logChange(env.db, 'odds', parseInt(matchId), null, `${matchLabel} O/U Goals`, oldVal, newVal);
         }
 
-        // Log O/U Score First (Cards O/U line and odds combined)
         const oldCardsOverOdds = oldMatch.cards_over_odds !== undefined ? oldMatch.cards_over_odds : 1.9;
         const oldCardsUnderOdds = oldMatch.cards_under_odds !== undefined ? oldMatch.cards_under_odds : 1.9;
-        if (oldMatch.cards_line !== cLine) {
+        if (cardsLine !== undefined && oldMatch.cards_line !== cLine) {
           const oldVal = `Line: ${oldMatch.cards_line}, ${formatOuPct(oldCardsOverOdds, oldCardsUnderOdds)}`;
           const newVal = `Line: ${cLine}, ${formatOuPct(1.9, 1.9)}`;
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} O/U Score First`, oldVal, newVal);
+          await logChange(env.db, 'odds', parseInt(matchId), null, `${matchLabel} O/U Score First`, oldVal, newVal);
         }
 
-        // Log Score/Cards changes
         if (oldMatch.home_score !== hScore || oldMatch.away_score !== aScore) {
-          await logChange(env.db, 'score', matchId, null, `${matchLabel} score`, `${oldMatch.home_score}-${oldMatch.away_score}`, `${hScore}-${aScore}`);
+          await logChange(env.db, 'score', parseInt(matchId), null, `${matchLabel} score`, `${oldMatch.home_score}-${oldMatch.away_score}`, `${hScore}-${aScore}`);
         }
         if (oldMatch.home_ht_score !== hHtScore || oldMatch.away_ht_score !== aHtScore) {
           const oldHt = (oldMatch.home_ht_score !== null && oldMatch.away_ht_score !== null) ? `${oldMatch.home_ht_score}-${oldMatch.away_ht_score}` : 'null';
           const newHt = (hHtScore !== null && aHtScore !== null) ? `${hHtScore}-${aHtScore}` : 'null';
           if (oldHt !== newHt) {
-            await logChange(env.db, 'score', matchId, null, `${matchLabel} halftime score`, oldHt, newHt);
+            await logChange(env.db, 'score', parseInt(matchId), null, `${matchLabel} halftime score`, oldHt, newHt);
           }
         }
         if (oldMatch.actual_cards !== actCards) {
-          await logChange(env.db, 'cards', matchId, null, `${matchLabel} actual cards`, oldMatch.actual_cards, actCards);
+          await logChange(env.db, 'cards', parseInt(matchId), null, `${matchLabel} actual cards`, oldMatch.actual_cards, actCards);
         }
       }
 
@@ -201,15 +306,14 @@ export async function onRequest(context) {
       `;
 
       await env.db.prepare(updateQuery)
-        .bind(hScore, aScore, hHtScore, aHtScore, status || 'scheduled', finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, actFirstScorer, matchId)
+        .bind(hScore, aScore, hHtScore, aHtScore, normalizedStatus, finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, actFirstScorer, parseInt(matchId))
         .run();
 
       clearMatchesCache();
       await bumpVersion(env.db, 'matches');
 
-      // If finished, we want to recalculate predictions/points for this match
       if (finishedVal === 1) {
-        await scoreAllPredictionsForMatch(env.db, matchId, {
+        await scoreAllPredictionsForMatch(env.db, parseInt(matchId), {
           home_score: hScore,
           away_score: aScore,
           over_under_line: ouLine,
@@ -228,7 +332,7 @@ export async function onRequest(context) {
 
       await emitEvent(env.db, 'matches_updated');
       await flushLogs(env.db);
-      const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
+      const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(parseInt(matchId)).first();
       return new Response(JSON.stringify({ success: true, match: updatedMatch }), { status: 200, headers });
     }
 

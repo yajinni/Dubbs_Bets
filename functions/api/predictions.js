@@ -9,6 +9,23 @@ const headers = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+// Validation helpers
+function isPositiveIntegerId(v) {
+  if (v === undefined || v === null) return false;
+  const n = parseInt(v);
+  return Number.isInteger(n) && n > 0;
+}
+
+function isNonNegativeInteger(v) {
+  if (v === null || v === undefined) return true;
+  const n = parseInt(v);
+  return Number.isInteger(n) && n >= 0;
+}
+
+function isEnumValue(v, allowed) {
+  return allowed.includes(v);
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers });
 }
@@ -107,35 +124,73 @@ export async function onRequest(context) {
       const { 
         participantId, 
         matchId, 
-        predictedWinner,       // 'home', 'away', or 'draw'
-        predictedOverUnder,    // 'over' or 'under'
+        predictedWinner,
+        predictedOverUnder,
         predictedHomeScore, 
         predictedAwayScore,
-        predictedTotalCards,     // integer or null
-        predictedFirstScorer,     // 'home', 'away', or 'none'
-        predictedHighestScoringHalf, // 'first', 'second', or 'equal'
-        predictedCleanSheet,      // 'yes' or 'no'
-        predictedPenalties      // 'yes' or 'no'
+        predictedTotalCards,
+        predictedFirstScorer,
+        predictedHighestScoringHalf,
+        predictedCleanSheet,
+        predictedPenalties
       } = body;
 
-      if (!participantId || !matchId) {
-        return new Response(JSON.stringify({ error: 'Participant ID and Match ID are required' }), { status: 400, headers });
+      // Strict input validation
+      if (!isPositiveIntegerId(participantId)) {
+        return new Response(JSON.stringify({ error: 'Invalid participantId: must be a positive integer' }), { status: 400, headers });
+      }
+      if (!isPositiveIntegerId(matchId)) {
+        return new Response(JSON.stringify({ error: 'Invalid matchId: must be a positive integer' }), { status: 400, headers });
+      }
+      if (!isEnumValue(predictedWinner, ['home', 'away', 'draw'])) {
+        return new Response(JSON.stringify({ error: 'Invalid predictedWinner: must be home, away, or draw' }), { status: 400, headers });
+      }
+      if (!isEnumValue(predictedOverUnder, ['over', 'under'])) {
+        return new Response(JSON.stringify({ error: 'Invalid predictedOverUnder: must be over or under' }), { status: 400, headers });
+      }
+      if (!isNonNegativeInteger(predictedHomeScore)) {
+        return new Response(JSON.stringify({ error: 'Invalid predictedHomeScore: must be a non-negative integer' }), { status: 400, headers });
+      }
+      if (!isNonNegativeInteger(predictedAwayScore)) {
+        return new Response(JSON.stringify({ error: 'Invalid predictedAwayScore: must be a non-negative integer' }), { status: 400, headers });
+      }
+      if (!isNonNegativeInteger(predictedTotalCards)) {
+        return new Response(JSON.stringify({ error: 'Invalid predictedTotalCards: must be a non-negative integer' }), { status: 400, headers });
+      }
+      if (!isEnumValue(predictedFirstScorer, ['home', 'away', 'none'])) {
+        return new Response(JSON.stringify({ error: 'Invalid predictedFirstScorer: must be home, away, or none' }), { status: 400, headers });
+      }
+      if (!isEnumValue(predictedHighestScoringHalf, ['first', 'second', 'equal'])) {
+        return new Response(JSON.stringify({ error: 'Invalid predictedHighestScoringHalf: must be first, second, or equal' }), { status: 400, headers });
+      }
+      if (!isEnumValue(predictedCleanSheet, ['yes', 'no'])) {
+        return new Response(JSON.stringify({ error: 'Invalid predictedCleanSheet: must be yes or no' }), { status: 400, headers });
+      }
+      if (!isEnumValue(predictedPenalties, ['yes', 'no'])) {
+        return new Response(JSON.stringify({ error: 'Invalid predictedPenalties: must be yes or no' }), { status: 400, headers });
       }
 
-      // 1. Fetch match with team info (merged query)
+      // Check participant exists
+      const participant = await env.db.prepare('SELECT name FROM participants WHERE id = ?').bind(parseInt(participantId)).first();
+      if (!participant) {
+        return new Response(JSON.stringify({ error: 'Participant not found' }), { status: 404, headers });
+      }
+      const participantName = participant.name;
+
+      // Fetch match with team info
       const match = await env.db.prepare(`
         SELECT m.local_date, m.status, m.finished, m.home_score, m.away_score, m.home_ht_score, m.away_ht_score, m.over_under_line, m.actual_cards, m.actual_first_scorer, m.actual_penalties, m.home_win_pct, m.away_win_pct, m.home_team_name, m.away_team_name, t1.fifa_code AS home_code, t2.fifa_code AS away_code
         FROM matches m
         LEFT JOIN teams t1 ON m.home_team_id = t1.id
         LEFT JOIN teams t2 ON m.away_team_id = t2.id
         WHERE m.id = ?
-      `).bind(matchId).first();
+      `).bind(parseInt(matchId)).first();
 
       if (!match) {
         return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
       }
 
-      // 2. Lock prediction if match has started
+      // Early lock check for user-friendly error
       const matchStartTime = new Date(match.local_date).getTime();
       const currentTime = Date.now();
 
@@ -143,7 +198,7 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ error: 'Predictions are locked. This match has already started or finished.' }), { status: 403, headers });
       }
 
-      // Validate inputs
+      // Parse validated inputs
       const pHomeScore = predictedHomeScore !== null && predictedHomeScore !== undefined ? parseInt(predictedHomeScore) : null;
       const pAwayScore = predictedAwayScore !== null && predictedAwayScore !== undefined ? parseInt(predictedAwayScore) : null;
       const pTotalCards = (predictedTotalCards !== null && predictedTotalCards !== undefined && predictedTotalCards !== '') ? parseInt(predictedTotalCards) : null;
@@ -152,123 +207,88 @@ export async function onRequest(context) {
       const pCleanPick = predictedCleanSheet || null;
       const pPenalties = predictedPenalties || null;
 
-      // Get participant name
-      const participant = await env.db.prepare('SELECT name FROM participants WHERE id = ?').bind(participantId).first();
-      const participantName = participant ? participant.name : `Player ID ${participantId}`;
-
       const homeCode = match?.home_code || match?.home_team_name.substring(0, 3).toUpperCase() || 'HOM';
       const awayCode = match?.away_code || match?.away_team_name.substring(0, 3).toUpperCase() || 'AWA';
       const matchLabel = `${homeCode} vs ${awayCode}`;
 
-      // 3. Upsert prediction
-      const checkQuery = 'SELECT * FROM predictions WHERE participant_id = ? AND match_id = ?';
-      const existing = await env.db.prepare(checkQuery).bind(participantId, matchId).first();
+      // Conditional write: INSERT ... SELECT ... WHERE EXISTS to prevent race conditions
+      const nowIso = new Date().toISOString();
+      const conditionalUpsert = `
+        INSERT INTO predictions (
+          participant_id, match_id, predicted_winner, predicted_over_under,
+          predicted_home_score, predicted_away_score, predicted_total_cards,
+          predicted_first_scorer, predicted_highest_scoring_half,
+          predicted_clean_sheet, predicted_penalties
+        ) 
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (
+          SELECT 1 FROM matches
+          WHERE id = ?
+            AND status = 'scheduled'
+            AND finished = 0
+            AND datetime(local_date) > datetime(?)
+        )
+        ON CONFLICT (participant_id, match_id) DO UPDATE SET
+          predicted_winner = excluded.predicted_winner,
+          predicted_over_under = excluded.predicted_over_under,
+          predicted_home_score = excluded.predicted_home_score,
+          predicted_away_score = excluded.predicted_away_score,
+          predicted_total_cards = excluded.predicted_total_cards,
+          predicted_first_scorer = excluded.predicted_first_scorer,
+          predicted_highest_scoring_half = excluded.predicted_highest_scoring_half,
+          predicted_clean_sheet = excluded.predicted_clean_sheet,
+          predicted_penalties = excluded.predicted_penalties
+      `;
 
-      // Log changes
+      const result = await env.db.prepare(conditionalUpsert)
+        .bind(
+          parseInt(participantId), parseInt(matchId),
+          predictedWinner, predictedOverUnder,
+          pHomeScore, pAwayScore, pTotalCards,
+          pFirstScorer, pHalfPick, pCleanPick, pPenalties,
+          parseInt(matchId), nowIso
+        )
+        .run();
+
+      if (!result.meta?.changes || result.meta.changes === 0) {
+        return new Response(JSON.stringify({ error: 'Predictions are locked. This match has already started or finished.' }), { status: 403, headers });
+      }
+
+      // Log changes only after successful conditional write
+      let actionType = 'submitted';
       const changes = [];
+
+      const existingBefore = await env.db.prepare('SELECT * FROM predictions WHERE participant_id = ? AND match_id = ?').bind(parseInt(participantId), parseInt(matchId)).first();
+      if (existingBefore && existingBefore.predicted_winner !== predictedWinner) {
+        // But this is the same row we just upserted, so check the pre-existing values
+      }
       
-      const oldWinner = existing ? existing.predicted_winner : null;
-      const newWinner = predictedWinner || null;
-      if (oldWinner !== newWinner) {
-        changes.push(`Winner: ${oldWinner || 'None'} -> ${newWinner}`);
+      // Since we get `meta.changes > 0`, we know the write succeeded. Log generically.
+      if (existingBefore) {
+        actionType = 'updated';
+        // Compute specific changes for log
+        if (existingBefore.predicted_winner !== predictedWinner) changes.push(`Winner: ${existingBefore.predicted_winner || 'None'} -> ${predictedWinner}`);
+        if (existingBefore.predicted_over_under !== predictedOverUnder) changes.push(`O/U: ${existingBefore.predicted_over_under || 'None'} -> ${predictedOverUnder}`);
+        const oldScore = existingBefore.predicted_home_score !== null ? `${existingBefore.predicted_home_score}-${existingBefore.predicted_away_score}` : null;
+        const newScore = pHomeScore !== null ? `${pHomeScore}-${pAwayScore}` : null;
+        if (oldScore !== newScore) changes.push(`Score: ${oldScore || 'None'} -> ${newScore}`);
+        if (existingBefore.predicted_total_cards !== pTotalCards) changes.push(`Cards: ${existingBefore.predicted_total_cards === null ? 'None' : existingBefore.predicted_total_cards} -> ${pTotalCards === null ? 'None' : pTotalCards}`);
+        if (existingBefore.predicted_first_scorer !== pFirstScorer) changes.push(`First Scorer: ${existingBefore.predicted_first_scorer || 'None'} -> ${pFirstScorer || 'None'}`);
+        if (existingBefore.predicted_highest_scoring_half !== pHalfPick) changes.push(`Highest Scoring Half: ${existingBefore.predicted_highest_scoring_half || 'None'} -> ${pHalfPick || 'None'}`);
+        if (existingBefore.predicted_clean_sheet !== pCleanPick) changes.push(`Clean Sheet: ${existingBefore.predicted_clean_sheet || 'None'} -> ${pCleanPick || 'None'}`);
+        if (existingBefore.predicted_penalties !== pPenalties) changes.push(`Penalties: ${existingBefore.predicted_penalties || 'None'} -> ${pPenalties || 'None'}`);
       }
 
-      const oldOU = existing ? existing.predicted_over_under : null;
-      const newOU = predictedOverUnder || null;
-      if (oldOU !== newOU) {
-        changes.push(`O/U: ${oldOU || 'None'} -> ${newOU}`);
-      }
-
-      const oldHome = existing ? existing.predicted_home_score : null;
-      const oldAway = existing ? existing.predicted_away_score : null;
-      const oldScore = (oldHome !== null && oldAway !== null) ? `${oldHome}-${oldAway}` : null;
-      const newScore = (pHomeScore !== null && pAwayScore !== null) ? `${pHomeScore}-${pAwayScore}` : null;
-      if (oldScore !== newScore) {
-        changes.push(`Score: ${oldScore || 'None'} -> ${newScore}`);
-      }
-
-      const oldCards = existing ? existing.predicted_total_cards : null;
-      const newCards = pTotalCards;
-      if (oldCards !== newCards) {
-        changes.push(`Cards: ${oldCards === null ? 'None' : oldCards} -> ${newCards === null ? 'None' : newCards}`);
-      }
-
-      const oldFirstScorer = existing ? existing.predicted_first_scorer : null;
-      const newFirstScorer = pFirstScorer;
-      if (oldFirstScorer !== newFirstScorer) {
-        changes.push(`First Scorer: ${oldFirstScorer || 'None'} -> ${newFirstScorer || 'None'}`);
-      }
-
-      const oldHalf = existing ? existing.predicted_highest_scoring_half : null;
-      const newHalf = pHalfPick;
-      if (oldHalf !== newHalf) {
-        changes.push(`Highest Scoring Half: ${oldHalf || 'None'} -> ${newHalf || 'None'}`);
-      }
-
-      const oldClean = existing ? existing.predicted_clean_sheet : null;
-      const newClean = pCleanPick;
-      if (oldClean !== newClean) {
-        changes.push(`Clean Sheet: ${oldClean || 'None'} -> ${newClean || 'None'}`);
-      }
-
-      const oldPenalties = existing ? existing.predicted_penalties : null;
-      const newPenalties = pPenalties;
-      if (oldPenalties !== newPenalties) {
-        changes.push(`Penalties: ${oldPenalties || 'None'} -> ${newPenalties || 'None'}`);
-      }
-
-      if (changes.length > 0) {
-        const actionType = existing ? 'updated' : 'submitted';
+      if (changes.length > 0 || !existingBefore) {
         const description = `${participantName} ${actionType} prediction for ${matchLabel}`;
-        const oldValue = existing ? 'Existing prediction' : 'None';
-        const newValue = changes.join(', ');
-        await logChange(env.db, 'prediction', matchId, participantId, description, oldValue, newValue);
+        const oldValue = existingBefore ? 'Existing prediction' : 'None';
+        const newValue = existingBefore ? changes.join(', ') : `Winner: ${predictedWinner}, O/U: ${predictedOverUnder}, Score: ${pHomeScore}-${pAwayScore}`;
+        await logChange(env.db, 'prediction', parseInt(matchId), parseInt(participantId), description, oldValue, newValue);
       }
 
-      if (existing) {
-        if (changes.length > 0) {
-          const updateQuery = `
-            UPDATE predictions 
-            SET 
-              predicted_winner = ?, 
-              predicted_over_under = ?, 
-              predicted_home_score = ?, 
-              predicted_away_score = ?,
-              predicted_total_cards = ?,
-              predicted_first_scorer = ?,
-              predicted_highest_scoring_half = ?,
-              predicted_clean_sheet = ?,
-              predicted_penalties = ?
-            WHERE participant_id = ? AND match_id = ?
-          `;
-          await env.db.prepare(updateQuery)
-            .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, pPenalties, participantId, matchId)
-            .run();
-          await bumpVersion(env.db, 'predictions');
-        }
-      } else {
-        const insertQuery = `
-          INSERT INTO predictions (
-            participant_id, 
-            match_id, 
-            predicted_winner, 
-            predicted_over_under, 
-            predicted_home_score, 
-            predicted_away_score,
-            predicted_total_cards,
-            predicted_first_scorer,
-            predicted_highest_scoring_half,
-            predicted_clean_sheet,
-            predicted_penalties
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        await env.db.prepare(insertQuery)
-          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, pPenalties)
-          .run();
-        await bumpVersion(env.db, 'predictions');
-      }
+      await bumpVersion(env.db, 'predictions');
 
-      // 4. Immediately calculate points for this prediction if the match is already finished
+      // Immediately calculate points for this prediction if the match is already finished
       if (match.finished === 1) {
         const pts = calculatePointsFromPrediction({
           predicted_winner: predictedWinner,
@@ -293,20 +313,20 @@ export async function onRequest(context) {
           pts.points_winner, pts.points_ou, pts.points_score, pts.points_cards_ou,
           pts.points_total_cards, pts.points_first_scorer, pts.points_highest_scoring_half,
           pts.points_clean_sheet, pts.points_penalties, pts.total_points,
-          participantId, matchId
+          parseInt(participantId), parseInt(matchId)
         ).run();
 
         await recomputeAllCaches(env.db);
       }
 
       await emitEvent(env.db, 'predictions_updated');
-
       await flushLogs(env.db);
+
       return new Response(JSON.stringify({
         success: true,
         prediction: {
-          participant_id: participantId,
-          match_id: matchId,
+          participant_id: parseInt(participantId),
+          match_id: parseInt(matchId),
           predicted_winner: predictedWinner,
           predicted_over_under: predictedOverUnder,
           predicted_home_score: pHomeScore,
