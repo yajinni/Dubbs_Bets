@@ -854,7 +854,7 @@ export function MatchCard({ m, pred, activeParticipantId, onSave, matchPredictio
   );
 }
 
-export default function MatchesList({ matches, predictions, activeParticipantId, onSave, selectedMatchId, onSelectMatch, matchPredictionsCache = {}, getMatchPredictions, leaderboard = [], onRefresh, onLoadArchive, hasFullMatches }) {
+export default function MatchesList({ matches = [], predictions = [], activeParticipantId, onSave, selectedMatchId, onSelectMatch, matchPredictionsCache = {}, getMatchPredictions, leaderboard = [], onRefresh, onLoadArchive, hasFullMatches }) {
   const [filterStage, setFilterStage] = useState('all');
   const [showPast, setShowPast] = useState(false);
   const [visibleCount, setVisibleCount] = useState(3);

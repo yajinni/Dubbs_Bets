@@ -50,7 +50,8 @@ export default function ChatBox({ onClose }) {
     try {
       const saved = sessionStorage.getItem('dubbs_chat_history');
       return saved ? JSON.parse(saved) : [];
-    } catch (_) {
+    } catch (err) {
+      console.warn('Failed to parse chat history from sessionStorage:', err);
       return [];
     }
   });
@@ -92,7 +93,7 @@ export default function ChatBox({ onClose }) {
   useEffect(() => {
     try {
       sessionStorage.setItem('dubbs_chat_history', JSON.stringify(messages));
-    } catch (_) {}
+    } catch (err) { console.warn('Failed to save chat history to sessionStorage:', err); }
     scrollToBottom();
   }, [messages]);
 
