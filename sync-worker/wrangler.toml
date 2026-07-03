@@ -1,10 +1,11 @@
-# Wrangler configuration for Cloudflare Worker midnight odds-lock cron
+# Wrangler configuration for Cloudflare Worker 9 AM ET odds-lock cron
 name = "dubbs-bets-sync-cron"
 main = "index.js"
 compatibility_date = "2026-06-10"
 
 [triggers]
-crons = ["0 13 * * *"] # 13:00 UTC = 9:00 AM EDT (June); locks odds for today's matches
+# 13:00 UTC = 9:00 AM ET during World Cup 2026 (EDT, UTC-4). Locks odds for today's matches.
+crons = ["0 13 * * *"]
 
 [vars]
 PAGES_URL = "https://dubbs-bets.pages.dev"
