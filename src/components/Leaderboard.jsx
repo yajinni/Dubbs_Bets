@@ -12,7 +12,7 @@ const pointValues = {
   underdog: 1,
 };
 
-export default function Leaderboard({ leaderboard, activeParticipantId }) {
+export default function Leaderboard({ leaderboard = [], activeParticipantId }) {
   const [viewMode, setViewMode] = useState('count');
 
   return (
