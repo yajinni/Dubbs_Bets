@@ -3,7 +3,7 @@ import { Calendar } from 'lucide-react';
 import { shortenTeamName } from '../utils/teamNames';
 import PlayerPicksList from './PlayerPicksList';
 
-export default function MatchView({ matches, statsData, fetchStats, leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch, onRefresh, matchPredictionsCache = {}, getMatchPredictions }) {
+export default function MatchView({ matches = [], statsData, fetchStats, leaderboard = [], activeParticipantId, selectedMatchId, onClearSelectedMatch, onRefresh, matchPredictionsCache = {}, getMatchPredictions }) {
   const [filterStage, setFilterStage] = useState('all');
 
   // Lazy-load stats on mount
