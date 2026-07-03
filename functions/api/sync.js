@@ -165,7 +165,7 @@ export async function onRequest(context) {
     // Run actual sync from ESPN. If it fails, let the error propagate.
     syncResults = await syncFromESPN(env.db);
 
-    // Only fetch odds if forced (since midnightLock cron task at 12:05 handles standard daily odds update)
+    // Only fetch odds if forced (the 9 AM ET daily lock cron handles the standard daily odds update)
     if (force && !skipOdds && apiKeyOdds && apiKeyOdds !== '') {
       try {
         const oddsResults = await syncFromTheOddsAPI(env.db, apiKeyOdds);
@@ -708,6 +708,48 @@ async function syncFromESPN(db) {
 
 
 // --------------------------------------------------------
+// Shared date/lock helpers (ET-aware, no server-local time)
+// --------------------------------------------------------
+
+// Returns YYYY-MM-DD for dateInput in America/New_York.
+function getEtDateString(dateInput) {
+  if (dateInput === null || dateInput === undefined || dateInput === '') return '';
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(d); // en-CA yields YYYY-MM-DD
+}
+
+// Compares ET calendar dates of matchDateInput and nowInput.
+// Returns difference in days (match date minus now date): 0 = today, 1 = tomorrow, etc.
+// Returns null when match date is missing/invalid.
+function getEtDayDiff(matchDateInput, nowInput = new Date()) {
+  const matchStr = getEtDateString(matchDateInput);
+  const nowStr = getEtDateString(nowInput);
+  if (!matchStr || !nowStr) return null;
+  const matchDay = new Date(`${matchStr}T00:00:00Z`).getTime();
+  const nowDay = new Date(`${nowStr}T00:00:00Z`).getTime();
+  return Math.round((matchDay - nowDay) / (1000 * 60 * 60 * 24));
+}
+
+// A match is "started" if it is not scheduled, already finished, at/after kickoff,
+// or has a missing/invalid date. Odds updates are blocked once started.
+function hasMatchStarted(match, nowMs = Date.now()) {
+  if (!match) return true;
+  if (match.status !== 'scheduled') return true;
+  if (match.finished === 1) return true;
+  if (!match.local_date) return true;
+  const kickoff = new Date(match.local_date).getTime();
+  if (isNaN(kickoff)) return true;
+  return nowMs >= kickoff;
+}
+
+// --------------------------------------------------------
 // The Odds API Sync Implementation
 // --------------------------------------------------------
 async function syncFromTheOddsAPI(db, apiKey) {
@@ -745,23 +787,16 @@ async function syncFromTheOddsAPI(db, apiKey) {
     const dbMatch = matchesByKey2.get(normalizeTeamName(match.home_team) + '|' + normalizeTeamName(match.away_team));
     
     if (dbMatch) {
+      // Never change odds after kickoff or once locked. force=true cannot bypass this.
       if (dbMatch.odds_locked === 1) {
         continue;
       }
-      // Date filter: only update odds for matches scheduled for today and the next 2 days
-      let isWithinWindow = false;
-      if (dbMatch.local_date) {
-        try {
-          const tzFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
-          const matchDateStr = tzFormatter.format(new Date(dbMatch.local_date));
-          const todayDateStr = tzFormatter.format(new Date());
-          const diffTime = new Date(`${matchDateStr}T00:00:00`) - new Date(`${todayDateStr}T00:00:00`);
-          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-          if (diffDays >= 0 && diffDays <= 2) {
-            isWithinWindow = true;
-          }
-        } catch (_) {}
+      if (hasMatchStarted(dbMatch)) {
+        continue;
       }
+      // Date filter: only update odds for matches scheduled for today and the next 2 ET days
+      const diffDays = getEtDayDiff(dbMatch.local_date);
+      const isWithinWindow = diffDays !== null && diffDays >= 0 && diffDays <= 2;
       if (!isWithinWindow) {
         continue;
       }
@@ -822,34 +857,42 @@ async function syncFromTheOddsAPI(db, apiKey) {
         const oldVal = `Line: ${dbMatch.over_under_line}, ${formatOuPct(dbMatch.over_odds, dbMatch.under_odds)}`;
         const newVal = `Line: ${ouLine}, ${formatOuPct(overOdds, underOdds)}`;
         await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} O/U Goals`, oldVal, newVal);
-          // Update D1 database with the latest odds only if something changed
-        if (dbMatch.home_win_pct !== homePct || dbMatch.away_win_pct !== awayPct || dbMatch.draw_pct !== drawPct ||
-            dbMatch.over_under_line !== ouLine || dbMatch.over_odds !== overOdds || dbMatch.under_odds !== underOdds) {
-          oddsUpdates.push(
-            db.prepare(`
-              UPDATE matches
-              SET
-                home_win_pct = ?,
-                away_win_pct = ?,
-                draw_pct = ?,
-                over_under_line = ?,
-                over_odds = ?,
-                under_odds = ?,
-                odds_updated_at = ?
-              WHERE id = ?
-            `).bind(
-              homePct,
-              awayPct,
-              drawPct,
-              ouLine,
-              overOdds,
-              underOdds,
-              new Date().toISOString(),
-              dbMatch.id
-            )
-          );
-          matchesUpdated++;
-        }
+      }
+
+      // Enqueue a single DB update (covers both H2H and O/U) only when odds actually changed.
+      const oddsChanged =
+        dbMatch.home_win_pct !== homePct ||
+        dbMatch.away_win_pct !== awayPct ||
+        dbMatch.draw_pct !== drawPct ||
+        dbMatch.over_under_line !== ouLine ||
+        dbMatch.over_odds !== overOdds ||
+        dbMatch.under_odds !== underOdds;
+
+      if (oddsChanged) {
+        oddsUpdates.push(
+          db.prepare(`
+            UPDATE matches
+            SET
+              home_win_pct = ?,
+              away_win_pct = ?,
+              draw_pct = ?,
+              over_under_line = ?,
+              over_odds = ?,
+              under_odds = ?,
+              odds_updated_at = ?
+            WHERE id = ?
+          `).bind(
+            homePct,
+            awayPct,
+            drawPct,
+            ouLine,
+            overOdds,
+            underOdds,
+            new Date().toISOString(),
+            dbMatch.id
+          )
+        );
+        matchesUpdated++;
       }
     }
   }
@@ -868,7 +911,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
 }
 
 // --------------------------------------------------------
-// Midnight Lock and Match Task Helpers
+// 9 AM Odds Lock and Match Task Helpers
 // --------------------------------------------------------
 
 async function handleLockMatchTask(db, matchId, apiKey) {
@@ -882,7 +925,20 @@ async function handleLockMatchTask(db, matchId, apiKey) {
     console.log(`Match ${matchId} is already locked.`);
     return;
   }
-  
+
+  // After kickoff, odds values must never change. Lock-only (no odds fetch, no odds write).
+  const started = hasMatchStarted(match);
+  const matchLabel = `${match.home_team_name} vs ${match.away_team_name}`;
+
+  if (started) {
+    console.log(`[Lock Task] Match ${matchId} has started; lock-only (no odds changes).`);
+    await db.prepare(`UPDATE matches SET odds_locked = 1, odds_updated_at = ? WHERE id = ?`)
+      .bind(new Date().toISOString(), matchId).run();
+    await bumpVersion(db, 'matches');
+    console.log(`[Lock Task] Lock-only update applied for match ${matchId}.`);
+    return;
+  }
+
   let homePct = match.home_win_pct;
   let awayPct = match.away_win_pct;
   let drawPct = match.draw_pct;
@@ -896,26 +952,26 @@ async function handleLockMatchTask(db, matchId, apiKey) {
       const sportKey = 'soccer_fifa_world_cup';
       const oddsRes = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${apiKey}&regions=us&markets=h2h,totals&oddsFormat=decimal`);
       const oddsData = await oddsRes.json();
-      
+
       if (oddsRes.status === 200) {
-        const apiMatch = oddsData.find(m => 
-          normalizeTeamName(m.home_team) === normalizeTeamName(match.home_team_name) && 
+        const apiMatch = oddsData.find(m =>
+          normalizeTeamName(m.home_team) === normalizeTeamName(match.home_team_name) &&
           normalizeTeamName(m.away_team) === normalizeTeamName(match.away_team_name)
         );
-        
+
         if (apiMatch && apiMatch.bookmakers && apiMatch.bookmakers.length > 0) {
           const bookmaker = apiMatch.bookmakers.find(b => {
             const markets = b.markets || [];
             return markets.some(mk => mk.key === 'h2h') && markets.some(mk => mk.key === 'totals');
           }) || apiMatch.bookmakers[0];
-          
+
           if (bookmaker) {
             const h2h = bookmaker.markets.find(mk => mk.key === 'h2h');
             if (h2h) {
               const homeOutcome = h2h.outcomes.find(o => o.name === apiMatch.home_team);
               const awayOutcome = h2h.outcomes.find(o => o.name === apiMatch.away_team);
               const drawOutcome = h2h.outcomes.find(o => o.name === 'Draw');
-              
+
               if (homeOutcome && awayOutcome && drawOutcome) {
                 const pHome = 1.0 / homeOutcome.price;
                 const pAway = 1.0 / awayOutcome.price;
@@ -926,7 +982,7 @@ async function handleLockMatchTask(db, matchId, apiKey) {
                 drawPct = Math.round((pDraw / sum) * 1000) / 10;
               }
             }
-            
+
             const totalsResult = pickBestTotals(apiMatch.bookmakers);
             if (totalsResult) {
               ouLine = totalsResult.line;
@@ -942,9 +998,8 @@ async function handleLockMatchTask(db, matchId, apiKey) {
       console.warn(`Failed to fetch latest odds for locking match ${matchId}: ${err.message}. Using existing odds.`);
     }
   }
-  
+
   // Log changes if any
-  const matchLabel = `${match.home_team_name} vs ${match.away_team_name}`;
   if (match.home_win_pct !== homePct || match.away_win_pct !== awayPct || match.draw_pct !== drawPct) {
     const oldVal = `H: ${match.home_win_pct}%, D: ${match.draw_pct}%, A: ${match.away_win_pct}%`;
     const newVal = `H: ${homePct}%, D: ${drawPct}%, A: ${awayPct}%`;
@@ -956,7 +1011,7 @@ async function handleLockMatchTask(db, matchId, apiKey) {
     await logChange(db, 'odds', match.id, null, `${matchLabel} O/U Goals (LOCK)`, oldVal, newVal);
   }
 
-  // Update D1 database and set odds_locked = 1
+  // Update D1 database and set odds_locked = 1 (match has not started; odds values may update)
   await db.prepare(`
     UPDATE matches
     SET
@@ -979,9 +1034,9 @@ async function handleLockMatchTask(db, matchId, apiKey) {
     new Date().toISOString(),
     matchId
   ).run();
-  
+
   await bumpVersion(db, 'matches');
-  
+
   console.log(`[Lock Task] Successfully updated and locked odds for match ${matchId}.`);
 }
 
@@ -1165,17 +1220,22 @@ async function handleScoreMatchTask(db, matchId) {
 }
 
 async function handleMidnightLock(db, apiKey) {
-  const todayFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
-  const today = todayFormatter.format(new Date());
+  // 9 AM ET daily odds lock. The query param/route is still `midnightLock` for
+  // backwards compatibility, but this runs at 9 AM ET, not midnight.
+  const now = new Date();
+  const todayEt = getEtDateString(now);
 
+  // Load all unfinished AND unlocked matches; today's matches are force-locked below.
   const { results: matches } = await db.prepare(
     "SELECT * FROM matches WHERE odds_locked = 0 AND finished = 0"
   ).all();
 
   if (!matches || matches.length === 0) {
-    console.log('[Midnight Lock] No unlocked matches found.');
-    return { updated: 0, locked: 0 };
+    console.log('[9 AM Odds Lock] No unlocked matches found.');
+    return { updated: 0, locked: 0, lockOnly: 0, skippedStartedOdds: 0, unmatchedToday: 0 };
   }
+
+  const todayMatches = matches.filter(m => getEtDateString(m.local_date) === todayEt);
 
   const sportKey = 'soccer_fifa_world_cup';
   const oddsRes = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${apiKey}&regions=us&markets=h2h,totals&oddsFormat=decimal`);
@@ -1187,7 +1247,11 @@ async function handleMidnightLock(db, apiKey) {
 
   let updated = 0;
   let locked = 0;
-  const midnightUpdates = [];
+  let lockOnly = 0;
+  let skippedStartedOdds = 0;
+  let unmatchedToday = 0;
+  const lockUpdates = [];
+  const lockedTodayIds = new Set();
 
   // Pre-build lookup map for O(1) match matching
   const matchesByKey3 = new Map();
@@ -1201,23 +1265,14 @@ async function handleMidnightLock(db, apiKey) {
 
     if (!dbMatch) continue;
 
-    // Date filter: only update odds for matches scheduled for today and the next 2 days
-    let isWithinWindow = false;
-    if (dbMatch.local_date) {
-      try {
-        const tzFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
-        const matchDateStr = tzFormatter.format(new Date(dbMatch.local_date));
-        const todayDateStr = tzFormatter.format(new Date());
-        const diffTime = new Date(`${matchDateStr}T00:00:00`) - new Date(`${todayDateStr}T00:00:00`);
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays >= 0 && diffDays <= 2) {
-          isWithinWindow = true;
-        }
-      } catch (_) {}
-    }
-    if (!isWithinWindow) {
+    // Only consider matches scheduled for today through the next 2 ET days.
+    const diffDays = getEtDayDiff(dbMatch.local_date, now);
+    if (diffDays === null || diffDays < 0 || diffDays > 2) {
       continue;
     }
+
+    const isToday = getEtDateString(dbMatch.local_date) === todayEt;
+    const started = hasMatchStarted(dbMatch, now.getTime());
 
     let homePct = dbMatch.home_win_pct;
     let awayPct = dbMatch.away_win_pct;
@@ -1226,7 +1281,8 @@ async function handleMidnightLock(db, apiKey) {
     let overOdds = dbMatch.over_odds;
     let underOdds = dbMatch.under_odds;
 
-    if (match.bookmakers && match.bookmakers.length > 0) {
+    // Only fetch/apply odds values when the match has not started.
+    if (!started && match.bookmakers && match.bookmakers.length > 0) {
       const bookmaker = match.bookmakers.find(b => {
         const markets = b.markets || [];
         return markets.some(mk => mk.key === 'h2h') && markets.some(mk => mk.key === 'totals');
@@ -1259,56 +1315,128 @@ async function handleMidnightLock(db, apiKey) {
       }
     }
 
-    let isToday = false;
-    if (dbMatch.local_date) {
-      try {
-        const md = new Date(dbMatch.local_date.replace(' ', 'T'));
-        const matchDate = todayFormatter.format(md);
-        isToday = matchDate === today;
-      } catch (_) {}
+    if (isToday) {
+      // Every today ET match returned by The Odds API must be locked.
+      lockedTodayIds.add(dbMatch.id);
+
+      if (started) {
+        // Started today match: lock-only, never change odds values.
+        lockOnly++;
+        skippedStartedOdds++;
+        lockUpdates.push(
+          db.prepare(`UPDATE matches SET odds_locked = 1, odds_updated_at = ? WHERE id = ?`)
+            .bind(new Date().toISOString(), dbMatch.id)
+        );
+      } else {
+        // Not started: lock + update odds values only if they changed.
+        const oddsChanged =
+          dbMatch.home_win_pct !== homePct ||
+          dbMatch.away_win_pct !== awayPct ||
+          dbMatch.draw_pct !== drawPct ||
+          dbMatch.over_under_line !== ouLine ||
+          dbMatch.over_odds !== overOdds ||
+          dbMatch.under_odds !== underOdds;
+
+        if (oddsChanged) {
+          updated++;
+          lockUpdates.push(
+            db.prepare(`
+              UPDATE matches
+              SET
+                home_win_pct = ?,
+                away_win_pct = ?,
+                draw_pct = ?,
+                over_under_line = ?,
+                over_odds = ?,
+                under_odds = ?,
+                odds_updated_at = ?,
+                odds_locked = 1
+              WHERE id = ?
+            `).bind(
+              homePct, awayPct, drawPct,
+              ouLine, overOdds, underOdds,
+              new Date().toISOString(),
+              dbMatch.id
+            )
+          );
+        } else {
+          // Lock-only when odds did not change.
+          lockOnly++;
+          lockUpdates.push(
+            db.prepare(`UPDATE matches SET odds_locked = 1, odds_updated_at = ? WHERE id = ?`)
+              .bind(new Date().toISOString(), dbMatch.id)
+          );
+        }
+      }
+      locked++;
+    } else if (!started) {
+      // Future (within window) match: update odds only, do not lock.
+      const oddsChanged =
+        dbMatch.home_win_pct !== homePct ||
+        dbMatch.away_win_pct !== awayPct ||
+        dbMatch.draw_pct !== drawPct ||
+        dbMatch.over_under_line !== ouLine ||
+        dbMatch.over_odds !== overOdds ||
+        dbMatch.under_odds !== underOdds;
+
+      if (oddsChanged) {
+        updated++;
+        lockUpdates.push(
+          db.prepare(`
+            UPDATE matches
+            SET
+              home_win_pct = ?,
+              away_win_pct = ?,
+              draw_pct = ?,
+              over_under_line = ?,
+              over_odds = ?,
+              under_odds = ?,
+              odds_updated_at = ?
+            WHERE id = ?
+          `).bind(
+            homePct, awayPct, drawPct,
+            ouLine, overOdds, underOdds,
+            new Date().toISOString(),
+            dbMatch.id
+          )
+        );
+      }
+    } else {
+      // Started future match: skip odds update entirely, do not lock.
+      skippedStartedOdds++;
     }
+  }
 
-    midnightUpdates.push(
-      db.prepare(`
-        UPDATE matches
-        SET
-          home_win_pct = ?,
-          away_win_pct = ?,
-          draw_pct = ?,
-          over_under_line = ?,
-          over_odds = ?,
-          under_odds = ?,
-          odds_updated_at = ?,
-          odds_locked = CASE WHEN ? = 1 THEN 1 ELSE odds_locked END
-        WHERE id = ?
-      `).bind(
-        homePct, awayPct, drawPct,
-        ouLine, overOdds, underOdds,
-        new Date().toISOString(),
-        isToday ? 1 : 0,
-        dbMatch.id
-      )
+  // Second pass: every today ET match not seen in The Odds API must still be locked.
+  for (const m of todayMatches) {
+    if (lockedTodayIds.has(m.id)) continue;
+    unmatchedToday++;
+    lockOnly++;
+    locked++;
+    lockUpdates.push(
+      db.prepare(`UPDATE matches SET odds_locked = 1, odds_updated_at = ? WHERE id = ?`)
+        .bind(new Date().toISOString(), m.id)
     );
-
-    updated++;
-    if (isToday) locked++;
   }
 
-  if (midnightUpdates.length > 0) {
-    await db.batch(midnightUpdates);
+  if (lockUpdates.length > 0) {
+    await db.batch(lockUpdates);
+    clearMatchesCache();
     await bumpVersion(db, 'matches');
+    await emitEvent(db, 'matches_updated');
   }
 
-  await logChange(db, 'system', null, null, '🌙 Midnight Odds Lock', null, `Updated: ${updated}, Locked Today: ${locked}`);
-  console.log(`[Midnight Lock] Updated ${updated} matches, locked ${locked} today's matches.`);
+  await logChange(db, 'system', null, null, '🔒 9 AM Odds Lock', null,
+    `Updated: ${updated}, Locked: ${locked}, Lock-only: ${lockOnly}, Skipped started odds: ${skippedStartedOdds}, Unmatched today: ${unmatchedToday}`);
+  console.log(`[9 AM Odds Lock] Updated ${updated}, locked ${locked} (lock-only ${lockOnly}), skipped started odds ${skippedStartedOdds}, unmatched today ${unmatchedToday}.`);
 
   // Prune logs older than 14 days to keep database size clean
   try {
     const pruneResult = await db.prepare("DELETE FROM logs WHERE timestamp < datetime('now', '-14 days')").run();
-    console.log(`[Midnight Lock] Pruned logs older than 14 days. Changes: ${pruneResult.meta?.changes || 0}`);
+    console.log(`[9 AM Odds Lock] Pruned logs older than 14 days. Changes: ${pruneResult.meta?.changes || 0}`);
   } catch (err) {
-    console.error('[Midnight Lock] Failed to prune old logs:', err.message);
+    console.error('[9 AM Odds Lock] Failed to prune old logs:', err.message);
   }
 
-  return { updated, locked };
+  return { updated, locked, lockOnly, skippedStartedOdds, unmatchedToday };
 }
