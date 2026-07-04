@@ -231,6 +231,32 @@ function normalizeTeamName(name) {
   return n;
 }
 
+function getEtDateString(dateInput) {
+  const date = new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const get = type => parts.find(part => part.type === type)?.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+function getEtDayDiff(matchDateInput, nowInput = new Date()) {
+  const matchDate = getEtDateString(matchDateInput);
+  const nowDate = getEtDateString(nowInput);
+  if (!matchDate || !nowDate) return null;
+  return Math.round((new Date(`${matchDate}T00:00:00Z`) - new Date(`${nowDate}T00:00:00Z`)) / (1000 * 60 * 60 * 24));
+}
+
+function hasMatchStarted(match, nowMs = Date.now()) {
+  if (!match || match.status !== 'scheduled' || match.finished === 1 || !match.local_date) return true;
+  const matchTime = new Date(match.local_date).getTime();
+  return Number.isNaN(matchTime) || matchTime <= nowMs;
+}
+
 function getActualPenalties(penaltiesStartAt, localDate, finished, homeCompetitor, awayCompetitor) {
   if (!penaltiesStartAt || !localDate || localDate < penaltiesStartAt) return null;
   if (homeCompetitor.shootoutScore != null || awayCompetitor.shootoutScore != null) return 'yes';
@@ -311,7 +337,6 @@ async function syncFromESPN(db) {
   }
   
   let matchesUpdated = 0;
-  let finishedDuringSync = 0;
   let scoringChangedDuringSync = false;
   const matchedDbIds = new Set();
   const matchedEventKeys = new Set();
@@ -523,7 +548,6 @@ async function syncFromESPN(db) {
         );
         
         if (finished === 1 && scoringChanged) {
-          if (dbMatch.finished !== 1) finishedDuringSync++;
           scoringChangedDuringSync = true;
           await scoreAllPredictionsForMatch(db, dbMatch.id, {
             home_score: homeScore,
@@ -674,7 +698,6 @@ async function syncFromESPN(db) {
       )
     );
     if (finished === 1 && scoringChanged) {
-      if (dbMatch.finished !== 1) finishedDuringSync++;
       scoringChangedDuringSync = true;
       await scoreAllPredictionsForMatch(db, dbMatch.id, {
         home_score: homeScore, away_score: awayScore,
@@ -724,7 +747,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
   
   
   const { results: dbMatches } = await db.prepare(`
-    SELECT m.id, m.home_team_name, m.away_team_name, m.home_team_label, m.away_team_label, m.local_date, m.finished, m.home_win_pct, m.away_win_pct, m.draw_pct, m.over_under_line, m.over_odds, m.under_odds, m.cards_line, m.cards_over_odds, m.cards_under_odds, m.odds_locked, m.odds_updated_at, t1.fifa_code AS home_code, t2.fifa_code AS away_code
+    SELECT m.id, m.home_team_name, m.away_team_name, m.home_team_label, m.away_team_label, m.local_date, m.status, m.finished, m.home_win_pct, m.away_win_pct, m.draw_pct, m.over_under_line, m.over_odds, m.under_odds, m.cards_line, m.cards_over_odds, m.cards_under_odds, m.odds_locked, m.odds_updated_at, t1.fifa_code AS home_code, t2.fifa_code AS away_code
     FROM matches m
     LEFT JOIN teams t1 ON m.home_team_id = t1.id
     LEFT JOIN teams t2 ON m.away_team_id = t2.id
@@ -745,23 +768,12 @@ async function syncFromTheOddsAPI(db, apiKey) {
     const dbMatch = matchesByKey2.get(normalizeTeamName(match.home_team) + '|' + normalizeTeamName(match.away_team));
     
     if (dbMatch) {
-      if (dbMatch.odds_locked === 1) {
+      if (dbMatch.odds_locked === 1 || hasMatchStarted(dbMatch)) {
         continue;
       }
       // Date filter: only update odds for matches scheduled for today and the next 2 days
-      let isWithinWindow = false;
-      if (dbMatch.local_date) {
-        try {
-          const tzFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
-          const matchDateStr = tzFormatter.format(new Date(dbMatch.local_date));
-          const todayDateStr = tzFormatter.format(new Date());
-          const diffTime = new Date(`${matchDateStr}T00:00:00`) - new Date(`${todayDateStr}T00:00:00`);
-          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-          if (diffDays >= 0 && diffDays <= 2) {
-            isWithinWindow = true;
-          }
-        } catch (_) {}
-      }
+      const diffDays = getEtDayDiff(dbMatch.local_date);
+      const isWithinWindow = diffDays !== null && diffDays >= 0 && diffDays <= 2;
       if (!isWithinWindow) {
         continue;
       }
@@ -810,7 +822,14 @@ async function syncFromTheOddsAPI(db, apiKey) {
       const awayCode = dbMatch.away_code || dbMatch.away_team_name.substring(0, 3).toUpperCase();
       const matchLabel = `${homeCode} vs ${awayCode}`;
 
-      // Log Winner probabilities change
+      const oddsChanged =
+        dbMatch.home_win_pct !== homePct ||
+        dbMatch.away_win_pct !== awayPct ||
+        dbMatch.draw_pct !== drawPct ||
+        dbMatch.over_under_line !== ouLine ||
+        dbMatch.over_odds !== overOdds ||
+        dbMatch.under_odds !== underOdds;
+
       if (dbMatch.home_win_pct !== homePct || dbMatch.away_win_pct !== awayPct || dbMatch.draw_pct !== drawPct) {
         const oldVal = `H: ${dbMatch.home_win_pct}%, D: ${dbMatch.draw_pct}%, A: ${dbMatch.away_win_pct}%`;
         const newVal = `H: ${homePct}%, D: ${drawPct}%, A: ${awayPct}%`;
@@ -822,34 +841,24 @@ async function syncFromTheOddsAPI(db, apiKey) {
         const oldVal = `Line: ${dbMatch.over_under_line}, ${formatOuPct(dbMatch.over_odds, dbMatch.under_odds)}`;
         const newVal = `Line: ${ouLine}, ${formatOuPct(overOdds, underOdds)}`;
         await logChange(db, 'odds', dbMatch.id, null, `${matchLabel} O/U Goals`, oldVal, newVal);
-          // Update D1 database with the latest odds only if something changed
-        if (dbMatch.home_win_pct !== homePct || dbMatch.away_win_pct !== awayPct || dbMatch.draw_pct !== drawPct ||
-            dbMatch.over_under_line !== ouLine || dbMatch.over_odds !== overOdds || dbMatch.under_odds !== underOdds) {
-          oddsUpdates.push(
-            db.prepare(`
-              UPDATE matches
-              SET
-                home_win_pct = ?,
-                away_win_pct = ?,
-                draw_pct = ?,
-                over_under_line = ?,
-                over_odds = ?,
-                under_odds = ?,
-                odds_updated_at = ?
-              WHERE id = ?
-            `).bind(
-              homePct,
-              awayPct,
-              drawPct,
-              ouLine,
-              overOdds,
-              underOdds,
-              new Date().toISOString(),
-              dbMatch.id
-            )
-          );
-          matchesUpdated++;
-        }
+      }
+
+      if (oddsChanged) {
+        oddsUpdates.push(
+          db.prepare(`
+            UPDATE matches
+            SET
+              home_win_pct = ?,
+              away_win_pct = ?,
+              draw_pct = ?,
+              over_under_line = ?,
+              over_odds = ?,
+              under_odds = ?,
+              odds_updated_at = ?
+            WHERE id = ?
+          `).bind(homePct, awayPct, drawPct, ouLine, overOdds, underOdds, new Date().toISOString(), dbMatch.id)
+        );
+        matchesUpdated++;
       }
     }
   }
@@ -868,7 +877,7 @@ async function syncFromTheOddsAPI(db, apiKey) {
 }
 
 // --------------------------------------------------------
-// Midnight Lock and Match Task Helpers
+// Daily Odds Lock and Match Task Helpers
 // --------------------------------------------------------
 
 async function handleLockMatchTask(db, matchId, apiKey) {
@@ -890,7 +899,9 @@ async function handleLockMatchTask(db, matchId, apiKey) {
   let overOdds = match.over_odds;
   let underOdds = match.under_odds;
 
-  if (apiKey && apiKey !== '') {
+  const matchStarted = hasMatchStarted(match);
+
+  if (!matchStarted && apiKey && apiKey !== '') {
     try {
       // Fetch odds
       const sportKey = 'soccer_fifa_world_cup';
@@ -982,7 +993,7 @@ async function handleLockMatchTask(db, matchId, apiKey) {
   
   await bumpVersion(db, 'matches');
   
-  console.log(`[Lock Task] Successfully updated and locked odds for match ${matchId}.`);
+  console.log(`[Lock Task] Successfully locked odds for match ${matchId}.`);
 }
 
 async function handleScoreMatchTask(db, matchId) {
@@ -1165,17 +1176,19 @@ async function handleScoreMatchTask(db, matchId) {
 }
 
 async function handleMidnightLock(db, apiKey) {
-  const todayFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
-  const today = todayFormatter.format(new Date());
+  const todayEt = getEtDateString(new Date());
 
   const { results: matches } = await db.prepare(
     "SELECT * FROM matches WHERE odds_locked = 0 AND finished = 0"
   ).all();
 
   if (!matches || matches.length === 0) {
-    console.log('[Midnight Lock] No unlocked matches found.');
-    return { updated: 0, locked: 0 };
+    console.log('[9 AM Odds Lock] No unlocked matches found.');
+    return { updated: 0, locked: 0, lockOnly: 0, skippedStartedOdds: 0, unmatchedToday: 0 };
   }
+
+  const todayMatches = matches.filter(m => getEtDateString(m.local_date) === todayEt);
+  const lockedTodayIds = new Set();
 
   const sportKey = 'soccer_fifa_world_cup';
   const oddsRes = await fetch(`https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${apiKey}&regions=us&markets=h2h,totals&oddsFormat=decimal`);
@@ -1187,6 +1200,9 @@ async function handleMidnightLock(db, apiKey) {
 
   let updated = 0;
   let locked = 0;
+  let lockOnly = 0;
+  let skippedStartedOdds = 0;
+  let unmatchedToday = 0;
   const midnightUpdates = [];
 
   // Pre-build lookup map for O(1) match matching
@@ -1201,21 +1217,23 @@ async function handleMidnightLock(db, apiKey) {
 
     if (!dbMatch) continue;
 
-    // Date filter: only update odds for matches scheduled for today and the next 2 days
-    let isWithinWindow = false;
-    if (dbMatch.local_date) {
-      try {
-        const tzFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
-        const matchDateStr = tzFormatter.format(new Date(dbMatch.local_date));
-        const todayDateStr = tzFormatter.format(new Date());
-        const diffTime = new Date(`${matchDateStr}T00:00:00`) - new Date(`${todayDateStr}T00:00:00`);
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays >= 0 && diffDays <= 2) {
-          isWithinWindow = true;
-        }
-      } catch (_) {}
-    }
+    const diffDays = getEtDayDiff(dbMatch.local_date);
+    const isWithinWindow = diffDays !== null && diffDays >= 0 && diffDays <= 2;
     if (!isWithinWindow) {
+      continue;
+    }
+
+    const isToday = getEtDateString(dbMatch.local_date) === todayEt;
+    const started = hasMatchStarted(dbMatch);
+    if (isToday) lockedTodayIds.add(dbMatch.id);
+
+    if (started) {
+      if (isToday) {
+        midnightUpdates.push(db.prepare('UPDATE matches SET odds_locked = 1 WHERE id = ?').bind(dbMatch.id));
+        locked++;
+        lockOnly++;
+        skippedStartedOdds++;
+      }
       continue;
     }
 
@@ -1259,15 +1277,6 @@ async function handleMidnightLock(db, apiKey) {
       }
     }
 
-    let isToday = false;
-    if (dbMatch.local_date) {
-      try {
-        const md = new Date(dbMatch.local_date.replace(' ', 'T'));
-        const matchDate = todayFormatter.format(md);
-        isToday = matchDate === today;
-      } catch (_) {}
-    }
-
     midnightUpdates.push(
       db.prepare(`
         UPDATE matches
@@ -1294,21 +1303,32 @@ async function handleMidnightLock(db, apiKey) {
     if (isToday) locked++;
   }
 
-  if (midnightUpdates.length > 0) {
-    await db.batch(midnightUpdates);
-    await bumpVersion(db, 'matches');
+  for (const todayMatch of todayMatches) {
+    if (lockedTodayIds.has(todayMatch.id)) continue;
+    midnightUpdates.push(db.prepare('UPDATE matches SET odds_locked = 1 WHERE id = ?').bind(todayMatch.id));
+    lockedTodayIds.add(todayMatch.id);
+    locked++;
+    lockOnly++;
+    unmatchedToday++;
   }
 
-  await logChange(db, 'system', null, null, '🌙 Midnight Odds Lock', null, `Updated: ${updated}, Locked Today: ${locked}`);
-  console.log(`[Midnight Lock] Updated ${updated} matches, locked ${locked} today's matches.`);
+  if (midnightUpdates.length > 0) {
+    await db.batch(midnightUpdates);
+    clearMatchesCache();
+    await bumpVersion(db, 'matches');
+    await emitEvent(db, 'matches_updated');
+  }
+
+  await logChange(db, 'system', null, null, '9 AM Odds Lock', null, `Updated: ${updated}, Locked Today: ${locked}, Lock Only: ${lockOnly}, Started Odds Skipped: ${skippedStartedOdds}, Unmatched Today: ${unmatchedToday}`);
+  console.log(`[9 AM Odds Lock] Updated ${updated}, locked ${locked}, lock-only ${lockOnly}, skipped started odds ${skippedStartedOdds}, unmatched today ${unmatchedToday}.`);
 
   // Prune logs older than 14 days to keep database size clean
   try {
     const pruneResult = await db.prepare("DELETE FROM logs WHERE timestamp < datetime('now', '-14 days')").run();
-    console.log(`[Midnight Lock] Pruned logs older than 14 days. Changes: ${pruneResult.meta?.changes || 0}`);
+    console.log(`[9 AM Odds Lock] Pruned logs older than 14 days. Changes: ${pruneResult.meta?.changes || 0}`);
   } catch (err) {
-    console.error('[Midnight Lock] Failed to prune old logs:', err.message);
+    console.error('[9 AM Odds Lock] Failed to prune old logs:', err.message);
   }
 
-  return { updated, locked };
+  return { updated, locked, lockOnly, skippedStartedOdds, unmatchedToday };
 }

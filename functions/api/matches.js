@@ -10,6 +10,33 @@ const headers = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+function isPositiveIntegerId(value) {
+  return Number.isInteger(Number(value)) && Number(value) > 0;
+}
+
+function isNonNegativeInteger(value) {
+  return Number.isInteger(Number(value)) && Number(value) >= 0;
+}
+
+function isFiniteNumber(value) {
+  return Number.isFinite(Number(value));
+}
+
+function isEnumValue(value, allowed) {
+  return allowed.includes(value);
+}
+
+function parseOptionalNonNegativeInteger(value) {
+  if (value === undefined || value === null || value === '') return null;
+  return isNonNegativeInteger(value) ? Number(value) : NaN;
+}
+
+function hasMatchStarted(match) {
+  if (!match || match.status !== 'scheduled' || match.finished === 1 || !match.local_date) return true;
+  const matchTime = new Date(match.local_date).getTime();
+  return Number.isNaN(matchTime) || matchTime <= Date.now();
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers });
 }
@@ -107,25 +134,56 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ error: authError.message }), { status: authError.status, headers });
       }
 
-      if (!matchId) {
-        return new Response(JSON.stringify({ error: 'Match ID is required' }), { status: 400, headers });
+      if (!isPositiveIntegerId(matchId)) {
+        return new Response(JSON.stringify({ error: 'Match ID must be a positive integer' }), { status: 400, headers });
+      }
+      const matchIdInt = Number(matchId);
+      if (!isEnumValue(status, ['scheduled', 'live', 'finished'])) {
+        return new Response(JSON.stringify({ error: 'Status must be scheduled, live, or finished' }), { status: 400, headers });
+      }
+      if (typeof finished !== 'boolean' && finished !== 0 && finished !== 1 && finished !== '0' && finished !== '1') {
+        return new Response(JSON.stringify({ error: 'Finished must be boolean-like' }), { status: 400, headers });
+      }
+      let finishedVal = finished === true || finished === 1 || finished === '1' ? 1 : 0;
+      let normalizedStatus = status;
+      if (finishedVal === 1) normalizedStatus = 'finished';
+      if (normalizedStatus === 'finished') finishedVal = 1;
+
+      if (!isNonNegativeInteger(homeScore) || !isNonNegativeInteger(awayScore)) {
+        return new Response(JSON.stringify({ error: 'Scores must be non-negative integers' }), { status: 400, headers });
+      }
+
+      const hHtScore = parseOptionalNonNegativeInteger(homeHtScore);
+      const aHtScore = parseOptionalNonNegativeInteger(awayHtScore);
+      if (Number.isNaN(hHtScore) || Number.isNaN(aHtScore)) {
+        return new Response(JSON.stringify({ error: 'Halftime scores must be empty or non-negative integers' }), { status: 400, headers });
       }
 
       // Convert variables to correct SQL types
-      const hScore = homeScore !== undefined ? parseInt(homeScore) : 0;
-      const aScore = awayScore !== undefined ? parseInt(awayScore) : 0;
-      const hHtScore = (homeHtScore !== undefined && homeHtScore !== null && homeHtScore !== '') ? parseInt(homeHtScore) : null;
-      const aHtScore = (awayHtScore !== undefined && awayHtScore !== null && awayHtScore !== '') ? parseInt(awayHtScore) : null;
-      const finishedVal = finished ? 1 : 0;
-      const hPct = homeWinPct !== undefined ? parseFloat(homeWinPct) : 33.3;
-      const aPct = awayWinPct !== undefined ? parseFloat(awayWinPct) : 33.3;
-      const dPct = drawWinPct !== undefined ? parseFloat(drawWinPct) : 33.3;
-      const ouLine = overUnderLine !== undefined ? parseFloat(overUnderLine) : 2.5;
-      const oOdds = overOdds !== undefined ? parseFloat(overOdds) : 1.9;
-      const uOdds = underOdds !== undefined ? parseFloat(underOdds) : 1.9;
-      const cLine = cardsLine !== undefined ? parseFloat(cardsLine) : 3.5;
-      const actCards = (actualCards !== undefined && actualCards !== '') ? parseInt(actualCards) : null;
+      const hScore = Number(homeScore);
+      const aScore = Number(awayScore);
+      const hPct = Number(homeWinPct);
+      const aPct = Number(awayWinPct);
+      const dPct = Number(drawWinPct);
+      const ouLine = Number(overUnderLine);
+      const oOdds = Number(overOdds);
+      const uOdds = Number(underOdds);
+      const cLine = Number(cardsLine);
+      const actCards = parseOptionalNonNegativeInteger(actualCards);
       let actFirstScorer = actualFirstScorer || null;
+
+      if (![hPct, aPct, dPct].every(n => Number.isFinite(n) && n >= 0 && n <= 100)) {
+        return new Response(JSON.stringify({ error: 'Odds percentages must be finite numbers between 0 and 100' }), { status: 400, headers });
+      }
+      if (![overUnderLine, overOdds, underOdds, cardsLine].every(v => isFiniteNumber(v) && Number(v) >= 0)) {
+        return new Response(JSON.stringify({ error: 'Odds lines and prices must be finite non-negative numbers' }), { status: 400, headers });
+      }
+      if (Number.isNaN(actCards)) {
+        return new Response(JSON.stringify({ error: 'Actual cards must be empty or a non-negative integer' }), { status: 400, headers });
+      }
+      if (actFirstScorer !== null && !isEnumValue(actFirstScorer, ['home', 'away', 'none'])) {
+        return new Response(JSON.stringify({ error: 'Actual first scorer must be home, away, none, or empty' }), { status: 400, headers });
+      }
 
       const oldMatch = await env.db.prepare(`
         SELECT m.*, t1.fifa_code AS home_code, t2.fifa_code AS away_code
@@ -133,7 +191,24 @@ export async function onRequest(context) {
         LEFT JOIN teams t1 ON m.home_team_id = t1.id
         LEFT JOIN teams t2 ON m.away_team_id = t2.id
         WHERE m.id = ?
-      `).bind(matchId).first();
+      `).bind(matchIdInt).first();
+
+      if (!oldMatch) {
+        return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
+      }
+
+      const oddsChanged =
+        oldMatch.home_win_pct !== hPct ||
+        oldMatch.away_win_pct !== aPct ||
+        oldMatch.draw_pct !== dPct ||
+        oldMatch.over_under_line !== ouLine ||
+        oldMatch.over_odds !== oOdds ||
+        oldMatch.under_odds !== uOdds ||
+        oldMatch.cards_line !== cLine;
+
+      if (hasMatchStarted(oldMatch) && oddsChanged) {
+        return new Response(JSON.stringify({ error: 'Odds cannot be changed after kickoff' }), { status: 400, headers });
+      }
 
       if (oldMatch) {
         const homeCode = oldMatch.home_code || oldMatch.home_team_name.substring(0, 3).toUpperCase();
@@ -144,14 +219,14 @@ export async function onRequest(context) {
         if (oldMatch.home_win_pct !== hPct || oldMatch.away_win_pct !== aPct || oldMatch.draw_pct !== dPct) {
           const oldVal = `H: ${oldMatch.home_win_pct}%, D: ${oldMatch.draw_pct}%, A: ${oldMatch.away_win_pct}%`;
           const newVal = `H: ${hPct}%, D: ${dPct}%, A: ${aPct}%`;
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} Winner`, oldVal, newVal);
+          await logChange(env.db, 'odds', matchIdInt, null, `${matchLabel} Winner`, oldVal, newVal);
         }
 
         // Log O/U Goals (combined line and odds)
         if (oldMatch.over_under_line !== ouLine || oldMatch.over_odds !== oOdds || oldMatch.under_odds !== uOdds) {
           const oldVal = `Line: ${oldMatch.over_under_line}, ${formatOuPct(oldMatch.over_odds, oldMatch.under_odds)}`;
           const newVal = `Line: ${ouLine}, ${formatOuPct(oOdds, uOdds)}`;
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} O/U Goals`, oldVal, newVal);
+          await logChange(env.db, 'odds', matchIdInt, null, `${matchLabel} O/U Goals`, oldVal, newVal);
         }
 
         // Log O/U Score First (Cards O/U line and odds combined)
@@ -160,22 +235,22 @@ export async function onRequest(context) {
         if (oldMatch.cards_line !== cLine) {
           const oldVal = `Line: ${oldMatch.cards_line}, ${formatOuPct(oldCardsOverOdds, oldCardsUnderOdds)}`;
           const newVal = `Line: ${cLine}, ${formatOuPct(1.9, 1.9)}`;
-          await logChange(env.db, 'odds', matchId, null, `${matchLabel} O/U Score First`, oldVal, newVal);
+          await logChange(env.db, 'odds', matchIdInt, null, `${matchLabel} O/U Score First`, oldVal, newVal);
         }
 
         // Log Score/Cards changes
         if (oldMatch.home_score !== hScore || oldMatch.away_score !== aScore) {
-          await logChange(env.db, 'score', matchId, null, `${matchLabel} score`, `${oldMatch.home_score}-${oldMatch.away_score}`, `${hScore}-${aScore}`);
+          await logChange(env.db, 'score', matchIdInt, null, `${matchLabel} score`, `${oldMatch.home_score}-${oldMatch.away_score}`, `${hScore}-${aScore}`);
         }
         if (oldMatch.home_ht_score !== hHtScore || oldMatch.away_ht_score !== aHtScore) {
           const oldHt = (oldMatch.home_ht_score !== null && oldMatch.away_ht_score !== null) ? `${oldMatch.home_ht_score}-${oldMatch.away_ht_score}` : 'null';
           const newHt = (hHtScore !== null && aHtScore !== null) ? `${hHtScore}-${aHtScore}` : 'null';
           if (oldHt !== newHt) {
-            await logChange(env.db, 'score', matchId, null, `${matchLabel} halftime score`, oldHt, newHt);
+            await logChange(env.db, 'score', matchIdInt, null, `${matchLabel} halftime score`, oldHt, newHt);
           }
         }
         if (oldMatch.actual_cards !== actCards) {
-          await logChange(env.db, 'cards', matchId, null, `${matchLabel} actual cards`, oldMatch.actual_cards, actCards);
+          await logChange(env.db, 'cards', matchIdInt, null, `${matchLabel} actual cards`, oldMatch.actual_cards, actCards);
         }
       }
 
@@ -201,7 +276,7 @@ export async function onRequest(context) {
       `;
 
       await env.db.prepare(updateQuery)
-        .bind(hScore, aScore, hHtScore, aHtScore, status || 'scheduled', finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, actFirstScorer, matchId)
+        .bind(hScore, aScore, hHtScore, aHtScore, normalizedStatus, finishedVal, hPct, aPct, dPct, ouLine, oOdds, uOdds, cLine, actCards, actFirstScorer, matchIdInt)
         .run();
 
       clearMatchesCache();
@@ -228,7 +303,7 @@ export async function onRequest(context) {
 
       await emitEvent(env.db, 'matches_updated');
       await flushLogs(env.db);
-      const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
+      const updatedMatch = await env.db.prepare('SELECT * FROM matches WHERE id = ?').bind(matchIdInt).first();
       return new Response(JSON.stringify({ success: true, match: updatedMatch }), { status: 200, headers });
     }
 
