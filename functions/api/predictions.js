@@ -9,6 +9,18 @@ const headers = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+function isPositiveIntegerId(value) {
+  return Number.isInteger(value) && value > 0;
+}
+
+function isNonNegativeInteger(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function isEnumValue(value, allowedValues) {
+  return allowedValues.includes(value);
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers });
 }
@@ -118,8 +130,54 @@ export async function onRequest(context) {
         predictedPenalties      // 'yes' or 'no'
       } = body;
 
-      if (!participantId || !matchId) {
+      if (participantId === undefined || matchId === undefined) {
         return new Response(JSON.stringify({ error: 'Participant ID and Match ID are required' }), { status: 400, headers });
+      }
+
+      const participantIdInt = Number(participantId);
+      const matchIdInt = Number(matchId);
+      const pHomeScore = Number(predictedHomeScore);
+      const pAwayScore = Number(predictedAwayScore);
+      const pTotalCards = Number(predictedTotalCards);
+      const pFirstScorer = predictedFirstScorer;
+      const pHalfPick = predictedHighestScoringHalf;
+      const pCleanPick = predictedCleanSheet;
+      const pPenalties = predictedPenalties;
+
+      if (!isPositiveIntegerId(participantIdInt)) {
+        return new Response(JSON.stringify({ error: 'participantId must be a positive integer' }), { status: 400, headers });
+      }
+      if (!isPositiveIntegerId(matchIdInt)) {
+        return new Response(JSON.stringify({ error: 'matchId must be a positive integer' }), { status: 400, headers });
+      }
+      if (!isEnumValue(predictedWinner, ['home', 'away', 'draw'])) {
+        return new Response(JSON.stringify({ error: 'predictedWinner must be one of: home, away, draw' }), { status: 400, headers });
+      }
+      if (!isEnumValue(predictedOverUnder, ['over', 'under'])) {
+        return new Response(JSON.stringify({ error: 'predictedOverUnder must be one of: over, under' }), { status: 400, headers });
+      }
+      if (!isNonNegativeInteger(pHomeScore) || !isNonNegativeInteger(pAwayScore)) {
+        return new Response(JSON.stringify({ error: 'predictedHomeScore and predictedAwayScore must be non-negative integers' }), { status: 400, headers });
+      }
+      if (!isNonNegativeInteger(pTotalCards)) {
+        return new Response(JSON.stringify({ error: 'predictedTotalCards must be a non-negative integer' }), { status: 400, headers });
+      }
+      if (!isEnumValue(pFirstScorer, ['home', 'away', 'none'])) {
+        return new Response(JSON.stringify({ error: 'predictedFirstScorer must be one of: home, away, none' }), { status: 400, headers });
+      }
+      if (!isEnumValue(pHalfPick, ['first', 'second', 'equal'])) {
+        return new Response(JSON.stringify({ error: 'predictedHighestScoringHalf must be one of: first, second, equal' }), { status: 400, headers });
+      }
+      if (!isEnumValue(pCleanPick, ['yes', 'no'])) {
+        return new Response(JSON.stringify({ error: 'predictedCleanSheet must be one of: yes, no' }), { status: 400, headers });
+      }
+      if (!isEnumValue(pPenalties, ['yes', 'no'])) {
+        return new Response(JSON.stringify({ error: 'predictedPenalties must be one of: yes, no' }), { status: 400, headers });
+      }
+
+      const participant = await env.db.prepare('SELECT name FROM participants WHERE id = ?').bind(participantIdInt).first();
+      if (!participant) {
+        return new Response(JSON.stringify({ error: 'Participant not found' }), { status: 404, headers });
       }
 
       // 1. Fetch match with team info (merged query)
@@ -129,7 +187,7 @@ export async function onRequest(context) {
         LEFT JOIN teams t1 ON m.home_team_id = t1.id
         LEFT JOIN teams t2 ON m.away_team_id = t2.id
         WHERE m.id = ?
-      `).bind(matchId).first();
+      `).bind(matchIdInt).first();
 
       if (!match) {
         return new Response(JSON.stringify({ error: 'Match not found' }), { status: 404, headers });
@@ -139,22 +197,10 @@ export async function onRequest(context) {
       const matchStartTime = new Date(match.local_date).getTime();
       const currentTime = Date.now();
 
-      if (currentTime >= matchStartTime || match.status !== 'scheduled' || match.finished === 1) {
+      if (Number.isNaN(matchStartTime) || currentTime >= matchStartTime || match.status !== 'scheduled' || match.finished === 1) {
         return new Response(JSON.stringify({ error: 'Predictions are locked. This match has already started or finished.' }), { status: 403, headers });
       }
-
-      // Validate inputs
-      const pHomeScore = predictedHomeScore !== null && predictedHomeScore !== undefined ? parseInt(predictedHomeScore) : null;
-      const pAwayScore = predictedAwayScore !== null && predictedAwayScore !== undefined ? parseInt(predictedAwayScore) : null;
-      const pTotalCards = (predictedTotalCards !== null && predictedTotalCards !== undefined && predictedTotalCards !== '') ? parseInt(predictedTotalCards) : null;
-      const pFirstScorer = predictedFirstScorer || null;
-      const pHalfPick = predictedHighestScoringHalf || null;
-      const pCleanPick = predictedCleanSheet || null;
-      const pPenalties = predictedPenalties || null;
-
-      // Get participant name
-      const participant = await env.db.prepare('SELECT name FROM participants WHERE id = ?').bind(participantId).first();
-      const participantName = participant ? participant.name : `Player ID ${participantId}`;
+      const participantName = participant.name;
 
       const homeCode = match?.home_code || match?.home_team_name.substring(0, 3).toUpperCase() || 'HOM';
       const awayCode = match?.away_code || match?.away_team_name.substring(0, 3).toUpperCase() || 'AWA';
@@ -162,7 +208,7 @@ export async function onRequest(context) {
 
       // 3. Upsert prediction
       const checkQuery = 'SELECT * FROM predictions WHERE participant_id = ? AND match_id = ?';
-      const existing = await env.db.prepare(checkQuery).bind(participantId, matchId).first();
+      const existing = await env.db.prepare(checkQuery).bind(participantIdInt, matchIdInt).first();
 
       // Log changes
       const changes = [];
@@ -217,55 +263,66 @@ export async function onRequest(context) {
         changes.push(`Penalties: ${oldPenalties || 'None'} -> ${newPenalties || 'None'}`);
       }
 
-      if (changes.length > 0) {
+      const nowIso = new Date().toISOString();
+      const writeResult = await env.db.prepare(`
+        INSERT INTO predictions (
+          participant_id,
+          match_id,
+          predicted_winner,
+          predicted_over_under,
+          predicted_home_score,
+          predicted_away_score,
+          predicted_total_cards,
+          predicted_first_scorer,
+          predicted_highest_scoring_half,
+          predicted_clean_sheet,
+          predicted_penalties
+        )
+        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (
+          SELECT 1 FROM matches
+          WHERE id = ?
+            AND status = 'scheduled'
+            AND finished = 0
+            AND datetime(local_date) > datetime(?)
+        )
+        ON CONFLICT(participant_id, match_id) DO UPDATE SET
+          predicted_winner = excluded.predicted_winner,
+          predicted_over_under = excluded.predicted_over_under,
+          predicted_home_score = excluded.predicted_home_score,
+          predicted_away_score = excluded.predicted_away_score,
+          predicted_total_cards = excluded.predicted_total_cards,
+          predicted_first_scorer = excluded.predicted_first_scorer,
+          predicted_highest_scoring_half = excluded.predicted_highest_scoring_half,
+          predicted_clean_sheet = excluded.predicted_clean_sheet,
+          predicted_penalties = excluded.predicted_penalties
+      `).bind(
+        participantIdInt,
+        matchIdInt,
+        predictedWinner,
+        predictedOverUnder,
+        pHomeScore,
+        pAwayScore,
+        pTotalCards,
+        pFirstScorer,
+        pHalfPick,
+        pCleanPick,
+        pPenalties,
+        matchIdInt,
+        nowIso
+      ).run();
+
+      if ((writeResult.meta?.changes || 0) === 0) {
+        return new Response(JSON.stringify({ error: 'Predictions are locked. This match has already started or finished.' }), { status: 403, headers });
+      }
+
+      if (changes.length > 0 || !existing) {
+        await bumpVersion(env.db, 'predictions');
         const actionType = existing ? 'updated' : 'submitted';
         const description = `${participantName} ${actionType} prediction for ${matchLabel}`;
         const oldValue = existing ? 'Existing prediction' : 'None';
-        const newValue = changes.join(', ');
-        await logChange(env.db, 'prediction', matchId, participantId, description, oldValue, newValue);
-      }
-
-      if (existing) {
-        if (changes.length > 0) {
-          const updateQuery = `
-            UPDATE predictions 
-            SET 
-              predicted_winner = ?, 
-              predicted_over_under = ?, 
-              predicted_home_score = ?, 
-              predicted_away_score = ?,
-              predicted_total_cards = ?,
-              predicted_first_scorer = ?,
-              predicted_highest_scoring_half = ?,
-              predicted_clean_sheet = ?,
-              predicted_penalties = ?
-            WHERE participant_id = ? AND match_id = ?
-          `;
-          await env.db.prepare(updateQuery)
-            .bind(predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, pPenalties, participantId, matchId)
-            .run();
-          await bumpVersion(env.db, 'predictions');
-        }
-      } else {
-        const insertQuery = `
-          INSERT INTO predictions (
-            participant_id, 
-            match_id, 
-            predicted_winner, 
-            predicted_over_under, 
-            predicted_home_score, 
-            predicted_away_score,
-            predicted_total_cards,
-            predicted_first_scorer,
-            predicted_highest_scoring_half,
-            predicted_clean_sheet,
-            predicted_penalties
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        await env.db.prepare(insertQuery)
-          .bind(participantId, matchId, predictedWinner, predictedOverUnder, pHomeScore, pAwayScore, pTotalCards, pFirstScorer, pHalfPick, pCleanPick, pPenalties)
-          .run();
-        await bumpVersion(env.db, 'predictions');
+        const newValue = changes.join(', ') || 'No field changes';
+        await logChange(env.db, 'prediction', matchIdInt, participantIdInt, description, oldValue, newValue);
       }
 
       // 4. Immediately calculate points for this prediction if the match is already finished
@@ -293,7 +350,7 @@ export async function onRequest(context) {
           pts.points_winner, pts.points_ou, pts.points_score, pts.points_cards_ou,
           pts.points_total_cards, pts.points_first_scorer, pts.points_highest_scoring_half,
           pts.points_clean_sheet, pts.points_penalties, pts.total_points,
-          participantId, matchId
+          participantIdInt, matchIdInt
         ).run();
 
         await recomputeAllCaches(env.db);
@@ -305,8 +362,8 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({
         success: true,
         prediction: {
-          participant_id: participantId,
-          match_id: matchId,
+          participant_id: participantIdInt,
+          match_id: matchIdInt,
           predicted_winner: predictedWinner,
           predicted_over_under: predictedOverUnder,
           predicted_home_score: pHomeScore,
