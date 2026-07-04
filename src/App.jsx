@@ -52,14 +52,14 @@ function loadNavLayout(playerName) {
       ];
       return merged;
     }
-  } catch (_) { /* ignore */ }
+  } catch (err) { console.warn('Failed to parse nav layout from localStorage:', err); }
   return [...DEFAULT_NAV_LAYOUT];
 }
 
 function saveNavLayout(playerName, layout) {
   try {
     localStorage.setItem(getNavLayoutKey(playerName), JSON.stringify(layout));
-  } catch (_) { /* ignore */ }
+  } catch (err) { console.warn('Failed to save nav layout to localStorage:', err); }
 }
 
 export default function App() {
@@ -103,6 +103,7 @@ export default function App() {
   const [dataHealth, setDataHealth] = useState({ ok: true, issues: [] });
   
   const [loading, setLoading] = useState(true);
+  const [initialLoadError, setInitialLoadError] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const hashRestoredRef = useRef(false);
 
@@ -127,7 +128,7 @@ export default function App() {
   // Load navLayout keyed by active player name
   const activePlayerName = useMemo(() => {
     if (!activeParticipantId) return null;
-    const p = leaderboard.find(p => p.id === activeParticipantId);
+    const p = (leaderboard || []).find(p => p.id === activeParticipantId);
     return p ? p.name : null;
   }, [activeParticipantId, leaderboard]);
 
@@ -164,7 +165,7 @@ export default function App() {
           // Also update localStorage cache
           saveNavLayout(activePlayerName, merged);
         }
-      } catch (_) { /* server unreachable — localStorage fallback stays */ }
+      } catch (err) { console.warn('Server unreachable for preferences fetch — localStorage fallback stays:', err); }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeParticipantId, activePlayerName]);
@@ -183,7 +184,7 @@ export default function App() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ participantId: activeParticipantId, navLayout: newLayout }),
         });
-      } catch (_) { /* server unreachable — localStorage fallback is enough */ }
+      } catch (err) { console.warn('Server unreachable for preferences save — localStorage fallback is enough:', err); }
       setNavLayoutSyncing(false);
     }
   }, [activeParticipantId, activePlayerName]);
@@ -215,7 +216,7 @@ export default function App() {
     setHoldProgress(0);
   }, []);
 
-  const hasLiveMatches = matches.some(m => {
+  const hasLiveMatches = (matches || []).some(m => {
     if (m.finished === 1 || m.status === 'finished') return false;
     const kickOffMs = new Date((m.local_date || '').replace(' ', 'T')).getTime();
     // eslint-disable-next-line react-hooks/purity
@@ -223,6 +224,7 @@ export default function App() {
   });
 
   const liveTabMatches = useMemo(() => {
+    if (!matches) return [];
     // eslint-disable-next-line react-hooks/purity
     const nowMs = Date.now();
       const thirtyMinsMs = 30 * 60 * 1000;
@@ -279,7 +281,7 @@ export default function App() {
     try {
       const res = await fetch(`/api/predictions?participantId=${pId}`);
       const data = await res.json();
-      setPredictions(data);
+      setPredictions(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load predictions:', err);
     }
@@ -313,7 +315,7 @@ export default function App() {
       const res = await fetch('/api/matches');
       if (!res.ok) return;
       const data = await res.json();
-      setMatches(data);
+      setMatches(Array.isArray(data) ? data : []);
       setHasFullMatches(true);
       loadedVersionsRef.current.hasFullMatches = true;
       
@@ -370,12 +372,12 @@ export default function App() {
         if (matchesChanged) {
           const url = loadedVersionsRef.current.hasFullMatches ? '/api/matches' : '/api/matches?activeOnly=true';
           promises.push(
-            fetch(url)
-              .then(r => r.json())
-              .then(data => {
-                setMatches(data);
-                updatedVersions.matches = serverVersions.matches;
-              })
+              fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                  setMatches(Array.isArray(data) ? data : []);
+                  updatedVersions.matches = serverVersions.matches;
+                })
           );
           promises.push(fetchDataHealth());
         }
@@ -385,11 +387,11 @@ export default function App() {
         if (leaderboardChanged) {
           promises.push(
             fetch('/api/leaderboard')
-              .then(r => r.json())
-              .then(data => {
-                setLeaderboard(data);
-                updatedVersions.leaderboard = serverVersions.leaderboard;
-              })
+                .then(r => r.json())
+                .then(data => {
+                  setLeaderboard(Array.isArray(data) ? data : []);
+                  updatedVersions.leaderboard = serverVersions.leaderboard;
+                })
           );
         }
 
@@ -408,7 +410,7 @@ export default function App() {
               fetch(`/api/predictions?participantId=${activeParticipantId}`)
                 .then(r => r.json())
                 .then(data => {
-                  setPredictions(data);
+                  setPredictions(Array.isArray(data) ? data : []);
                   if (participantSwitched) setMatchPredictionsCache({});
                 })
             );
@@ -510,7 +512,7 @@ export default function App() {
           const res = await fetch(`/api/predictions?participantId=${activeParticipantId}`);
           if (!res.ok) return;
           const data = await res.json();
-          setPredictions(data);
+          setPredictions(Array.isArray(data) ? data : []);
           setMatchPredictionsCache({});
           
           // Sync predictions version from server
@@ -535,62 +537,68 @@ export default function App() {
   }, [activeParticipantId]);
 
   // Initial load (Parallelized & Minimized)
-  useEffect(() => {
-    const initialize = async () => {
-      setLoading(true);
-      try {
-        const promises = [
-          fetch('/api/matches?activeOnly=true').then(r => r.json()),
-          fetch('/api/leaderboard').then(r => r.json()),
-          fetch('/api/sync?checkOnly=true').then(r => r.json()).catch(() => ({})),
-          fetch('/api/versions').then(r => r.json()).catch(() => ({})),
-          fetch('/api/data_health').then(r => r.json()).catch(() => ({ ok: true, issues: [] }))
-        ];
-        
-        if (activeParticipantId) {
-          promises.push(fetch(`/api/predictions?participantId=${activeParticipantId}`).then(r => r.json()));
-        }
-        
-        const results = await Promise.all(promises);
-        const matchesData = results[0];
-        const leaderboardData = results[1];
-        const syncData = results[2];
-        const vData = results[3];
-        const healthData = results[4];
-        const predictionsData = activeParticipantId ? results[5] : [];
-        
-        setMatches(matchesData);
-        setLeaderboard(leaderboardData);
-        setDataHealth(healthData);
-        if (syncData?.success && syncData?.sync_time) {
-          setLastSync(syncData.sync_time);
-        } else if (syncData?.last_sync) {
-          setLastSync(syncData.last_sync);
-        }
-        if (activeParticipantId) {
-          setPredictions(predictionsData);
-        }
-        
-        if (vData) {
-          loadedVersionsRef.current = {
-            matches: vData.matches || null,
-            predictions: vData.predictions || null,
-            leaderboard: vData.leaderboard || null,
-            stats: vData.stats || null,
-            participantId: activeParticipantId,
-            hasFullMatches: false
-          };
-          if (vData.matchCounts) {
-            setMatchCounts(vData.matchCounts);
-          }
-        }
-      } catch (err) {
-        console.error('Initial load failed:', err);
-      } finally {
-        setLoading(false);
+  const initializeApp = useCallback(async () => {
+    setLoading(true);
+    setInitialLoadError(null);
+    try {
+      const promises = [
+        fetch('/api/matches?activeOnly=true').then(r => r.json()),
+        fetch('/api/leaderboard').then(r => r.json()),
+        fetch('/api/sync?checkOnly=true').then(r => r.json()).catch(() => ({})),
+        fetch('/api/versions').then(r => r.json()).catch(() => ({})),
+        fetch('/api/data_health').then(r => r.json()).catch(() => ({ ok: true, issues: [] }))
+      ];
+      
+      if (activeParticipantId) {
+        promises.push(fetch(`/api/predictions?participantId=${activeParticipantId}`).then(r => r.json()));
       }
-    };
-    initialize();
+      
+      const results = await Promise.all(promises);
+      const matchesData = results[0];
+      const leaderboardData = results[1];
+      const syncData = results[2];
+      const vData = results[3];
+      const healthData = results[4];
+      const predictionsData = activeParticipantId ? results[5] : [];
+      
+      setMatches(Array.isArray(matchesData) ? matchesData : []);
+      setLeaderboard(Array.isArray(leaderboardData) ? leaderboardData : []);
+      setDataHealth(healthData);
+      if (syncData?.success && syncData?.sync_time) {
+        setLastSync(syncData.sync_time);
+      } else if (syncData?.last_sync) {
+        setLastSync(syncData.last_sync);
+      }
+      if (activeParticipantId) {
+        setPredictions(Array.isArray(predictionsData) ? predictionsData : []);
+      }
+      
+      if (vData) {
+        loadedVersionsRef.current = {
+          matches: vData.matches || null,
+          predictions: vData.predictions || null,
+          leaderboard: vData.leaderboard || null,
+          stats: vData.stats || null,
+          participantId: activeParticipantId,
+          hasFullMatches: false
+        };
+        if (vData.matchCounts) {
+          setMatchCounts(vData.matchCounts);
+        }
+      }
+    } catch (err) {
+      console.error('Initial load failed:', err);
+      setInitialLoadError(err.message || 'Failed to load match data. The server may be unavailable.');
+      setMatches([]);
+      setLeaderboard([]);
+      setPredictions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeParticipantId]);
+
+  useEffect(() => {
+    initializeApp();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -780,7 +788,7 @@ export default function App() {
   };
 
   const getMatchesForWeek = (weekNum) => {
-    return matches.filter(m => getWeekNumber(m) === weekNum && m.finished !== 1);
+    return (matches || []).filter(m => getWeekNumber(m) === weekNum && m.finished !== 1);
   };
 
   const handleTabChange = (tab) => {
@@ -790,11 +798,13 @@ export default function App() {
     }
     if (tab === 'matches') {
       if (activeParticipantId) {
+        const safeMatches = matches || [];
+        const safePredictions = predictions || [];
         // Find upcoming matches that have no predictions by the user yet
-        const unpredictedMatches = matches.filter(m => 
+        const unpredictedMatches = safeMatches.filter(m => 
           m.status === 'scheduled' && 
           m.finished === 0 && 
-          !predictions.some(p => p.match_id === m.id)
+          !safePredictions.some(p => p.match_id === m.id)
         );
 
         if (unpredictedMatches.length > 0) {
@@ -803,7 +813,7 @@ export default function App() {
           setSelectedMatchId(unpredictedMatches[0].id);
         } else {
           // Fallback: latest predicted match
-          const userPredictedMatches = matches.filter(m => predictions.some(p => p.match_id === m.id));
+          const userPredictedMatches = safeMatches.filter(m => safePredictions.some(p => p.match_id === m.id));
           if (userPredictedMatches.length > 0) {
             userPredictedMatches.sort((a, b) => new Date(b.local_date) - new Date(a.local_date));
             setSelectedMatchId(userPredictedMatches[0].id);
@@ -812,7 +822,7 @@ export default function App() {
       }
     } else if (tab === 'match-view') {
       if (!statsData) fetchStats();
-      const completedMatches = matches.filter(m => m.finished === 1);
+      const completedMatches = (matches || []).filter(m => m.finished === 1);
       if (completedMatches.length > 0) {
         completedMatches.sort((a, b) => new Date(b.local_date) - new Date(a.local_date));
         setSelectedMatchId(completedMatches[0].id);
@@ -841,6 +851,48 @@ export default function App() {
         </div>
       ) : (
         <main style={{ flex: 1 }}>
+          {initialLoadError && (
+            <div
+              className="glass-panel"
+              style={{
+                maxWidth: '900px',
+                margin: '0 auto 18px',
+                border: '1px solid rgba(239, 68, 68, 0.5)',
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05))',
+                boxShadow: '0 0 24px rgba(239,68,68,0.15)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                padding: '24px',
+                alignItems: 'center',
+                textAlign: 'center',
+              }}
+            >
+              <AlertTriangle size={28} color="#ef4444" />
+              <strong style={{ color: '#fca5a5', fontSize: '15px' }}>
+                Unable to load data from server
+              </strong>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                {initialLoadError}
+              </span>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  className="btn-primary"
+                  style={{ padding: '8px 20px', fontSize: '13px' }}
+                  onClick={initializeApp}
+                >
+                  Retry
+                </button>
+                <button
+                  className="btn-secondary"
+                  style={{ padding: '8px 20px', fontSize: '13px' }}
+                  onClick={() => handleTabChange('admin')}
+                >
+                  Check Admin
+                </button>
+              </div>
+            </div>
+          )}
           {dataHealth?.issues?.length > 0 && (
             <div
               className="glass-panel"
@@ -903,7 +955,7 @@ export default function App() {
                   <div>
                     <h4 style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Participants</h4>
                     <span style={{ fontSize: '32px', fontWeight: '800', fontFamily: 'var(--font-heading)', color: 'var(--primary-hover)' }}>
-                      {leaderboard.length}
+                      {(leaderboard || []).length}
                     </span>
                   </div>
                 </div>
@@ -954,7 +1006,7 @@ export default function App() {
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               {activeParticipantId && (
-                                predictions.some(p => p.match_id === m.id) ? (
+                                (predictions || []).some(p => p.match_id === m.id) ? (
                                   <CheckCircle size={16} color="#10b981" style={{ filter: 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.2))' }} title="Prediction saved" />
                                 ) : (
                                   <XCircle size={16} color="#ef4444" style={{ filter: 'drop-shadow(0 0 4px rgba(239, 68, 68, 0.2))' }} title="No prediction placed" />
@@ -1178,7 +1230,7 @@ export default function App() {
         </button>
 
         {/* Player Name Selector */}
-        {leaderboard.length > 0 && (
+                    {(leaderboard || []).length > 0 && (
           <div className="sidebar-section">
             <label htmlFor="sidebar-player-select" className="sidebar-label">Name</label>
             <select
